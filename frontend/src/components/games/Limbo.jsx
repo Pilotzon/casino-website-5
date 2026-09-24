@@ -1,5 +1,6 @@
 import Stepper from "../common/Stepper";
 import { useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -162,6 +163,9 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       setIsPlaying(false);
     }
   };
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("limbo", isPlaying);
+
 
   const adjustBet = (val) => {
     const curr = parseFloat(betAmount) || 0;

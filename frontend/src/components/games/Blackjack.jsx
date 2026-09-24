@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -523,6 +524,13 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     }
   };
 
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  // (a dealt hand is not persisted client-side: refreshing mid-hand loses it)
+  useActiveBetFlag(
+    "blackjack",
+    Boolean(ui.roundId) && !ui.settled && ui.phase !== "idle" && ui.phase !== "settled"
+  );
+
   return (
     <div className={styles.container}>
       <div className={styles.sidebar}>
@@ -726,6 +734,7 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
       <img className={styles.cardBackImg} src={cardBackSrc} alt="" draggable="false" />
     </div>
   );
+
 
   return (
     <div

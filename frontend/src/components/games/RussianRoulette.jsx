@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -545,6 +546,9 @@ export default function RussianRoulette({ gameRow }) {
       setIsPlaying(false);
     }
   };
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("russian_roulette", isPlaying || (phase !== "idle" && phase !== "done"));
+
 
   const continueToPhase2 = () => {
     if (!canContinue) return;

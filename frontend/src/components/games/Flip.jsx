@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -284,6 +285,9 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     const curr = parseFloat(betAmount) || 0;
     setBetAmount((curr * factor).toFixed(2));
   };
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("flip", isBusy || phase === 'transition');
+
 
   const handleRandomPick = () => {
     if (isBusy) return;

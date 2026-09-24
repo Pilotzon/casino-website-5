@@ -1,5 +1,6 @@
 import Stepper from "../common/Stepper";
 import { useState, useEffect, useMemo, useRef } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -280,6 +281,9 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const profit =
     parseFloat(betAmount || 0) * parseFloat(multiplierInput || 0) -
     parseFloat(betAmount || 0);
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("dice", isRolling);
+
 
   const gemClass = useMemo(() => {
     if (!lastResult) return styles.gemLoss;

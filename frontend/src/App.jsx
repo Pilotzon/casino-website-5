@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { GameProvider } from "./context/GameContext";
+import { ActiveBetProvider } from "./context/ActiveBetContext";
 import api from "./services/api";
 
 import Home from "./pages/Home";
@@ -14,6 +15,7 @@ import Admin from "./pages/Admin";
 import Layout from "./components/layout/layout";
 import MaintenanceLock from "./components/common/MaintenanceLock";
 import BackToTop from "./components/common/BackToTop";
+import RefreshGuard from "./components/common/RefreshGuard";
 
 // custom bets layout
 import CustomBetsLayout from "./components/customBets/Layout/CustomBetsLayout";
@@ -143,9 +145,13 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <GameProvider>
-            <MaintenanceLock />
-            <AppRoutes />
-            <BackToTop />
+            <ActiveBetProvider>
+              <MaintenanceLock />
+              <AppRoutes />
+              <BackToTop />
+              {/* warns before a refresh while a game has a live bet */}
+              <RefreshGuard />
+            </ActiveBetProvider>
           </GameProvider>
         </ToastProvider>
       </AuthProvider>

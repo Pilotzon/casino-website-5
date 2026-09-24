@@ -417,9 +417,9 @@ function serializeHistory(userId, limit = HISTORY_LIMIT) {
   return recentCrashRounds(userId, limit).map((row) => {
     const outcome = parseOutcome(row.outcome);
     const won = Number(row.payout_amount) > 0;
-    const value = won
-      ? Number(outcome.cashoutMultiplier ?? row.multiplier)
-      : Number(outcome.crashPoint ?? row.multiplier);
+    // The pill always shows the FINAL point of the graph (the crash point) —
+    // never the cash-out multiplier. Green = the player won that round.
+    const value = Number(outcome.crashPoint ?? row.multiplier);
     return {
       roundId: row.round_uuid,
       value: Number.isFinite(value) ? value : row.multiplier,

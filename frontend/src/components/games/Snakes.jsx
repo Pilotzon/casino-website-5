@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -916,6 +917,9 @@ export default function Snakes({ gameRow }) {
       placement: onTop ? "below" : "above",
     };
   }, [hoverInfo, selectedTile]);
+
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("snakes", status === "in_progress");
 
   return (
     <div className={styles.container} style={themeVars}>

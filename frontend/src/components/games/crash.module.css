@@ -172,10 +172,28 @@
   grid-column: 1;
   grid-row: 1;
 }
-/* Y tick: gray text, no grid line, no badge */
+/* The Y spine runs through the MIDDLE of the tick-label column, so every label
+   is centred on the axis instead of sitting next to it. It lives in the label
+   column (not in the plot) so it can span the full board height. */
+.yAxisSpine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2.5px;
+  transform: translateX(-1px);
+  background: var(--crash-axis);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Y tick: gray text, centred on the spine, no grid line, no badge */
 .yTick {
   position: absolute;
-  right: 10px;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
   transform: translateY(50%);
   font-size: 17px;
   font-weight: 700;
@@ -183,6 +201,7 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  z-index: 1;
 }
 
 .plotArea {
@@ -195,27 +214,6 @@
   min-width: 0;
 }
 
-/* Axis lines (the ONLY lines in the plot — no grid) */
-.axisLineY,
-.axisLineX {
-  position: absolute;
-  background: var(--crash-axis);
-  pointer-events: none;
-  z-index: 1;
-}
-.axisLineY {
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-}
-.axisLineX {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-}
-
 .svg {
   position: absolute;
   inset: 0;
@@ -226,10 +224,11 @@
 
 .tipMarker {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: #ffffff;
+  /* bottom:% + translateY(50%) => the circle's CENTRE is exactly on the tip */
   transform: translate(-50%, 50%);
   box-shadow: 0 0 0 4px rgba(255,255,255,0.15), 0 4px 14px rgba(0,0,0,0.45);
   z-index: 3;
@@ -296,8 +295,9 @@
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
 }
 .statusGreen { color: var(--accent-green); font-weight: 800; }
-.statusRed { color: var(--crash-red); font-weight: 800; }
-.statusMuted { color: var(--color-text-muted); }
+/* "Crashed" is plain WHITE text inside the box (the multiplier above it is the
+   red one) */
+.statusCrashed { color: #ffffff; font-weight: 800; }
 
 /* X-axis (seconds) — labels white, total on the same row but NOT part of
    the axis system. */

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -659,6 +660,9 @@ function Plinko({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       setTimeout(() => removeBall(id), 120);
     }
   };
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("plinko", balls.length > 0);
+
 
   const desktopHoverActive = !isMobile && hoverBucket != null && hoverInfo != null;
 

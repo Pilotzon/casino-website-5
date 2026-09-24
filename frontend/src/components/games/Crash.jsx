@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { gamesAPI } from '../../services/api';
@@ -35,14 +36,26 @@ const X_MIN_SPAN_S = 12;        // first 12s of every round are shown 1:1
 const Y_MIN_CEIL = 2.3;         // visible multiplier ceiling at the start
 const X_HEADROOM = 1.1;         // camera grows 10% ahead of the tip
 const Y_HEADROOM = 1.1;
-const CAMERA_TAU_MS = 160;      // camera easing (never a jump)
-const MULT_TAU_MS = 70;         // tiny numeric smoothing (hides poll jitter)
 const POLL_LIVE_MS = 250;       // reconciliation poll while a round is live
 const POLL_IDLE_MS = 4000;      // slow poll while nothing is happening
 const POLL_HIDDEN_MS = 2000;    // tab in background
-const CRASH_RED = '#EF005E'; // crashed multiplier / red text
+const CRASH_RED = '#EF005E';    // crashed multiplier (red text)
+const CRASH_DEAD = '#2E4552';   // line + fill colour once the round crashed
+const LINE_WIDTH = 3;           // white curve stroke (screen px)
+
+/**
+ * The line's drop shadow, cast onto the solid fill underneath. dy is in board
+ * units (the plot is 100 units tall); the layers fade out downwards, and every
+ * layer stays black at 50% → ~10%, exactly like a real shadow.
+ */
+const LINE_SHADOW_LAYERS = [
+  { dy: 0.5, alpha: 0.5, width: 3.6 },
+  { dy: 1.1, alpha: 0.26, width: 3.2 },
+  { dy: 1.8, alpha: 0.12, width: 2.8 },
+];
 
 /* ------------------------------------------------------------------ utils */
+const SAMPLES = 140; // path resolution (per frame, per layer)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const fmt = (m) => Number(m ?? 1).toFixed(2);
 
@@ -91,29 +104,41 @@ function xTickValues(span) {
   return out;
 }
 
-/** Build the SVG path of the curve for the currently visible window. */
+/**
+ * Build the SVG path of the curve for the currently visible window.
+ * Returns the line, the (solid) area under it, the tip position and the
+ * shadow layers — all derived from the SAME samples, so the tip marker, the
+ * shadow and the line can never disagree.
+ */
 function buildCurve({ elapsed, dispX, dispY, k, tipMult }) {
   const tMax = Math.max(0, Math.min(elapsed, dispX));
   const toX = (t) => (t / dispX) * 100;
   const toY = (m) => 100 - ((Math.min(Math.max(m, 1), dispY) - 1) / (dispY - 1)) * 100;
 
-  if (tMax <= 0.001) return { line: '', area: '', tipX: 0, tipY: 100 };
+  const path = (dy) => {
+    let out = '';
+    for (let i = 0; i <= SAMPLES; i += 1) {
+      const t = (i / SAMPLES) * tMax;
+      const x = toX(t);
+      const y = clamp(toY(Math.exp(k * t)) + dy, -4, 104);
+      out += `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
+    }
+    return out.trim();
+  };
 
-  const SAMPLES = 140;
-  let line = '';
-  for (let i = 0; i <= SAMPLES; i += 1) {
-    const t = (i / SAMPLES) * tMax;
-    const x = toX(t);
-    const y = clamp(toY(Math.exp(k * t)), 0, 100);
-    line += `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
+  if (tMax <= 0.001) {
+    const y0 = clamp(toY(1), 0, 100);
+    return { line: '', area: '', tipX: 0, tipY: y0, shadows: [] };
   }
+
+  let line = path(0);
   const tipX = toX(tMax);
   const tipY = clamp(toY(tipMult ?? Math.exp(k * tMax)), 0, 100);
-  // close the tip exactly on the smoothed live value
-  line += `L${tipX.toFixed(2)},${tipY.toFixed(2)} `;
-  line = line.trim();
+  // close the line exactly on the tip value that the marker uses
+  line += ` L${tipX.toFixed(2)},${tipY.toFixed(2)}`;
   const area = `${line} L${tipX.toFixed(2)},100 L0,100 Z`;
-  return { line, area, tipX, tipY };
+  const shadows = LINE_SHADOW_LAYERS.map((layer) => path(layer.dy));
+  return { line, area, tipX, tipY, shadows };
 }
 
 /* =============================================================== component */
@@ -160,6 +185,7 @@ function Crash({ gameRow }) {
   const [cashout, setCashout] = useState(null);        // { multiplier, payout }
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
   const [busy, setBusy] = useState(false);             // request in flight
+  const [totalStartAt, setTotalStartAt] = useState(() => Date.now()); // "Total Ns"
   const [, setFrame] = useState(0);                    // rAF render pump
 
   /* ----------------------------------------------------------------- refs */
@@ -171,14 +197,14 @@ function Crash({ gameRow }) {
   const activeBetRef = useRef(null);
   const lastRoundRef = useRef(null);
   const cooldownRef = useRef(0);
-  const multRef = useRef(1);            // smoothed multiplier (render source)
-  const viewRef = useRef({ spanX: X_MIN_SPAN_S, spanY: Y_MIN_CEIL });
-  const roundKeyRef = useRef(null);     // resets the camera when a round changes
   const autoToastedRef = useRef(null);  // roundId already toasted for auto cashout
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
   const lastBalanceRef = useRef(null);
   const cooldownActiveRef = useRef(false);
+  const lastSecondRef = useRef(0);                 // "Total Ns" tick detection
+  const lastFrameAtRef = useRef(0);                // render-pump watchdog
+  const totalStartAtRef = useRef(Date.now());      // "Total Ns" origin (page load / last bet)
 
   const serverNow = () => Date.now() + serverOffsetRef.current;
 
@@ -194,13 +220,6 @@ function Crash({ gameRow }) {
   }, []);
 
   /* --------------------------------------------------- state application */
-  /** Reset the chart camera for a round that starts (or that we adopt). */
-  const resetCamera = useCallback((elapsedS = 0, mult = 1) => {
-    const spanX = Math.max(X_MIN_SPAN_S, elapsedS * X_HEADROOM);
-    const spanY = Math.max(Y_MIN_CEIL, mult * Y_HEADROOM);
-    viewRef.current = { spanX, spanY };
-  }, []);
-
   /**
    * THE single place where server state becomes UI state. Every endpoint
    * (start / cashout / stop / state poll) returns the same payload, so the
@@ -227,16 +246,19 @@ function Crash({ gameRow }) {
 
     if (round) {
       // ---- a live round we own (fresh bet, another tab, or after refresh)
-      const isNewRound = roundKeyRef.current !== round.roundId;
-      roundKeyRef.current = round.roundId;
       startedAtRef.current = round.startedAt;
       if (round.crashPoint != null) crashPointRef.current = round.crashPoint;
 
-      const elapsedS = Math.max(0, (serverNow() - round.startedAt) / 1000);
-      const mult = Math.max(1, round.currentMultiplier ?? Math.exp(growthKRef.current * elapsedS));
-      if (isNewRound) {
-        resetCamera(elapsedS, mult);
-        multRef.current = mult; // no growth ramp when adopting a running round
+      // Clock sanity: if our own time base is off by more than 8%, realign it
+      // with the multiplier the server reports. (The server value is floored to
+      // 2 decimals, so small differences are expected and must NOT cause churn.)
+      const srvMult = Number(round.currentMultiplier);
+      if (Number.isFinite(srvMult) && srvMult > 1.0001) {
+        const clientMult = Math.exp(growthKRef.current * Math.max(0, (serverNow() - round.startedAt) / 1000));
+        if (clientMult > srvMult * 1.08 || clientMult < srvMult * 0.92) {
+          const wantedElapsedMs = (Math.log(srvMult) / growthKRef.current) * 1000;
+          serverOffsetRef.current += round.startedAt + wantedElapsedMs - serverNow();
+        }
       }
 
       const bet = { betAmount: round.betAmount, autoCashout: round.autoCashout ?? null };
@@ -264,7 +286,6 @@ function Crash({ gameRow }) {
     // ---- no live round for us
     const ended = d.lastRound || null;
     if (ended) {
-      roundKeyRef.current = null;
       crashPointRef.current = ended.crashPoint ?? null;
       lastRoundRef.current = ended;
       setLastRound(ended);
@@ -288,7 +309,7 @@ function Crash({ gameRow }) {
     setCashout(null);
     lastRoundRef.current = null;
     setLastRound(null);
-  }, [resetCamera, setPhaseSafe, toast, updateBalance]);
+  }, [setPhaseSafe, toast, updateBalance]);
 
   // The reconciliation loop must NOT restart every time React re-renders
   // (the render pump runs at 60fps and context callbacks change identity) —
@@ -301,9 +322,6 @@ function Crash({ gameRow }) {
     let cancelled = false;
     mountedRef.current = true;
     setPhaseSafe('boot');
-    roundKeyRef.current = null;
-    multRef.current = 1;
-    resetCamera(0, 1);
 
     (async () => {
       // 1) public snapshot — FINISHED rounds only, so nothing can leak and the
@@ -382,74 +400,77 @@ function Crash({ gameRow }) {
   }, [isAuthenticated, isLocked]);
 
   /* ------------------------------------------------- animation render pump */
+  // The multiplier, the camera and the curve are all PURE functions of the
+  // current time (see the render body), so this loop only decides *when* to
+  // repaint. Nothing is smoothed in a ref, which is what removes the old
+  // "the graph keeps rising but the multiplier stops, then jumps" behaviour.
+  //
+  // It is also armed defensively: a body that throws (or a browser that paused
+  // requestAnimationFrame, e.g. a background tab) can never leave the board
+  // frozen — a 1.5s heartbeat re-arms the loop and repaints either way.
   useEffect(() => {
     let raf = null;
-    let last = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    let stopped = false;
 
-    const loop = (ts) => {
-      const dt = clamp(ts - last, 8, 120);
-      last = ts;
+    const repaint = () => setFrame((f) => (f + 1) % 1000000);
 
-      const st = phaseRef.current;
-      const k = growthKRef.current;
-      const view = viewRef.current;
+    const loop = () => {
+      if (stopped) return;
+      lastFrameAtRef.current = Date.now();
+      try {
+        const st = phaseRef.current;
+        const running = st === 'running' || st === 'cashedOut';
 
-      // ---- target multiplier (the exact game value)
-      let target = 1;
-      let elapsedS = 0;
-      if (st === 'running' || st === 'cashedOut') {
-        elapsedS = Math.max(0, (serverNow() - startedAtRef.current) / 1000);
-        target = Math.exp(k * elapsedS);
-        if (crashPointRef.current != null) target = Math.min(target, crashPointRef.current);
-      } else if (st === 'ended') {
-        const cp = lastRoundRef.current?.crashPoint;
-        target = cp != null ? cp : multRef.current;
-        elapsedS = cp != null && cp > 1 ? Math.log(cp) / k : 0;
-      } else {
-        target = 1;
-      }
+        // repaint the moment the post-round cooldown expires (Bet button)
+        const cooldownLeft = cooldownRef.current - serverNow();
+        let tickle = false;
+        if (cooldownLeft > 0) {
+          cooldownActiveRef.current = true;
+          tickle = true;
+        } else if (cooldownActiveRef.current) {
+          cooldownActiveRef.current = false;
+          tickle = true;
+        }
 
-      // ---- smooth the number so a slow poll can never make it snap, then land
-      //      EXACTLY on the target (crash point / adopted value) so the board
-      //      never freezes half a hundredth away from the real number
-      const diff = target - multRef.current;
-      let moving = false;
-      if (Math.abs(diff) < 0.0005) {
-        if (multRef.current !== target) { multRef.current = target; moving = true; }
-      } else {
-        multRef.current += diff * (1 - Math.exp(-dt / MULT_TAU_MS));
-        moving = true;
-      }
+        // the "Total Ns" counter ticks once per second
+        const second = Math.floor((Date.now() - totalStartAtRef.current) / 1000);
+        if (second !== lastSecondRef.current) {
+          lastSecondRef.current = second;
+          tickle = true;
+        }
 
-      // ---- camera: grows 10% ahead of the tip, eases instead of jumping
-      const wantX = Math.max(X_MIN_SPAN_S, elapsedS * X_HEADROOM);
-      const wantY = Math.max(Y_MIN_CEIL, multRef.current * Y_HEADROOM);
-      const ease = 1 - Math.exp(-dt / CAMERA_TAU_MS);
-      if (wantX > view.spanX) view.spanX += (wantX - view.spanX) * ease;
-      if (wantY > view.spanY) view.spanY += (wantY - view.spanY) * ease;
-
-      // ---- keep re-rendering only while something is actually moving, plus
-      //      one extra frame when the post-round cooldown runs out (so the
-      //      Bet button is re-enabled the moment it is allowed)
-      const cooldownLeft = cooldownRef.current - serverNow();
-      let tickle = false;
-      if (cooldownLeft > 0) {
-        cooldownActiveRef.current = true;
-        tickle = true;
-      } else if (cooldownActiveRef.current) {
-        cooldownActiveRef.current = false;
-        tickle = true;
-      }
-
-      const running = st === 'running' || st === 'cashedOut';
-      if (running || moving || tickle) {
-        setFrame((f) => (f + 1) % 1000000);
+        if (running || tickle) repaint();
+      } catch (err) {
+        console.error('[crash] render pump error:', err);
       }
       raf = requestAnimationFrame(loop);
     };
 
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    const arm = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
+    };
+
+    arm();
+
+    // heartbeat: also keeps the board moving if rAF is throttled to a stop
+    const watchdog = setInterval(() => {
+      if (stopped) return;
+      const stale = Date.now() - (lastFrameAtRef.current || 0);
+      if (stale > 2000) arm();
+      const st = phaseRef.current;
+      if (st === 'running' || st === 'cashedOut' || cooldownRef.current > serverNow()) repaint();
+      else {
+        const second = Math.floor((Date.now() - totalStartAtRef.current) / 1000);
+        if (second !== lastSecondRef.current) repaint();
+      }
+    }, 1500);
+
+    return () => {
+      stopped = true;
+      clearInterval(watchdog);
+      if (raf) cancelAnimationFrame(raf);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -473,6 +494,8 @@ function Crash({ gameRow }) {
       const res = await gamesAPI.crashStart({ betAmount: amt, autoCashout: autoCashoutNum });
       if (!mountedRef.current) return;
       setBetError(null);
+      setTotalStartAt(Date.now());          // "Total Ns" restarts with the bet
+      totalStartAtRef.current = Date.now();
       applyState(res.data?.data);
     } catch (e) {
       if (!mountedRef.current) return;
@@ -550,16 +573,30 @@ function Crash({ gameRow }) {
   const k = growthKRef.current || GROWTH_K_DEFAULT;
   const nowServer = serverNow();
 
+  // Everything below is a PURE function of the current time — no ref-based
+  // smoothing — so the number, the curve, the tip marker and the camera can
+  // never drift apart or freeze while the graph keeps moving (see the pump).
   const elapsed = isLive
     ? Math.max(0, (nowServer - startedAtRef.current) / 1000)
     : (phase === 'ended' && lastRound?.crashPoint > 1 ? Math.log(lastRound.crashPoint) / k : 0);
 
-  const displayedMult = multRef.current;
-  const { spanX: dispX, spanY: dispY } = viewRef.current;
+  // The multiplier stops exactly at the crash point.
+  const rawMult = isLive ? Math.exp(k * elapsed) : (phase === 'ended' ? (lastRound?.crashPoint ?? 1) : 1);
+  const displayedMult = crashPointRef.current != null && isLive
+    ? Math.min(rawMult, crashPointRef.current)
+    : rawMult;
+  const crashReached = (isLive && crashPointRef.current != null && displayedMult >= crashPointRef.current - 1e-9)
+    || phase === 'ended';
 
-  const { line: curveLine, area: curveArea, tipX, tipY } = useMemo(
+  // Camera: the visible span grows 10% AHEAD of the tip, continuously from the
+  // first frame, so the tip can never touch the right wall (it used to teleport
+  // left when it did).
+  const dispX = Math.max(X_MIN_SPAN_S, elapsed * X_HEADROOM);
+  const dispY = Math.max(Y_MIN_CEIL, displayedMult * Y_HEADROOM);
+
+  const { line: curveLine, area: curveArea, tipX, tipY, shadows: curveShadows } = useMemo(
     () => buildCurve({ elapsed, dispX, dispY, k, tipMult: displayedMult }),
-    // re-computed every animation frame on purpose (frame is the pump)
+    // re-computed on every repaint on purpose (the rAF pump drives this)
     [elapsed, dispX, dispY, k, displayedMult]
   );
 
@@ -572,34 +609,33 @@ function Crash({ gameRow }) {
 
   const cooldownLeft = Math.max(0, cooldownEndsAt - nowServer);
   const inCooldown = cooldownLeft > 0;
+  // "Total Ns" — NOT part of the chart: it simply counts seconds since the
+  // board was loaded (so it starts at 0 on every refresh) and restarts with
+  // every new bet.
+  const totalSeconds = Math.max(0, Math.floor((Date.now() - totalStartAt) / 1000));
 
   const showBoard = phase !== 'boot';
   const showCurve = phase !== 'idle' && phase !== 'boot';
-
-  // ---- board colors
   const isCrashedView = phase === 'ended' && !!lastRound;
-  const multColor = isCrashedView ? CRASH_RED : '#ffffff';
 
-  // ---- status box content
+  // ---- board colors (line + solid fill turn steel blue once it crashed)
+  const multColor = crashReached ? CRASH_RED : '#ffffff';
+  const fillColor = crashReached ? CRASH_DEAD : '#FB9D08';
+  const lineColor = crashReached ? CRASH_DEAD : '#ffffff';
+
+  // ---- status box: ONLY shown when there is something to say.
+  //   • auto/manual cash-out  -> "Cashed Out 2.00×" (multiplier in green)
+  //   • the round crashed     -> "Crashed" (white text)
+  //   • a new bet             -> disappears (nothing is rendered)
   let statusContent = null;
-  if (phase === 'running') {
-    statusContent = <span className={styles.statusMuted}>—</span>;
-  } else if (phase === 'cashedOut') {
+  if (crashReached) {
+    statusContent = <span className={styles.statusCrashed}>Crashed</span>;
+  } else if (isLive && cashout) {
     statusContent = (
       <>
-        Cashed Out <span className={styles.statusGreen}>{fmt(cashout?.multiplier ?? displayedMult)}×</span>
+        Cashed Out <span className={styles.statusGreen}>{fmt(cashout.multiplier ?? displayedMult)}×</span>
       </>
     );
-  } else if (phase === 'ended') {
-    if (lastRound?.cashedOut) {
-      statusContent = (
-        <>
-          Cashed Out <span className={styles.statusGreen}>{fmt(lastRound.cashoutMultiplier)}×</span>
-        </>
-      );
-    } else {
-      statusContent = <span className={styles.statusRed}>Crashed</span>;
-    }
   }
 
   // ---- action button
@@ -636,6 +672,9 @@ function Crash({ gameRow }) {
     return betAmountNum * (autoCashoutNum - 1);
   })();
   const profitLabel = phase === 'ended' && lastRound?.cashedOut ? 'Profit' : 'Profit on Win';
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("crash", isLive);
+
 
   /* ---------------------------------------------------------------------- */
   return (
@@ -757,8 +796,9 @@ function Crash({ gameRow }) {
 
             {/* Board */}
             <div className={styles.chartWrap}>
-              {/* Y axis (gray labels, no grid) */}
+              {/* Y axis (gray labels centred on the spine, no grid) */}
               <div className={styles.yAxis}>
+                <div className={styles.yAxisSpine} />
                 {yTicks.map((v) => (
                   <div
                     key={v}
@@ -773,15 +813,28 @@ function Crash({ gameRow }) {
               {/* Plot area */}
               <div className={styles.plotArea}>
                 <svg className={styles.svg} viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {showCurve && curveArea && (
-                    <path d={curveArea} fill="#FB9D08" />
-                  )}
+                  {/* solid area under the curve (never a gradient) */}
+                  {showCurve && curveArea && <path d={curveArea} fill={fillColor} />}
+                  {/* drop shadow of the line, cast onto the fill below it */}
+                  {showCurve && curveShadows.map((d, i) => (
+                    <path
+                      key={`sh-${i}`}
+                      d={d}
+                      fill="none"
+                      stroke="#000000"
+                      strokeOpacity={LINE_SHADOW_LAYERS[i].alpha}
+                      strokeWidth={LINE_SHADOW_LAYERS[i].width}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))}
                   {showCurve && curveLine && (
                     <path
                       d={curveLine}
                       fill="none"
-                      stroke="#ffffff"
-                      strokeWidth="2"
+                      stroke={lineColor}
+                      strokeWidth={LINE_WIDTH}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       vectorEffect="non-scaling-stroke"
@@ -789,19 +842,20 @@ function Crash({ gameRow }) {
                   )}
                 </svg>
 
-                {/* Only the axis lines — no grid */}
-                <div className={styles.axisLineY} />
-                <div className={styles.axisLineX} />
-
-                {/* Tip marker */}
+                {/* Tip marker — sits exactly on the tip of the curve */}
                 {showCurve && (isLive || phase === 'ended') && (
                   <div
                     className={styles.tipMarker}
-                    style={{ left: `${clamp(tipX, 0, 99.6)}%`, bottom: `${clamp(tipY, 0, 100)}%` }}
+                    style={{
+                      left: `${clamp(tipX, 0, 99.6)}%`,
+                      // tipY is an SVG coordinate (0 = top); `bottom` counts
+                      // from the bottom, hence 100 - tipY.
+                      bottom: `${clamp(100 - tipY, 0, 100)}%`,
+                    }}
                   />
                 )}
 
-                {/* Multiplier + status box UNDER it */}
+                {/* Multiplier + status box UNDER it (only when it says something) */}
                 {showBoard && phase !== 'idle' && (
                   <div className={styles.centerOverlay}>
                     <div
@@ -816,14 +870,15 @@ function Crash({ gameRow }) {
                 )}
               </div>
 
-              {/* X axis — seconds (white). The total is NOT part of the axis. */}
+              {/* X axis — seconds (white, no axis line). The total counter is
+                  NOT part of the axis: it counts from 0 on every refresh. */}
               <div className={styles.xAxis}>
                 {xTicks.map((t) => (
                   <div key={t} className={styles.xTick} style={{ left: `${(t / dispX) * 100}%` }}>
                     {t}s
                   </div>
                 ))}
-                <div className={styles.xTotal}>Total {Math.round(Math.max(X_MIN_SPAN_S, dispX))}s</div>
+                <div className={styles.xTotal}>Total {totalSeconds}s</div>
               </div>
             </div>
           </>

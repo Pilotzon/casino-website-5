@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -418,6 +419,9 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
     setRowModalHits(h);
     setRowModalOpen(true);
   };
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("keno", isBusy);
+
 
   // Always reserve space for the payout rows (min 1 column) so nothing
   // jumps when the first number is picked — the rows are just hidden

@@ -1,0 +1,40 @@
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.stay,
+.leave {
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: filter 140ms ease, transform 100ms ease, background 140ms ease;
+}
+
+.stay {
+  background: var(--color-bet-btn-bg, #2377ff);
+  color: #ffffff;
+}
+
+.leave {
+  background: var(--color-btn-random-bg, #2d3b48);
+  color: var(--color-text-primary, #ffffff);
+}
+
+.stay:hover,
+.leave:hover { filter: brightness(1.08); }
+.stay:active,
+.leave:active { transform: scale(0.985); }
+
+.footer {
+  display: inline-block;
+  text-align: center;
+}

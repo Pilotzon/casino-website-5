@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -342,6 +343,9 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       setSpinning(false);
     }
   }, [betAmount, riskLevel, segments, wheelLayout, rotation, updateBalance, stopTracking, startTracking]);
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("wheel", spinning);
+
 
   const onCellEnterDesktop = (c, idx) => {
     if (isMobile) return;

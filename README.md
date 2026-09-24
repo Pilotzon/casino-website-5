@@ -40,6 +40,25 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
 * `npm run test:crash` (in `backend/`) runs the 51-check engine smoke test
   against a throw-away database.
 
+### Board rules (frontend)
+
+* The multiplier, the curve and the visible "camera" span are **pure functions
+  of the current time**, so the number can never freeze while the graph keeps
+  moving. The camera grows 10% ahead of the tip, so the tip never touches the
+  right wall (no jump when it would).
+* History pills show the **crash point** of every finished round — green when
+  the player won that round, gray when they lost.
+* The rectangular status box only appears when it has something to say:
+  `Cashed Out 2.00×` (multiplier in green) after a cash-out, `Crashed` (white)
+  once the round crashes; it disappears when the next bet is placed.
+* `Total Ns` next to the X axis is **not** part of the chart — it counts
+  seconds since the board was loaded (0 on every refresh) and restarts with
+  every bet.
+* While a bet is live, `RefreshGuard` intercepts F5 / Ctrl+R / Cmd+R with a
+  "Refreshing the page will not save" prompt (plus a `beforeunload` fallback for
+  the browser's own reload button). Every game reports its own live bet through
+  `useActiveBetFlag(key, active)`.
+
 ## Database persistence — how it works
 
 **Nothing in the database is ever reset by a restart.** Users, balances, rounds,

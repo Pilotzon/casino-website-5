@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -461,6 +462,9 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const isSkull = (row, col) =>
     status === "lost" && lostPick && lostPick.row === row && lostPick.tileIndex === col;
+
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("tower", inGame);
 
   return (
     <div className={styles.container} data-phase={uiPhase}>

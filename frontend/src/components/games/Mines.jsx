@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -325,6 +326,9 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     const pick = hidden[Math.floor(Math.random() * hidden.length)];
     await reveal(pick);
   };
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("mines", inProgress);
+
 
   const mainLabel = !inProgress ? "Bet" : "Cashout";
   const mainDisabled = isLocked || isBusy || (inProgress && !canCashout);

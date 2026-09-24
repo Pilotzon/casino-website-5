@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -379,6 +380,9 @@ export default function RPS({ gameRow }) {
     if (!canChoose) return;
     choose(CHOICES[Math.floor(Math.random() * 3)].value);
   }, [canChoose, choose]);
+  // Warn before a page refresh while a bet is live (see RefreshGuard).
+  useActiveBetFlag("rps", inProgress);
+
 
   const dealerOffset = isSliding ? activeIdx + 1 + PAD_LEFT : activeIdx + PAD_LEFT;
   const playerOffset = isSliding ? activeIdx + 1 : activeIdx;
