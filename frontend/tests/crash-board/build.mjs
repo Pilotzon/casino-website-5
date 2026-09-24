@@ -25,6 +25,14 @@ const stubPlugin = {
     b.onResolve({ filter: /[/\\]context[/\\]AuthContext$/ }, () => ({ path: p('../stubs/authContext.jsx') }));
     b.onResolve({ filter: /[/\\]context[/\\]ToastContext$/ }, () => ({ path: p('../stubs/toastContext.jsx') }));
 
+    // Sound files -> a stable fake path ("asset://crash/Win.mp3") so tests can
+    // assert WHICH sound a game fired without loading real audio.
+    b.onResolve({ filter: /\.mp3$/ }, (args) => ({ path: args.path, namespace: 'audio-stub' }));
+    b.onLoad({ filter: /.*/, namespace: 'audio-stub' }, (args) => {
+      const tail = args.path.split(/[/\\]/).slice(-2).join('/');
+      return { loader: 'js', contents: `export default ${JSON.stringify('asset://' + tail)};` };
+    });
+
     // CSS modules -> class-name proxy
     b.onResolve({ filter: /\.module\.css$/ }, (args) => ({ path: args.path, namespace: 'css-module-stub' }));
     b.onLoad({ filter: /.*/, namespace: 'css-module-stub' }, () => ({
@@ -45,7 +53,8 @@ await build({
   format: 'cjs',
   target: 'node18',
   jsx: 'automatic',
-  loader: { '.webp': 'dataurl', '.gif': 'dataurl', '.jpg': 'dataurl', '.png': 'dataurl', '.svg': 'text' },
+  // every asset a game can import (mp3 = a fake path; the tests stub Audio)
+  loader: { '.webp': 'dataurl', '.gif': 'dataurl', '.jpg': 'dataurl', '.png': 'dataurl', '.svg': 'text', '.mp3': 'text', '.mp4': 'text' },
   define: {
     'process.env.NODE_ENV': '"test"',
     __TEST_DIR__: JSON.stringify(here),   // import.meta is not usable in cjs output

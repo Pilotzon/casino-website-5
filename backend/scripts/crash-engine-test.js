@@ -39,8 +39,15 @@ const ok = (cond, label, extra = "") => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // fake request/response helpers -------------------------------------------------
-function makeReq(userId, body = {}) {
-  return { user: { id: userId }, body };
+const EventEmitter = require("events");
+function makeReq(userId, body = {}, query = {}) {
+  // a real express request is an event emitter (used by the hold long-poll to
+  // notice a tab that went away) — mimic that here
+  const req = new EventEmitter();
+  req.user = { id: userId };
+  req.body = body;
+  req.query = query;
+  return req;
 }
 function makeRes() {
   const res = { statusCode: 200, payload: null };
@@ -319,6 +326,90 @@ const U2 = db.prepare("SELECT id FROM users WHERE email = 't2@t.t'").get().id;
     // --- outside a request there is no bypass at all
     ok(require(path.join(BACKEND, "src/services/gameAccess")).isBypassActive() === false,
       "no request scope → no bypass (scripts and background jobs stay safe)");
+  }
+
+  console.log("\n=== 11. hold long-poll: the crash is DELIVERED, not polled for ===");
+  {
+    // A round that crashes ~1.2s from now. A client that polls every 120ms
+    // would still learn about the crash late enough to have drawn past it;
+    // with `hold` the very first request comes back with the final state.
+    setBalance(U1, 100);
+    crashAtR(0.9166);                       // -> 1.08x, ~1.16s
+    await call(crash.startCrash, U1, { betAmount: 10, autoCashout: 100 });
+
+    const t0 = Date.now();
+    const held = await call(crash.tickCrash, U1, { hold: 5000 });
+    const waited = Date.now() - t0;
+    ok(held.payload.data.active === false, "a held request answers with the round already over",
+      JSON.stringify(held.payload.data).slice(0, 160));
+    ok(held.payload.data.lastRound?.win === false && held.payload.data.lastRound?.cashedOut === false,
+      "…and the outcome says the bet lost (what the board paints red)",
+      JSON.stringify(held.payload.data.lastRound).slice(0, 160));
+    ok(held.payload.data.lastRound?.crashPoint === 1.08,
+      "…carrying the real crash point (the curve can stop exactly there)",
+      String(held.payload.data.lastRound?.crashPoint));
+    ok(waited < 3000, "it resolved as soon as the round did, not at the 5s budget", `${waited}ms`);
+    ok(waited >= 700, "…which means it really waited for the round instead of answering instantly", `${waited}ms`);
+
+    // While a round is genuinely long the wait is bounded by the ask, so a
+    // client can never be parked forever.
+    setBalance(U1, 100);
+    await sleep(1100);                      // the 1s post-round cooldown
+    crashAtR(0.5);                          // -> 1.98x, ~10s
+    const started = await call(crash.startCrash, U1, { betAmount: 10, autoCashout: 100 });
+    ok(started.payload.data?.active === true, "a long round is running",
+      JSON.stringify(started.payload).slice(0, 120));
+    const t1 = Date.now();
+    const parked = await call(crash.tickCrash, U1, { hold: 1200 });
+    const parkedFor = Date.now() - t1;
+    ok(parked.payload.data.active === true, "a still-running round is reported as running");
+    ok(parkedFor >= 1100 && parkedFor <= 2400, "the parked request times out at the hold budget",
+      `${parkedFor}ms`);
+
+    // A tab that closes mid-hold releases the wait (no leaked listener/timer,
+    // and nothing is written to a dead socket).
+    const req = makeReq(U1, { hold: 5000 });
+    const res = makeRes();
+    const pending = crash.tickCrash(req, res);
+    await sleep(250);
+    const t2 = Date.now();
+    req.emit("close");
+    await pending;
+    ok(Date.now() - t2 < 800, "a disconnected tab releases the hold immediately",
+      `${Date.now() - t2}ms`);
+    ok(res.payload === null, "…and no payload is written to the dead socket");
+
+    // `hold` is validated: nonsense or a huge value can never park a request
+    // beyond MAX_HOLD_MS.
+    const t3 = Date.now();
+    await call(crash.tickCrash, U1, { hold: "nonsense" });
+    ok(Date.now() - t3 < 500, "an unparsable hold is treated as no hold", `${Date.now() - t3}ms`);
+
+    // An automatic cash-out does not end the round, but the board still has to
+    // see it at once — a parked request wakes on that too.
+    // (stop only works on an already cashed-out round, so cash out first)
+    await call(crash.cashoutCrash, U1, {});
+    const stoppedLong = await call(crash.stopCrash, U1, {});
+    ok(stoppedLong.payload.success === true, "the long round is closed for the next case",
+      JSON.stringify(stoppedLong.payload).slice(0, 120));
+    await sleep(1100);
+    setBalance(U1, 100);
+    crashAtR(0.5);                          // -> 1.98x, ~10s
+    const autoStart = await call(crash.startCrash, U1, { betAmount: 10, autoCashout: 1.05 });
+    ok(autoStart.payload.data?.active === true && autoStart.payload.data?.round?.autoCashout === 1.05,
+      "the auto cash-out round started", JSON.stringify(autoStart.payload).slice(0, 200));
+    const t4 = Date.now();
+    const auto = await call(crash.tickCrash, U1, { hold: 5000 });
+    const autoFor = Date.now() - t4;
+    ok(auto.payload.data.active === true, "the round keeps running after an auto cash-out");
+    ok(auto.payload.data.round?.cashedOut === true,
+      "…and the held request already reports it (0.7s in, not at the 5s budget)",
+      JSON.stringify(auto.payload.data.round).slice(0, 160));
+    ok(autoFor < 2200, "a parked request wakes on the auto cash-out itself", `${autoFor}ms`);
+
+    // clean up the auto cash-out round so later sections start from a clean slate
+    await call(crash.stopCrash, U1, {});
+    await sleep(50);
   }
 
   console.log(`\n──────────── ${pass} passed, ${fail} failed ────────────\n`);

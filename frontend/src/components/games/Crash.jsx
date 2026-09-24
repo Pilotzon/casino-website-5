@@ -8,6 +8,8 @@ import useGameDisabled from "../../hooks/useGameDisabled";
 import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
+import useGameAudio from "../../hooks/useGameAudio";
+import crashWinMp3 from "../../assets/crash/Win.mp3";
 import styles from './crash.module.css';
 
 /**
@@ -44,9 +46,13 @@ const X_MIN_SPAN_S = 12;        // first 12s of every round are shown 1:1
 const Y_MIN_CEIL = 2.3;         // visible multiplier ceiling at the start
 const X_HEADROOM = 1.1;         // camera grows 10% ahead of the tip
 const Y_HEADROOM = 1.1;
-const POLL_LIVE_MS = 250;       // reconciliation poll while a round is live
+const POLL_LIVE_MS = 120;       // reconciliation poll while a round is live
 const POLL_IDLE_MS = 4000;      // slow poll while nothing is happening
 const POLL_HIDDEN_MS = 2000;    // tab in background
+const HOLD_MS = 1500;           // server keeps the live poll open until the round ends
+const HOLD_SEEN_MS = 250;       // a live request that took this long was really parked
+const POLL_REPARK_MS = 30;      // re-park almost immediately once the server holds
+
 const CRASH_RED = '#EF005E';    // crashed multiplier (red text)
 const CRASH_DEAD = '#2E4552';   // line + fill colour once the round crashed
 const LINE_WIDTH = 8;           // white curve stroke (screen px)
@@ -185,7 +191,7 @@ function buildCurve({ elapsed, dispX, dispY, k, tipMult, capMult }) {
 }
 
 /* =============================================================== component */
-function Crash({ gameRow }) {
+function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance } = useAuth();
   const toast = useToast();
 
@@ -227,6 +233,11 @@ function Crash({ gameRow }) {
   const [activeBet, setActiveBet] = useState(null);    // { betAmount, autoCashout }
   const [cashout, setCashout] = useState(null);        // { multiplier, payout }
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
+  const sfx = useGameAudio(
+    { win: crashWinMp3 },
+    { enabled: soundEnabled, volume: soundVolume }
+  );
+
   const [busy, setBusy] = useState(false);             // request in flight
   const [tickLimit, setTickLimit] = useState(0.85);     // right-hand room for ticks
   const [, setFrame] = useState(0);                   // rAF render pump
@@ -246,6 +257,7 @@ function Crash({ gameRow }) {
   const mountedRef = useRef(true);
   const lastBalanceRef = useRef(null);
   const lastStateAtRef = useRef(0);                // newest server timestamp applied
+  const lastStampRef = useRef(0);                  // serverNow of the newest APPLIED payload
   const endedRoundsRef = useRef([]);               // round ids already seen finished
   const cashoutPendingRef = useRef(false);         // optimistic cash-out in flight
   const roundIdRef = useRef(null);                 // round currently on the board
@@ -260,6 +272,9 @@ function Crash({ gameRow }) {
   // Set by the polling effect: lets a freshly started round be polled at once
   // instead of waiting for the next (slow, idle) tick.
   const pollPokeRef = useRef(null);
+  // How long a live poll may park on the server. The backend advertises its
+  // own cadence in every payload (`holdMs`), so the two can never drift.
+  const holdMsRef = useRef(HOLD_MS);
 
   const setPhaseSafe = useCallback((next) => {
     const changed = phaseRef.current !== next;
@@ -276,6 +291,11 @@ function Crash({ gameRow }) {
    */
   const applyState = useCallback((d) => {
     if (!d || typeof d !== 'object') return;
+
+    const advertisedHold = Number(d.holdMs);
+    if (Number.isFinite(advertisedHold) && advertisedHold > 0) {
+      holdMsRef.current = Math.min(3000, Math.max(200, advertisedHold));
+    }
 
     // ---- ignore STALE responses -------------------------------------------
     // Requests can finish out of order (a 250ms poll sent after a cash-out can
@@ -307,6 +327,7 @@ function Crash({ gameRow }) {
       samples.push(stamp - Date.now());
       if (samples.length > OFFSET_SAMPLES) samples.shift();
       serverOffsetRef.current = Math.max(...samples);
+      lastStampRef.current = Math.max(lastStampRef.current, stamp);
     }
     if (typeof d.growthK === 'number' && d.growthK > 0) growthKRef.current = d.growthK;
     if (Array.isArray(d.history)) setHistory(d.history);
@@ -382,10 +403,11 @@ function Crash({ gameRow }) {
         cashoutPendingRef.current = false;
         setCashout({ multiplier: round.cashoutMultiplier, payout: round.payout });
         if (round.autoCashout && autoToastedRef.current !== round.roundId && round.cashoutMultiplier >= round.autoCashout - 1e-9) {
+          // Another tab/device (or the server's own auto-cash-out timer) locked
+          // the win in for us. Crash has no win/loss toasts any more — the
+          // board itself shows the result — so this is the cue for the sound.
           autoToastedRef.current = round.roundId;
-          // another tab/device cashed out before us: say so (the local
-          // cash-out path already toasted for this device)
-          toast.success(`Cashed out at ${fmt(round.cashoutMultiplier)}× · +${Number(round.payout ?? 0).toFixed(2)}`);
+          sfx.play('win');
         }
         setPhaseSafe('cashedOut');
       } else {
@@ -425,7 +447,7 @@ function Crash({ gameRow }) {
     setCashout(null);
     lastRoundRef.current = null;
     setLastRound(null);
-  }, [setPhaseSafe, toast, updateBalance]);
+  }, [setPhaseSafe, sfx, toast, updateBalance]);
 
   // The reconciliation loop must NOT restart every time React re-renders
   // (the render pump runs at 60fps and context callbacks change identity) —
@@ -464,7 +486,15 @@ function Crash({ gameRow }) {
 
   /* ------------------------------------------------------------- polling */
   // One self-scheduling reconciliation poll for the whole page lifetime:
-  //   • 250ms while a round is live  (crash / cash-out is applied in <=250ms)
+  //   • while a round is live: ONE held request (the server answers the moment
+  //     the round resolves — see crashHandler.waitForResolve), so the crash is
+  //     applied within a round-trip instead of up to a poll interval later.
+  //     That delay used to be visible as the graph "jumping back in time" on
+  //     an early crash: the curve was already drawn past the crash moment.
+  //     Parking is nearly continuous (30ms gap), so the only time the board is
+  //     "not listening" is one round-trip.
+  //   • 120ms fallback while a round is live (an older server, a proxy that
+  //     does not hold requests, or a request that ends early)
   //   • 4s when idle, 2s in a hidden tab
   // The loop is independent of React re-renders (the render pump runs at
   // 60fps) and is poked for an immediate tick whenever a round starts. The
@@ -474,26 +504,41 @@ function Crash({ gameRow }) {
     if (!isAuthenticated || isLocked) return undefined;
     let stopped = false;
     let inFlight = false;
+    let sentAt = 0;                 // when the in-flight request was sent
+    let parked = false;             // has this server ever held a live request?
     let timer = null;
 
     const clear = () => { if (timer) { clearTimeout(timer); timer = null; } };
     const live = () => phaseRef.current === 'running' || phaseRef.current === 'cashedOut';
 
     const runTick = async () => {
-      if (stopped || inFlight) return;
+      if (stopped) return;
+      const hold = holdMsRef.current;
+      if (inFlight) {
+        // A held request should never outlive its own budget: if the network
+        // swallowed it, let the loop continue with a fresh one.
+        if (Date.now() - sentAt < hold + 4000) return;
+      }
       inFlight = true;
+      sentAt = Date.now();
+      const wantedHold = live();
       try {
-        const res = await gamesAPI.crashState();
+        const res = await gamesAPI.crashState(wantedHold ? { hold } : undefined);
+        // A live request that took a while must have been held by the server.
+        // Only then can the loop re-park immediately: an older/unknown server
+        // that answers instantly would otherwise be hammered at 30ms.
+        if (wantedHold && Date.now() - sentAt >= HOLD_SEEN_MS) parked = true;
         if (!stopped) applyStateRef.current(res.data?.data);
       } catch (e) {
         // swallow: a failed poll must never break the game loop
       }
       inFlight = false;
       if (stopped) return;
-      if (typeof document !== 'undefined' && document.hidden && !live()) {
+      const gap = live() ? (parked ? POLL_REPARK_MS : POLL_LIVE_MS) : null;
+      if (typeof document !== 'undefined' && document.hidden && gap === null) {
         timer = setTimeout(runTick, POLL_HIDDEN_MS);
       } else {
-        timer = setTimeout(runTick, live() ? POLL_LIVE_MS : POLL_IDLE_MS);
+        timer = setTimeout(runTick, gap === null ? POLL_IDLE_MS : gap);
       }
     };
 
@@ -657,9 +702,10 @@ function Crash({ gameRow }) {
       const d = res.data?.data;
       cashoutPendingRef.current = false;
       applyState(d);
-      // the crash beat our cash-out: the bet is lost, nothing errored
-      if (d?.crashed) toast.loss('Crashed before your cash out went through');
-      else if (d?.cashedOut) toast.success(`Cashed out at ${fmt(d.multiplier)}× · +${Number(d.payout ?? 0).toFixed(2)}`);
+      // Crash shows the outcome on the board itself, so there is deliberately
+      // NO toast here — not for the win and not for "the crash beat you"
+      // (which is a loss, not an error). A confirmed cash-out gets its sound.
+      if (d?.cashedOut && !d?.crashed) sfx.play('win');
     } catch (e) {
       if (!mountedRef.current) return;
       cashoutPendingRef.current = false;
@@ -681,7 +727,7 @@ function Crash({ gameRow }) {
       busyRef.current = false;
       if (mountedRef.current) setBusy(false);
     }
-  }, [applyState, setPhaseSafe, toast]);
+  }, [applyState, setPhaseSafe, sfx]);
 
   const handleStop = useCallback(async () => {
     if (busyRef.current) return;

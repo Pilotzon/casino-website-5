@@ -62,6 +62,10 @@ const K = 0.066;
 /* --------------------------------------------------------------- the page */
 const gameRow = { name: 'crash', display_name: 'Crash', is_enabled: 1, is_mobile_enabled: 1 };
 const T0 = Date.now();
+/** did the board ask to play the crash win sound (assets/crash/Win.mp3)? */
+const playedWinSound = () =>
+  (global.__playedAudio || []).some((src) => /crash\/Win\.mp3/.test(src));
+
 const mounted = [];
 
 const mountBoard = () => {
@@ -214,7 +218,13 @@ async function main() {
   ok(/Crashed/.test(txt(c1, 'statusBox') ?? ''), 'STILL crashed after the late cash-out response', txt(c1, 'statusBox'));
   ok(linePath(c1).getAttribute('stroke') === '#2E4552', 'line is still muted (no un-crash)');
   ok(!c1.querySelector('.css-cashoutBtn'), 'no Cash Out button after the round ended');
-  ok(toasts.some(([k]) => k === 'error'), 'the lost race raised an error toast', JSON.stringify(toasts.slice(-1)));
+  // Crash never toasts a win or a loss any more — the board says it all, and
+  // "the crash beat your cash-out" is an outcome, not an error.
+  ok(!toasts.some(([k]) => k === 'loss'),
+    'a lost cash-out race raises NO loss toast', JSON.stringify(toasts.slice(-1)));
+  ok(!toasts.some(([k]) => k === 'error'),
+    'and it is not dressed up as an error either', JSON.stringify(toasts.slice(-1)));
+  ok(!playedWinSound(), 'nor does it play the win sound', JSON.stringify(global.__playedAudio || []));
   ok(__auth.user.balance === 90, 'balance stays the server value (nothing was credited)', String(__auth.user.balance));
   unmountAll();                                       // c1 is done — no cross-talk
 
@@ -222,6 +232,7 @@ async function main() {
   console.log('\n=== 3c. a normal cash-out (no race) confirms itself ===');
   {
     toasts.length = 0;
+    global.__playedAudio = [];
     const c1b = mountBoard();
     const startedAt = Date.now();
     api.delay = { cashout: 250 };
@@ -239,8 +250,10 @@ async function main() {
       cashedOut: true, cashoutMultiplier: 1.04, payout: 10.4, crashPoint: 1.6,
     }, { balance: 96 });
     c1b.querySelector('.css-cashoutBtn').click();
-    ok(await waitFor(() => toasts.some(([k]) => k === 'success'), 2000), 'success toast raised',
-      JSON.stringify(toasts.slice(-1)));
+    ok(await waitFor(() => playedWinSound(), 2000), 'a confirmed cash-out plays the win sound',
+      JSON.stringify(global.__playedAudio || []));
+    ok(!toasts.some(([k]) => k === 'success'),
+      'and raises NO success toast (Crash has no win/loss toasts)', JSON.stringify(toasts.slice(-1)));
     ok(/Cashed Out/.test(txt(c1b, 'statusBox') ?? ''), 'board shows Cashed Out', txt(c1b, 'statusBox'));
     ok(__auth.user.balance === 96, 'payout balance applied', String(__auth.user.balance));
     await sleep(400);     // …and it survives the following polls
@@ -340,6 +353,7 @@ async function main() {
   /* ----------------------------------------------------------------- §6b */
   console.log('\n=== 6b. smoothness on a slow link (no stall, no rewind) ===');
   {
+    global.__crashStateOpts = [];
     api.delay = { state: 700 };                       // every poll answers 700ms late
     api.state = liveState({ roundId: 'rSmooth', startedAt: Date.now() - 1200, currentMultiplier: 1.08 });
     api.last = api.state;
@@ -368,6 +382,12 @@ async function main() {
     ok(rewinds === 0, 'multiplier never walks backwards', `${rewinds} rewind(s)`);
     ok(xRewinds === 0, 'curve tip never slides left', `${xRewinds} rewind(s)`);
     ok(stall < 900, 'no frozen moment (value keeps ticking)', `longest gap ${stall}ms`);
+    // The rewind fix: while a round is live the board parks ONE request on the
+    // server (`hold`), so the crash is delivered within a round-trip instead of
+    // up to a poll interval later — that lag is what made the graph jump back.
+    const held = (global.__crashStateOpts || []).filter((o) => o && o.hold > 0);
+    ok(held.length > 0, 'live polls park on the server (hold param sent)',
+      JSON.stringify((global.__crashStateOpts || []).slice(-1)));
     unmountAll();
   }
 

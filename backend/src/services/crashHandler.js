@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { EventEmitter } = require("events");
 const RNG = require("../utils/rng");
 const { validateBetAmount } = require("../middleware/validation");
 const Round = require("../models/Round");
@@ -43,6 +44,17 @@ const MIN_AUTO_CASHOUT = 1.01;
 const MAX_AUTO_CASHOUT = 1000000;
 const HISTORY_LIMIT = 20; // pills shown in the UI
 const MAX_ROUND_MS = 10 * 60 * 1000; // hard safety cap for a live round
+
+/* Long-poll budget for the state endpoint: a client that is watching a live
+   round may ask the server to HOLD its request until the round resolves, so the
+   crash is delivered within a few milliseconds of happening instead of up to a
+   whole poll interval later. That latency is exactly what used to make the
+   graph look like it jumped backwards when a round crashed early — the client
+   had already drawn past the crash moment before the news arrived. */
+const MAX_HOLD_MS = 5000;
+// The cadence the board uses while a round is live (it re-parks right after
+// each answer). Sent to the client so the two can never drift apart.
+const HOLD_TICK_MS = 1500;
 const EPS = 1e-9;
 
 // ---------------------------------------------------------------------------
@@ -58,6 +70,14 @@ const lastEnded = new Map();
 const settleTimers = new Map();
 
 let tablesReady = false;
+
+/* userId -> "something the board must show just happened". Emitted when a
+   cash-out is credited (manual or automatic) and when the round is finalized,
+   so every held state request — and every extra tab of that user — is woken at
+   once instead of waiting out its hold budget. Listeners are attached with
+   { once: true } and always removed, so a client that vanishes cannot leak. */
+const roundChanged = new EventEmitter();
+roundChanged.setMaxListeners(0);
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -294,6 +314,9 @@ function creditCashout(round, multiplier, { auto = false } = {}) {
   round.autoCashedOut = auto;
   round.cashedOutAt = Date.now();
   persistOpenRound(round);
+  // wake held requests: an automatic cash-out does NOT end the round, and the
+  // board must show it the moment it lands (not when the hold budget expires)
+  roundChanged.emit(String(round.userId));
   return true;
 }
 
@@ -374,6 +397,7 @@ function finalizeRound(userId, { crashed = false, reason = "crash" } = {}) {
   };
   lastEnded.set(userId, payload);
   round.lastPayload = payload;
+  roundChanged.emit(String(userId));
   return payload;
 }
 
@@ -501,6 +525,8 @@ function buildState(userId, extra = {}) {
   return {
     serverNow: Date.now(),
     growthK: GROWTH_K,
+    // how long the client may park its next state request (see tickCrash)
+    holdMs: HOLD_TICK_MS,
     cooldownMs: COOLDOWN_MS,
     cooldownEndsAt: remaining > 0 ? Date.now() + remaining : null,
     cooldownRemainingMs: remaining,
@@ -723,6 +749,45 @@ async function stopCrash(req, res) {
  * applies any due event server-side, so the state is correct no matter how
  * often (or rarely) the client polls.
  */
+/**
+ * Waits until `userId`'s round is over, the hold budget runs out, or the client
+ * goes away — whichever comes first. Returns immediately when there is nothing
+ * to wait for.
+ */
+function waitForResolve(userId, holdMs, req) {
+  return new Promise((resolve) => {
+    const key = String(userId);
+    let settled = false;
+
+    const finish = (reason) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      roundChanged.removeListener(key, finish);
+      if (req && typeof req.removeListener === "function") req.removeListener("close", finish);
+      resolve(reason || "timeout");
+    };
+
+    const timer = setTimeout(() => finish("timeout"), holdMs);
+    roundChanged.once(key, () => finish("resolved"));
+    if (req && typeof req.once === "function") {
+      req.once("close", () => finish("client-gone"));
+    }
+    // the round may have ended between the check and the subscription
+    if (!activeRounds.has(userId)) finish("resolved");
+  });
+}
+
+/**
+ * POST/GET /api/games/crash/state[?hold=ms]
+ *
+ * The plain form is a cheap snapshot of everything the board needs. With
+ * `hold=<ms>` (used while a round is live) the server keeps the request open
+ * until something happens to the round — the crash, or a cash-out (manual from
+ * another tab, or the automatic one) — and then answers with the fresh state,
+ * so the board learns about it within one round-trip instead of up to one poll
+ * interval later.
+ */
 async function tickCrash(req, res) {
   try {
     ensureTables();
@@ -731,6 +796,21 @@ async function tickCrash(req, res) {
 
     if (activeRounds.has(userId)) {
       crashedPayload = evaluateRound(userId);
+
+      if (!crashedPayload) {
+        const raw = req.query?.hold ?? req.body?.hold ?? 0;
+        const holdMs = Math.min(MAX_HOLD_MS, Math.max(0, Number(raw) || 0));
+        if (holdMs > 0) {
+          const reason = await waitForResolve(userId, holdMs, req);
+          // the tab left while we were holding — there is nobody to answer,
+          // and writing to its dead socket would only throw
+          if (reason === "client-gone") return;
+          // the round may have crashed, been cashed out, or expired while we
+          // waited — evaluate before answering so the payload is terminal
+          if (activeRounds.has(userId)) crashedPayload = evaluateRound(userId);
+          if (res.writableEnded || res.headersSent) return;
+        }
+      }
     }
 
     const state = buildState(userId);

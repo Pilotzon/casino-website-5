@@ -114,8 +114,12 @@ async function main() {
     ok(!/toast\.error\(`You lost/.test(rr) && (rr.match(/toast\.loss\(/g) || []).length === 2,
       'Russian Roulette reports losses with the Loss kind');
     const crash = readCss('src/components/games/Crash.jsx');
-    ok(/toast\.loss\('Crashed before your cash out went through'\)/.test(crash),
-      'Crash reports the lost cash-out race as a Loss');
+    // Crash is a NO-TOAST game: a lost cash-out race is an outcome, not an
+    // error or a loss notification — the board (and the tip dot) say it.
+    ok(!/toast\.loss\(/.test(crash) && !/toast\.success\(/.test(crash),
+      'Crash raises no win/loss toasts at all');
+    ok(/sfx\.play\('win'\)/.test(crash) && /assets\/crash\/Win\.mp3/.test(crash),
+      'Cash Out plays assets/crash/Win.mp3 instead');
 
     unmountAll();
     // clean up any lingering toast container

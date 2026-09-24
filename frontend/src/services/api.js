@@ -113,8 +113,15 @@ export const gamesAPI = {
   crashCashout: () => api.post("/games/crash/cashout"),
   crashStop: () => api.post("/games/crash/stop"),
   crashTick: () => api.post("/games/crash/tick"),
-  // Lightweight reconciliation poll (GET so it never fights the POST budget)
-  crashState: () => api.get("/games/crash/state", { params: { _t: Date.now() } }),
+  // Lightweight reconciliation poll (GET so it never fights the POST budget).
+  // `hold` (ms) asks the server to keep the request open until the round is
+  // over — the crash then reaches the board within one round-trip instead of up
+  // to one poll interval later (see crashHandler.waitForResolve).
+  crashState: (opts = {}) =>
+    api.get("/games/crash/state", {
+      params: { _t: Date.now(), ...(opts.hold ? { hold: opts.hold } : {}) },
+      timeout: (opts.hold || 0) + 8000,
+    }),
   crashActive: () => api.get("/games/crash/active"),
   // Public snapshot of finished rounds only — safe for guests / first paint
   crashLast: () => api.get("/games/crash/last"),

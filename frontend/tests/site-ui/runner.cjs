@@ -40,7 +40,11 @@ global.HTMLImageElement = window.HTMLImageElement;
 // jsdom throws "Not implemented" for media playback; the games only ever
 // pause/play their bet sounds, so no-op both.
 if (window.HTMLMediaElement) {
-  window.HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
+  window.HTMLMediaElement.prototype.play = function () {
+    // record every play() so tests can assert which sound a game fired
+    (global.__playedAudio = global.__playedAudio || []).push(String(this.src || ''));
+    return Promise.resolve();
+  };
   window.HTMLMediaElement.prototype.pause = function () {};
   window.HTMLMediaElement.prototype.load = function () {};
 }

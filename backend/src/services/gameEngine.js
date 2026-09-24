@@ -2099,7 +2099,9 @@ static getKenoLadder(difficulty = "medium", picks = 1) {
 static getKenoPayoutTableVersion() {
   // simple version to let frontend cache + bust when you change tables
   // change this string whenever you change payouts
-  return "keno_v1_40_10";
+  // v2: per-difficulty payout tables (easy/medium/high were identical before,
+  //     because the table key was `low` while the API sends `easy`)
+  return "keno_v2_easy_medium_high";
 }
 
 // ================================================

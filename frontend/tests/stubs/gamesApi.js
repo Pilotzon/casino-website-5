@@ -28,7 +28,11 @@ function respond(key) {
 
 export const gamesAPI = {
   crashLast: () => respond('last'),
-  crashState: () => respond('state'),
+  // record the options so tests can assert the live long-poll (`hold`) wiring
+  crashState: (opts) => {
+    (global.__crashStateOpts = global.__crashStateOpts || []).push(opts);
+    return respond('state');
+  },
   crashActive: () => respond('state'),
   crashStart: () => respond('start'),
   crashCashout: () => respond('cashout'),
