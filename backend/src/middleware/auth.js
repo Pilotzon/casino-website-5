@@ -122,9 +122,16 @@ function userRateLimit(maxRequests = 100, windowMs = 60000) {
     const userId = req.user.id;
     const now = Date.now();
 
-    if (!userRateLimitMap.has(userId)) userRateLimitMap.set(userId, []);
+    // Bucket per user AND per endpoint. A single shared bucket meant that a
+    // chatty route (the crash state poll runs 4x/second) silently ate every
+    // other route's budget, so the next bet/cash-out was answered with
+    // "Too many requests, please slow down".
+    const routePath = (req.route && req.route.path) || req.path || "";
+    const bucket = `${userId}:${req.method}:${req.baseUrl || ""}${routePath}`;
 
-    const userRequests = userRateLimitMap.get(userId);
+    if (!userRateLimitMap.has(bucket)) userRateLimitMap.set(bucket, []);
+
+    const userRequests = userRateLimitMap.get(bucket);
     const validRequests = userRequests.filter((timestamp) => now - timestamp < windowMs);
 
     if (validRequests.length >= maxRequests) {
@@ -132,7 +139,7 @@ function userRateLimit(maxRequests = 100, windowMs = 60000) {
     }
 
     validRequests.push(now);
-    userRateLimitMap.set(userId, validRequests);
+    userRateLimitMap.set(bucket, validRequests);
 
     if (Math.random() < 0.01) {
       for (const [key, value] of userRateLimitMap.entries()) {

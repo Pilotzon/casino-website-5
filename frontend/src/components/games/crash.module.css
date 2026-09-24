@@ -10,6 +10,13 @@
   color: var(--color-text-primary);
   font-family: 'proxima-nova';
   font-feature-settings: "salt" on;
+  /* Crash-specific palette */
+  --crash-red: #EF005E;        /* crashed multiplier / red text  */
+  --crash-fill: #FB9D08;       /* solid area under the curve     */
+  --crash-board: #0F212C;      /* chart background               */
+  --crash-axis: rgba(255, 255, 255, 0.18);
+  --crash-tick-y: #8092A5;     /* Y tick text (gray)             */
+  --crash-tick-x: #FFFFFF;     /* X tick text (white)            */
 }
 
 .sidebar {
@@ -77,7 +84,9 @@
   overflow: hidden;
 }
 
-/* History pills row — top of the stage */
+/* History pills row — top of the stage.
+   Newest pill sits at the TOP RIGHT; older rounds continue to the left and
+   simply fall off the (faded) left edge. */
 .historyRow {
   display: flex;
   align-items: center;
@@ -88,13 +97,16 @@
 }
 .historyPills {
   display: flex;
+  flex-direction: row-reverse;   /* start at the right, continue left */
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 4px));
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 4px));
+  /* fade the OLD end (left) instead of the new end (right) */
+  mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
 }
 .histPill {
   flex: 0 0 auto;
@@ -119,8 +131,8 @@
   color: #fff;
 }
 @keyframes histPop {
-  from { transform: translateX(12px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(12px) scale(0.94); opacity: 0; }
+  to   { transform: translateX(0) scale(1); opacity: 1; }
 }
 .historyIcon {
   flex: 0 0 auto;
@@ -149,8 +161,8 @@
   flex: 1 1 auto;
   position: relative;
   display: grid;
-  grid-template-columns: 56px 1fr;
-  grid-template-rows: 1fr 28px;
+  grid-template-columns: 70px 1fr;
+  grid-template-rows: 1fr 30px;
   min-height: 0;
   min-width: 0;
 }
@@ -160,39 +172,48 @@
   grid-column: 1;
   grid-row: 1;
 }
+/* Y tick: gray text, no grid line, no badge */
 .yTick {
   position: absolute;
-  right: 8px;
+  right: 10px;
   transform: translateY(50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
-  color: #7e8996;
+  color: var(--crash-tick-y);
   white-space: nowrap;
-}
-.yTick span {
-  background: #2f4553;
-  color: #fff;
-  font-weight: 800;
-  border-radius: 6px;
-  padding: 3px 8px;
-  min-width: 44px;
-  text-align: center;
-}
-.yTickLine {
-  display: none;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .plotArea {
   position: relative;
   grid-column: 2;
   grid-row: 1;
-  background: #0F212C;
+  background: var(--crash-board);
   border-radius: 8px;
   overflow: hidden;
   min-width: 0;
+}
+
+/* Axis lines (the ONLY lines in the plot — no grid) */
+.axisLineY,
+.axisLineX {
+  position: absolute;
+  background: var(--crash-axis);
+  pointer-events: none;
+  z-index: 1;
+}
+.axisLineY {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.axisLineX {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
 }
 
 .svg {
@@ -200,44 +221,35 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 0;
 }
 
 .tipMarker {
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #ffffff;
   transform: translate(-50%, 50%);
   box-shadow: 0 0 0 4px rgba(255,255,255,0.15), 0 4px 14px rgba(0,0,0,0.45);
   z-index: 3;
+  pointer-events: none;
   transition: none;
 }
 
-/* Horizontal grid lines */
-.gridLines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.gridLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: rgba(255,255,255,0.05);
-}
-
-/* Center overlay text */
+/* Center overlay text — multiplier on top, status box UNDER it */
 .centerOverlay {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   pointer-events: none;
   z-index: 2;
-  width: 80%;
+  width: 88%;
 }
 .centerMult {
   font-size: clamp(48px, 8vw, 110px);
@@ -245,7 +257,7 @@
   letter-spacing: -1px;
   line-height: 1;
   text-shadow: 0 6px 28px rgba(0,0,0,0.55);
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
   justify-content: center;
 }
@@ -255,7 +267,7 @@
   margin-left: 2px;
 }
 .centerMultCrashed {
-  color: var(--accent-red) !important;
+  color: var(--crash-red) !important;
   animation: crashShake 420ms ease;
 }
 @keyframes crashShake {
@@ -266,46 +278,67 @@
   80% { transform: translate(3px, 0); }
 }
 
+/* Rectangular status box — always BELOW the multiplier text */
 .statusBox {
-  margin-top: 14px;
+  margin-top: 16px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 26px;
   background: #1c2f3c;
   border-radius: var(--radius-md);
   color: #ffffff;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
   box-shadow: 0 8px 24px rgba(0,0,0,0.45);
 }
 .statusGreen { color: var(--accent-green); font-weight: 800; }
+.statusRed { color: var(--crash-red); font-weight: 800; }
 .statusMuted { color: var(--color-text-muted); }
 
-/* X-axis (seconds) */
+/* X-axis (seconds) — labels white, total on the same row but NOT part of
+   the axis system. */
 .xAxis {
   grid-column: 2;
   grid-row: 2;
   position: relative;
-  height: 28px;
+  height: 30px;
   margin-left: 0;
 }
 .xTick {
   position: absolute;
-  top: 8px;
+  top: 9px;
   transform: translateX(-50%);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
-  color: #7e8996;
+  color: var(--crash-tick-x);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .xTotal {
   position: absolute;
-  top: 8px;
-  transform: translateX(-100%);
-  font-size: 14px;
+  top: 9px;
+  right: 0;
+  font-size: 17px;
   font-weight: 800;
-  color: #ffffff;
-  padding-left: 10px;
+  color: var(--crash-tick-x);
+  white-space: nowrap;   /* always ONE row */
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  padding-left: 12px;
+}
+
+/* Cooldown hint under the action button */
+.cooldownHint {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
 /* Mobile: stack sidebar under chart */
@@ -317,12 +350,13 @@
     border-top: 1px solid var(--color-divider-panel);
   }
   .chartWrap {
-    grid-template-columns: 46px 1fr;
+    grid-template-columns: 58px 1fr;
+    grid-template-rows: 1fr 28px;
   }
-  .yTick { font-size: 12px; right: 4px; }
-  .yTick span { min-width: 36px; padding: 2px 6px; }
+  .yTick { font-size: 15px; right: 6px; }
+  .xTick, .xTotal { font-size: 15px; top: 8px; }
   .centerMult { font-size: clamp(44px, 13vw, 78px); }
-  .statusBox { font-size: 17px; padding: 8px 14px; }
+  .statusBox { font-size: 20px; padding: 9px 16px; margin-top: 12px; }
   .histPill { min-width: 48px; height: 28px; padding: 0 10px; font-size: 14px; }
   .historyIcon { width: 32px; height: 28px; }
 }

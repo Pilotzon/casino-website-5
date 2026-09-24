@@ -57,6 +57,9 @@ router.post(
 // ------------------------------
 // Crash (solo, no websockets)
 // ------------------------------
+// The state/tick endpoints are polled while a round is on screen, so they
+// have their own (generous but finite) per-user budget instead of eating the
+// global one — see the `skip` in server.js for /api/games/crash/state.
 router.post(
   "/crash/start",
   authenticateToken,
@@ -70,7 +73,7 @@ router.post(
   authenticateToken,
   requireNotMaintenance,
   requireNotTimedOut,
-  userRateLimit(60, 60000),
+  userRateLimit(120, 60000),
   crashHandler.cashoutCrash
 );
 router.post(
@@ -81,18 +84,39 @@ router.post(
   userRateLimit(60, 60000),
   crashHandler.stopCrash
 );
+// Reconciliation poll (POST kept for compatibility with older clients)
 router.post(
   "/crash/tick",
   authenticateToken,
   requireNotMaintenance,
   requireNotTimedOut,
-  userRateLimit(120, 60000),
+  userRateLimit(900, 60000),
+  crashHandler.tickCrash
+);
+// Lightweight reconciliation poll (used by the client every ~250ms)
+router.get(
+  "/crash/state",
+  authenticateToken,
+  requireNotMaintenance,
+  requireNotTimedOut,
+  userRateLimit(900, 60000),
   crashHandler.tickCrash
 );
 router.get(
   "/crash/active",
   authenticateToken,
+  requireNotMaintenance,
+  requireNotTimedOut,
+  userRateLimit(900, 60000),
   crashHandler.getActiveCrash
+);
+// Public snapshot of FINISHED rounds only (safe for guests + first paint)
+router.get(
+  "/crash/last",
+  optionalAuth,
+  requireNotMaintenance,
+  userRateLimit(900, 60000),
+  crashHandler.getLastCrashRounds
 );
 
 // Start Mines

@@ -17,6 +17,29 @@ npm install
 npm run dev
 ```
 
+## Crash — how the round works (server-authoritative)
+
+Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
+
+| Step | Endpoint | What happens |
+|------|----------|--------------|
+| poll state | `GET /api/games/crash/state` | full UI state (live round, last round, history, balance, cooldown); polled ~4×/s while a round is live |
+| public snapshot | `GET /api/games/crash/last` | finished rounds only — used for the first paint, so a refresh can never flash a stale round |
+| bet | `POST /api/games/crash/start` | debits atomically, commits `sha256(serverSeed:crashPoint)`, never sends the crash point |
+| cash out | `POST /api/games/crash/cashout` | credits at the multiplier at that instant (capped by the crash point) |
+| auto cash out | — | executed **server-side by a timer**, so it fires even if the tab is closed or the poll stalls |
+| stop | `POST /api/games/crash/stop` | viewer-only: ends the animation after a cash-out |
+| tick | `POST /api/games/crash/tick` | compatibility alias of the state poll |
+
+* The crash point is revealed only **after** the round ends for that player.
+* Every round is settled by a server timer; while a round is open it is also
+  persisted in `crash_rounds`, so a backend restart resumes (or settles) it
+  instead of losing the bet.
+* After a round ends there is a **1 s cooldown** before the next bet
+  (`retryInMs` is returned with a 429).
+* `npm run test:crash` (in `backend/`) runs the 51-check engine smoke test
+  against a throw-away database.
+
 ## Database persistence — how it works
 
 **Nothing in the database is ever reset by a restart.** Users, balances, rounds,

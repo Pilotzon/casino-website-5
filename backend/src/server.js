@@ -68,16 +68,27 @@ app.use("/uploads", express.static(resolveUploadsDir()));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Global rate limiting
+// Global rate limiting.
+// Crash polls its state a few times per second while a round is live, and
+// those routes already carry their own per-user budget (see routes/games.js),
+// so they are excluded here — otherwise a single round would exhaust the
+// shared IP budget and every other request would start failing with 429.
+const GLOBAL_LIMIT_SKIP = [/^\/api\/games\/crash\/(state|active|last|tick)\/?$/];
+
 const globalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000, // 1 minute
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 600,
   message: {
     success: false,
     message: "Too many requests, please try again later",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // req.url is stripped of the "/api" mount point, so match originalUrl.
+    const full = String(req.originalUrl || req.url || "").split("?")[0];
+    return GLOBAL_LIMIT_SKIP.some((re) => re.test(full));
+  },
 });
 
 app.use("/api/", globalLimiter);

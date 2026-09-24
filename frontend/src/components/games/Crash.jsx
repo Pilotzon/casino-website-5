@@ -1,54 +1,140 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { gamesAPI } from '../../services/api';
 import Stepper from "../common/Stepper";
 import useGameDisabled from "../../hooks/useGameDisabled";
-import useBetSound from "../../hooks/useBetSound";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import styles from './crash.module.css';
 
 /**
- * Solo Crash game:
- *  - Each user runs their own round; no multiplayer feed, no websockets.
- *  - Chart uses SVG with exponential curve m(t) = e^(k*t).
- *  - History pills start empty; gray = loss/no bet, green = cashed-out win.
- *  - Axes stay at their INITIAL fixed range until the line hits the right
- *    wall, THEN rescale together to keep the tip pinned near the right edge.
- *  - After cashout the graph continues animating to the crash point; the
- *    action button becomes a "Stop" (viewer-only) button.
+ * ===========================================================================
+ *  Crash — solo round, Stake-style board.
+ * ===========================================================================
+ *  The BACKEND is the source of truth (see backend/src/services/crashHandler.js):
+ *   • every endpoint answers with one identical "state" payload, and the UI is
+ *     rendered straight from it — no guessing, no duplicated money logic;
+ *   • the crash point is never known client-side before it happens, so the
+ *     board simply polls `/crash/state` (~4/s) while a round is live and is
+ *     corrected immediately when the round ends — even in another tab;
+ *   • a round that ended is *always* re-renderable (last round + history come
+ *     with every payload), which is what makes a page refresh safe: nothing is
+ *     drawn until that payload exists (`phase === 'boot'`).
+ *
+ *  Chart notes (see crash.module.css for the visual spec):
+ *   • area under the curve = SOLID #FB9D08 (no gradient), white curve;
+ *   • no grid lines — only the two axis lines of the board;
+ *   • the "camera" (visible span) only ever grows, and it grows by 10% BEFORE
+ *     the tip touches the right wall, then eases into place over ~160ms, so
+ *     the tip can never jump backwards when it reaches the wall.
  */
 
-const GROWTH_K_DEFAULT = 0.066; // fallback if server doesn't return one
-const Y_TICKS = [1.0, 1.3, 1.5, 1.8, 2.0, 2.3];
-const X_TICKS = [3, 6, 8, 11];
-const INITIAL_TOTAL_S = 12; // Total Ns shown before hitting right wall
-const TICK_POLL_MS = 400;  // server reconciliation tick
-const RAF_MS = 16;
+const GROWTH_K_DEFAULT = 0.066; // m(t) = e^(k*t) — mirrors the backend
+const X_MIN_SPAN_S = 12;        // first 12s of every round are shown 1:1
+const Y_MIN_CEIL = 2.3;         // visible multiplier ceiling at the start
+const X_HEADROOM = 1.1;         // camera grows 10% ahead of the tip
+const Y_HEADROOM = 1.1;
+const CAMERA_TAU_MS = 160;      // camera easing (never a jump)
+const MULT_TAU_MS = 70;         // tiny numeric smoothing (hides poll jitter)
+const POLL_LIVE_MS = 250;       // reconciliation poll while a round is live
+const POLL_IDLE_MS = 4000;      // slow poll while nothing is happening
+const POLL_HIDDEN_MS = 2000;    // tab in background
+const CRASH_RED = '#EF005E'; // crashed multiplier / red text
 
-function formatMult(m) {
-  if (m >= 100) return m.toFixed(2);
-  if (m >= 10) return m.toFixed(2);
-  return m.toFixed(2);
+/* ------------------------------------------------------------------ utils */
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const fmt = (m) => Number(m ?? 1).toFixed(2);
+
+/** Y label set: nice steps, at most ~9 labels (positions use the smooth span). */
+function yTickValues(ceiling) {
+  const ceilingSafe = Math.max(1.05, ceiling);
+  const steps = [0.25, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
+  let step = steps[steps.length - 1];
+  for (const s of steps) {
+    if (ceilingSafe / s <= 10) { step = s; break; }
+  }
+  const out = [];
+  for (let i = 0; i * step < ceilingSafe + step * 0.35; i += 1) {
+    const v = 1 + i * step;
+    if (v > ceilingSafe + step * 0.349) break;
+    out.push(Math.round(v * 1000) / 1000);
+  }
+  return out.slice(0, 10);
 }
 
+function yTickLabel(v) {
+  if (v < 10) return `${v.toFixed(2)}×`;
+  if (v < 100) return `${v.toFixed(1)}×`;
+  return `${v.toFixed(0)}×`;
+}
+
+/** Snap the visible ceiling onto a stable ladder so the label set rarely changes. */
+function snapCeilY(v) {
+  const ladder = [2.3, 2.5, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80,
+    100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000,
+    15000, 20000, 50000, 100000, 200000, 500000, 1000000];
+  for (const l of ladder) if (l >= v - 1e-9) return l;
+  return 1000000;
+}
+
+function xTickValues(span) {
+  const spanSafe = Math.max(1, span);
+  const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
+  let step = steps[steps.length - 1];
+  for (const s of steps) {
+    if (spanSafe / s <= 10) { step = s; break; }
+  }
+  const out = [];
+  // keep the label row clear of the "Total Ns" label on the right
+  for (let t = step; t <= spanSafe * 0.86; t += step) out.push(Math.round(t));
+  return out;
+}
+
+/** Build the SVG path of the curve for the currently visible window. */
+function buildCurve({ elapsed, dispX, dispY, k, tipMult }) {
+  const tMax = Math.max(0, Math.min(elapsed, dispX));
+  const toX = (t) => (t / dispX) * 100;
+  const toY = (m) => 100 - ((Math.min(Math.max(m, 1), dispY) - 1) / (dispY - 1)) * 100;
+
+  if (tMax <= 0.001) return { line: '', area: '', tipX: 0, tipY: 100 };
+
+  const SAMPLES = 140;
+  let line = '';
+  for (let i = 0; i <= SAMPLES; i += 1) {
+    const t = (i / SAMPLES) * tMax;
+    const x = toX(t);
+    const y = clamp(toY(Math.exp(k * t)), 0, 100);
+    line += `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
+  }
+  const tipX = toX(tMax);
+  const tipY = clamp(toY(tipMult ?? Math.exp(k * tMax)), 0, 100);
+  // close the tip exactly on the smoothed live value
+  line += `L${tipX.toFixed(2)},${tipY.toFixed(2)} `;
+  line = line.trim();
+  const area = `${line} L${tipX.toFixed(2)},100 L0,100 Z`;
+  return { line, area, tipX, tipY };
+}
+
+/* =============================================================== component */
 function Crash({ gameRow }) {
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const { user, isAuthenticated, updateBalance } = useAuth();
   const toast = useToast();
 
   const { isDisabled, isMobileDisabled, isLocked, disabledTitle, disabledDesc, betErrorMessage } =
     useGameDisabled(gameRow);
 
-  // -- Sidebar inputs
+  /* -------------------------------------------------------- sidebar inputs */
   const [betAmount, setBetAmount] = useState('');
   const [autoCashout, setAutoCashout] = useState('2.00');
+  const [betError, setBetError] = useState(null);
   const [betLockedError, setBetLockedError] = useState("");
+
   useEffect(() => {
     if (isLocked && String(betAmount).trim() !== "") setBetLockedError(betErrorMessage);
     else setBetLockedError("");
   }, [betAmount, isLocked, betErrorMessage]);
-  const [betError, setBetError] = useState(null);
+
   useEffect(() => {
     if (!betError) return;
     if (betError === "Log in to place a bet") {
@@ -59,375 +145,499 @@ function Crash({ gameRow }) {
     if (amt > 0 && amt <= (user?.balance ?? 0)) setBetError(null);
   }, [betAmount, isAuthenticated, user?.balance, betError]);
 
-  // -- Game phase state
-  const [phase, setPhase] = useState('idle'); // idle | running | cashedOut | crashed
-  const [crashPoint, setCrashPoint] = useState(null);     // revealed only on crash (or after cashout response)
-  const [serverSeed, setServerSeed] = useState(null);
-  const [startedAt, setStartedAt] = useState(0);
-  const [growthK, setGrowthK] = useState(GROWTH_K_DEFAULT);
-  const [roundId, setRoundId] = useState(null);
-  const [liveMultiplier, setLiveMultiplier] = useState(1.0);
-  const [cashoutMult, setCashoutMult] = useState(null);
-  const [cashoutPayout, setCashoutPayout] = useState(null);
-
-  // -- History pills (start empty)
-  const [history, setHistory] = useState([]); // [{ value, won }] newest pushes right
-  const historyRef = useRef(history);
-  historyRef.current = history;
-
-  // -- Refs for loop
-  const rafRef = useRef(null);
-  const startedAtRef = useRef(0);
-  const crashPointRef = useRef(null);
-  const growthKRef = useRef(GROWTH_K_DEFAULT);
-  const phaseRef = useRef('idle');
-  const cashedOutRef = useRef(false);
-  const lastTickRef = useRef(0);
-  const autoCashoutTriggeredRef = useRef(false);
-  const hasBetRef = useRef(false);
-
-  useEffect(() => { phaseRef.current = phase; }, [phase]);
-
   const betAmountNum = parseFloat(betAmount) || 0;
   const autoCashoutNum = Math.max(1.01, parseFloat(autoCashout) || 2.0);
 
-  const addHistory = useCallback((value, won) => {
-    setHistory(prev => {
-      const next = [...prev, { value, won, id: Date.now() + Math.random() }];
-      if (next.length > 20) next.shift();
-      return next;
-    });
+  /* ------------------------------------------------------------ game state */
+  // boot   -> nothing known yet (refresh-safe: the board stays empty)
+  // idle   -> no round yet, board empty
+  // running / cashedOut -> a live round owned by this user
+  // ended  -> the last finished round is on the board, betting is available
+  const [phase, setPhase] = useState('boot');
+  const [history, setHistory] = useState([]);          // newest first (server order)
+  const [lastRound, setLastRound] = useState(null);    // finished round on the board
+  const [activeBet, setActiveBet] = useState(null);    // { betAmount, autoCashout }
+  const [cashout, setCashout] = useState(null);        // { multiplier, payout }
+  const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
+  const [busy, setBusy] = useState(false);             // request in flight
+  const [, setFrame] = useState(0);                    // rAF render pump
+
+  /* ----------------------------------------------------------------- refs */
+  const phaseRef = useRef('boot');
+  const startedAtRef = useRef(0);
+  const crashPointRef = useRef(null);   // only ever set when the round is over for us
+  const growthKRef = useRef(GROWTH_K_DEFAULT);
+  const serverOffsetRef = useRef(0);    // serverNow - Date.now()
+  const activeBetRef = useRef(null);
+  const lastRoundRef = useRef(null);
+  const cooldownRef = useRef(0);
+  const multRef = useRef(1);            // smoothed multiplier (render source)
+  const viewRef = useRef({ spanX: X_MIN_SPAN_S, spanY: Y_MIN_CEIL });
+  const roundKeyRef = useRef(null);     // resets the camera when a round changes
+  const autoToastedRef = useRef(null);  // roundId already toasted for auto cashout
+  const busyRef = useRef(false);
+  const mountedRef = useRef(true);
+  const lastBalanceRef = useRef(null);
+  const cooldownActiveRef = useRef(false);
+
+  const serverNow = () => Date.now() + serverOffsetRef.current;
+
+  // Set by the polling effect: lets a freshly started round be polled at once
+  // instead of waiting for the next (slow, idle) tick.
+  const pollPokeRef = useRef(null);
+
+  const setPhaseSafe = useCallback((next) => {
+    const changed = phaseRef.current !== next;
+    phaseRef.current = next;
+    setPhase(next);
+    if (changed && (next === 'running' || next === 'cashedOut')) pollPokeRef.current?.(true);
   }, []);
 
-  const finalizeCrashed = useCallback((cp, seed) => {
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-    setCrashPoint(cp);
-    if (seed) setServerSeed(seed);
-    setPhase(cashedOutRef.current ? 'crashed' : 'crashed');
-    // Determine win: green only if user cashed out AND that cashoutMult > 0
-    const didWin = cashedOutRef.current;
-    addHistory(cp, didWin);
-    setTimeout(() => refreshUser(), 200);
-  }, [addHistory, refreshUser]);
+  /* --------------------------------------------------- state application */
+  /** Reset the chart camera for a round that starts (or that we adopt). */
+  const resetCamera = useCallback((elapsedS = 0, mult = 1) => {
+    const spanX = Math.max(X_MIN_SPAN_S, elapsedS * X_HEADROOM);
+    const spanY = Math.max(Y_MIN_CEIL, mult * Y_HEADROOM);
+    viewRef.current = { spanX, spanY };
+  }, []);
 
-  const finalizeFromServer = useCallback((data) => {
-    // data: { crashed, crashPoint, serverSeed, cashedOut, cashoutMultiplier, payout }
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-    setCrashPoint(data.crashPoint);
-    setServerSeed(data.serverSeed || null);
-    setPhase('crashed');
-    addHistory(data.crashPoint, !!data.cashedOut);
-    setTimeout(() => refreshUser(), 200);
-  }, [addHistory, refreshUser]);
+  /**
+   * THE single place where server state becomes UI state. Every endpoint
+   * (start / cashout / stop / state poll) returns the same payload, so the
+   * client can never drift away from the server.
+   */
+  const applyState = useCallback((d) => {
+    if (!d || typeof d !== 'object') return;
+    if (typeof d.serverNow === 'number') serverOffsetRef.current = d.serverNow - Date.now();
+    if (typeof d.growthK === 'number' && d.growthK > 0) growthKRef.current = d.growthK;
+    if (Array.isArray(d.history)) setHistory(d.history);
+    if (typeof d.balance === 'number' && Math.abs((lastBalanceRef.current ?? -1) - d.balance) > 1e-9) {
+      lastBalanceRef.current = d.balance;
+      updateBalance(d.balance);
+    }
+    if (typeof d.cooldownEndsAt === 'number') {
+      cooldownRef.current = d.cooldownEndsAt;
+      setCooldownEndsAt(d.cooldownEndsAt);
+    } else if (d.cooldownEndsAt === null) {
+      cooldownRef.current = 0;
+      setCooldownEndsAt(0);
+    }
 
-  // Animation loop
-  useEffect(() => {
-    if (phase !== 'running' && phase !== 'cashedOut') return;
+    const round = d.active ? d.round : null;
 
-    const tick = () => {
-      const elapsed = (Date.now() - startedAtRef.current) / 1000;
-      if (elapsed <= 0) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
+    if (round) {
+      // ---- a live round we own (fresh bet, another tab, or after refresh)
+      const isNewRound = roundKeyRef.current !== round.roundId;
+      roundKeyRef.current = round.roundId;
+      startedAtRef.current = round.startedAt;
+      if (round.crashPoint != null) crashPointRef.current = round.crashPoint;
+
+      const elapsedS = Math.max(0, (serverNow() - round.startedAt) / 1000);
+      const mult = Math.max(1, round.currentMultiplier ?? Math.exp(growthKRef.current * elapsedS));
+      if (isNewRound) {
+        resetCamera(elapsedS, mult);
+        multRef.current = mult; // no growth ramp when adopting a running round
       }
-      const m = Math.exp(growthKRef.current * elapsed);
-      const cp = crashPointRef.current;
-      if (cp != null && m >= cp) {
-        setLiveMultiplier(cp);
-        finalizeCrashed(cp, null); // serverTick will reveal seed shortly
-        return;
-      }
-      setLiveMultiplier(m);
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [phase, finalizeCrashed]);
 
-  // Server reconciliation tick — detects crash + auto-cashout server-side
-  useEffect(() => {
-    if (phase !== 'running' && phase !== 'cashedOut') return undefined;
-    const id = setInterval(async () => {
-      try {
-        const res = await gamesAPI.crashTick();
-        const d = res.data?.data;
-        if (!d) return;
-        if (d.crashed) {
-          finalizeFromServer(d);
-          return;
+      const bet = { betAmount: round.betAmount, autoCashout: round.autoCashout ?? null };
+      activeBetRef.current = bet;
+      setActiveBet(bet);
+      setLastRound(null);
+      lastRoundRef.current = null;
+      setBetAmount(String(round.betAmount));
+      if (round.autoCashout) setAutoCashout(String(round.autoCashout));
+
+      if (round.cashedOut) {
+        setCashout({ multiplier: round.cashoutMultiplier, payout: round.payout });
+        if (round.autoCashout && autoToastedRef.current !== round.roundId && round.cashoutMultiplier >= round.autoCashout - 1e-9) {
+          autoToastedRef.current = round.roundId;
+          toast.success(`Auto cashed out at ${fmt(round.cashoutMultiplier)}× · +${Number(round.payout ?? 0).toFixed(2)}`);
         }
-        if (d.autoCashoutHit && !cashedOutRef.current) {
-          cashedOutRef.current = true;
-          setCashoutMult(d.multiplier);
-          setCashoutPayout(d.payout);
-          setPhase('cashedOut');
-          toast.success(`Auto cashout at ${d.multiplier.toFixed(2)}×! +${d.payout.toFixed(2)}`);
-          if (d.newBalance != null) refreshUser();
-        }
-      } catch (e) {
-        // ignore network blips
+        setPhaseSafe('cashedOut');
+      } else {
+        setCashout(null);
+        setPhaseSafe('running');
       }
-    }, TICK_POLL_MS);
-    return () => clearInterval(id);
-  }, [phase, finalizeFromServer, toast, refreshUser]);
+      return;
+    }
 
-  // Check for an active round on mount (page refresh)
+    // ---- no live round for us
+    const ended = d.lastRound || null;
+    if (ended) {
+      roundKeyRef.current = null;
+      crashPointRef.current = ended.crashPoint ?? null;
+      lastRoundRef.current = ended;
+      setLastRound(ended);
+      activeBetRef.current = null;
+      setActiveBet(null);
+      setCashout(ended.cashedOut ? { multiplier: ended.cashoutMultiplier, payout: ended.payout } : null);
+      if (phaseRef.current === 'boot' || phaseRef.current === 'running' || phaseRef.current === 'cashedOut' || phaseRef.current === 'ended') {
+        setPhaseSafe('ended');
+      }
+      return;
+    }
+
+    if (phaseRef.current === 'boot') {
+      setPhaseSafe('idle');
+    } else if (phaseRef.current === 'running' || phaseRef.current === 'cashedOut') {
+      // server says the round is gone but has no record for us: don't get stuck
+      setPhaseSafe('idle');
+    }
+    activeBetRef.current = null;
+    setActiveBet(null);
+    setCashout(null);
+    lastRoundRef.current = null;
+    setLastRound(null);
+  }, [resetCamera, setPhaseSafe, toast, updateBalance]);
+
+  // The reconciliation loop must NOT restart every time React re-renders
+  // (the render pump runs at 60fps and context callbacks change identity) —
+  // so it always calls the latest applier through this ref.
+  const applyStateRef = useRef(applyState);
+  useEffect(() => { applyStateRef.current = applyState; });
+
+  /* --------------------------------------------------------- initial load */
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
+    mountedRef.current = true;
+    setPhaseSafe('boot');
+    roundKeyRef.current = null;
+    multRef.current = 1;
+    resetCamera(0, 1);
+
     (async () => {
-      if (!isAuthenticated) return;
+      // 1) public snapshot — FINISHED rounds only, so nothing can leak and the
+      //    pills/last round are already correct on the very first paint.
       try {
-        const res = await gamesAPI.crashActive();
-        const d = res.data?.data;
-        if (!mounted || !d?.active) return;
-        setRoundId(d.roundId);
-        setStartedAt(d.startedAt);
-        startedAtRef.current = d.startedAt;
-        setGrowthK(d.growthK || GROWTH_K_DEFAULT);
-        growthKRef.current = d.growthK || GROWTH_K_DEFAULT;
-        if (d.crashPoint) {
-          setCrashPoint(d.crashPoint);
-          crashPointRef.current = d.crashPoint;
-        }
-        setBetAmount(String(d.betAmount ?? ''));
-        if (d.autoCashout) setAutoCashout(String(d.autoCashout));
-        hasBetRef.current = true;
-        autoCashoutTriggeredRef.current = false;
-        if (d.cashedOut) {
-          cashedOutRef.current = true;
-          setCashoutMult(d.cashoutMultiplier);
-          setCashoutPayout(d.payout);
-          setPhase('cashedOut');
-        } else {
-          cashedOutRef.current = false;
-          setPhase('running');
-        }
-      } catch (e) { /* ignore */ }
+        const res = await gamesAPI.crashLast();
+        if (!cancelled) applyStateRef.current(res.data?.data);
+      } catch { /* offline / rate limited — phase 2 will sort it out */ }
+
+      // 2) authoritative state for this user (live round, if any)
+      if (isAuthenticated) {
+        try {
+          const res = await gamesAPI.crashState();
+          if (!cancelled) applyStateRef.current(res.data?.data);
+        } catch { /* ignore */ }
+      }
+
+      if (!cancelled && phaseRef.current === 'boot') setPhaseSafe('idle');
     })();
-    return () => { mounted = false; };
+
+    return () => { cancelled = true; mountedRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  // -- Actions
-  const handleBet = async () => {
+  /* ------------------------------------------------------------- polling */
+  // One self-scheduling reconciliation poll for the whole page lifetime:
+  //   • 250ms while a round is live  (crash / cash-out is applied in <=250ms)
+  //   • 4s when idle, 2s in a hidden tab
+  // The loop is independent of React re-renders (the render pump runs at
+  // 60fps) and is poked for an immediate tick whenever a round starts. The
+  // backend settles rounds on its own timers, so even a completely stalled
+  // poll can never lose a bet or leave a round "active" forever.
+  useEffect(() => {
+    if (!isAuthenticated || isLocked) return undefined;
+    let stopped = false;
+    let inFlight = false;
+    let timer = null;
+
+    const clear = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    const live = () => phaseRef.current === 'running' || phaseRef.current === 'cashedOut';
+
+    const runTick = async () => {
+      if (stopped || inFlight) return;
+      inFlight = true;
+      try {
+        const res = await gamesAPI.crashState();
+        if (!stopped) applyStateRef.current(res.data?.data);
+      } catch (e) {
+        // swallow: a failed poll must never break the game loop
+      }
+      inFlight = false;
+      if (stopped) return;
+      if (typeof document !== 'undefined' && document.hidden && !live()) {
+        timer = setTimeout(runTick, POLL_HIDDEN_MS);
+      } else {
+        timer = setTimeout(runTick, live() ? POLL_LIVE_MS : POLL_IDLE_MS);
+      }
+    };
+
+    pollPokeRef.current = (immediate) => {
+      clear();
+      timer = setTimeout(runTick, immediate ? 0 : (live() ? POLL_LIVE_MS : POLL_IDLE_MS));
+    };
+    pollPokeRef.current(false);
+
+    const onVisible = () => { if (!document.hidden) pollPokeRef.current?.(true); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      stopped = true;
+      clear();
+      pollPokeRef.current = null;
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isLocked]);
+
+  /* ------------------------------------------------- animation render pump */
+  useEffect(() => {
+    let raf = null;
+    let last = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+    const loop = (ts) => {
+      const dt = clamp(ts - last, 8, 120);
+      last = ts;
+
+      const st = phaseRef.current;
+      const k = growthKRef.current;
+      const view = viewRef.current;
+
+      // ---- target multiplier (the exact game value)
+      let target = 1;
+      let elapsedS = 0;
+      if (st === 'running' || st === 'cashedOut') {
+        elapsedS = Math.max(0, (serverNow() - startedAtRef.current) / 1000);
+        target = Math.exp(k * elapsedS);
+        if (crashPointRef.current != null) target = Math.min(target, crashPointRef.current);
+      } else if (st === 'ended') {
+        const cp = lastRoundRef.current?.crashPoint;
+        target = cp != null ? cp : multRef.current;
+        elapsedS = cp != null && cp > 1 ? Math.log(cp) / k : 0;
+      } else {
+        target = 1;
+      }
+
+      // ---- smooth the number so a slow poll can never make it snap, then land
+      //      EXACTLY on the target (crash point / adopted value) so the board
+      //      never freezes half a hundredth away from the real number
+      const diff = target - multRef.current;
+      let moving = false;
+      if (Math.abs(diff) < 0.0005) {
+        if (multRef.current !== target) { multRef.current = target; moving = true; }
+      } else {
+        multRef.current += diff * (1 - Math.exp(-dt / MULT_TAU_MS));
+        moving = true;
+      }
+
+      // ---- camera: grows 10% ahead of the tip, eases instead of jumping
+      const wantX = Math.max(X_MIN_SPAN_S, elapsedS * X_HEADROOM);
+      const wantY = Math.max(Y_MIN_CEIL, multRef.current * Y_HEADROOM);
+      const ease = 1 - Math.exp(-dt / CAMERA_TAU_MS);
+      if (wantX > view.spanX) view.spanX += (wantX - view.spanX) * ease;
+      if (wantY > view.spanY) view.spanY += (wantY - view.spanY) * ease;
+
+      // ---- keep re-rendering only while something is actually moving, plus
+      //      one extra frame when the post-round cooldown runs out (so the
+      //      Bet button is re-enabled the moment it is allowed)
+      const cooldownLeft = cooldownRef.current - serverNow();
+      let tickle = false;
+      if (cooldownLeft > 0) {
+        cooldownActiveRef.current = true;
+        tickle = true;
+      } else if (cooldownActiveRef.current) {
+        cooldownActiveRef.current = false;
+        tickle = true;
+      }
+
+      const running = st === 'running' || st === 'cashedOut';
+      if (running || moving || tickle) {
+        setFrame((f) => (f + 1) % 1000000);
+      }
+      raf = requestAnimationFrame(loop);
+    };
+
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ------------------------------------------------------------- actions */
+  const handleBet = useCallback(async () => {
+    if (busyRef.current) return;
     if (isLocked) { setBetLockedError(betErrorMessage); return; }
     if (!isAuthenticated) { toast.error('Please login to play'); setBetError("Log in to place a bet"); return; }
+
     const amt = parseFloat(betAmount);
     if (isNaN(amt) || amt <= 0) { setBetError("Enter a valid bet amount"); return; }
     if (amt > (user?.balance ?? 0)) { setBetError("Insufficient balance"); return; }
-    if (phase === 'running' || phase === 'cashedOut') {
-      toast.error("Round already in progress");
-      return;
-    }
-    // Reset local UI from any previous finished round.
-    resetForNextRound();
 
+    const p = phaseRef.current;
+    if (p === 'running' || p === 'cashedOut') { toast.error('Round already in progress'); return; }
+    if (cooldownRef.current > serverNow()) return; // the button is disabled anyway
+
+    busyRef.current = true;
+    setBusy(true);
     try {
+      const res = await gamesAPI.crashStart({ betAmount: amt, autoCashout: autoCashoutNum });
+      if (!mountedRef.current) return;
       setBetError(null);
-      const res = await gamesAPI.crashStart({
-        betAmount: amt,
-        autoCashout: autoCashoutNum,
-      });
-      const d = res.data.data;
-      setRoundId(d.roundId);
-      setStartedAt(d.startedAt);
-      startedAtRef.current = d.startedAt;
-      setGrowthK(d.growthK ?? GROWTH_K_DEFAULT);
-      growthKRef.current = d.growthK ?? GROWTH_K_DEFAULT;
-      setCrashPoint(null);
-      crashPointRef.current = null; // DON'T leak crashPoint to client yet
-      setServerSeed(null);
-      setServerSeed(null);
-      setCashoutMult(null);
-      setCashoutPayout(null);
-      setLiveMultiplier(1.0);
-      cashedOutRef.current = false;
-      hasBetRef.current = true;
-      autoCashoutTriggeredRef.current = false;
-      setPhase('running');
-      await refreshUser();
+      applyState(res.data?.data);
     } catch (e) {
-      const msg = e.response?.data?.message || e.message || "Bet failed";
-      toast.error(msg);
+      if (!mountedRef.current) return;
+      const msg = e.response?.data?.message || e.message || 'Bet failed';
       setBetError(msg);
+      toast.error(msg);
+      // the backend attaches its current state so we can resync instantly
+      const state = e.response?.data?.data;
+      if (state) applyState(state);
+    } finally {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
-  };
+  }, [applyState, autoCashoutNum, betAmount, betErrorMessage, isAuthenticated, isLocked, toast, user?.balance]);
 
-  const handleCashout = async () => {
-    if (phase !== 'running' || !hasBetRef.current || cashedOutRef.current) return;
+  const handleCashout = useCallback(async () => {
+    if (busyRef.current) return;
+    if (phaseRef.current !== 'running' || !activeBetRef.current) return;
+
+    busyRef.current = true;
+    setBusy(true);
     try {
       const res = await gamesAPI.crashCashout();
-      const d = res.data.data;
-      cashedOutRef.current = true;
-      setCashoutMult(d.multiplier);
-      setCashoutPayout(d.payout);
-      if (d.crashPoint != null) {
-        crashPointRef.current = d.crashPoint;
-        setCrashPoint(d.crashPoint);
-      }
-      setPhase('cashedOut');
-      toast.success(`Cashed out at ${d.multiplier.toFixed(2)}×! +${d.payout.toFixed(2)}`);
-      if (d.newBalance != null) refreshUser();
+      if (!mountedRef.current) return;
+      const d = res.data?.data;
+      applyState(d);
+      if (d?.crashed) toast.error('Crashed before your cash out went through');
+      else if (d?.cashedOut) toast.success(`Cashed out at ${fmt(d.multiplier)}× · +${Number(d.payout ?? 0).toFixed(2)}`);
     } catch (e) {
-      // If the crash happened mid-request, the tick will finalize.
-      const msg = e.response?.data?.message || e.message;
-      console.warn("cashout failed:", msg);
+      if (!mountedRef.current) return;
+      const msg = e.response?.data?.message || e.message || 'Cash out failed';
+      toast.error(msg);
+      const state = e.response?.data?.data;
+      if (state) applyState(state);
+    } finally {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
-  };
+  }, [applyState, toast]);
 
-  const handleStop = async () => {
-    if (phase !== 'cashedOut') return;
+  const handleStop = useCallback(async () => {
+    if (busyRef.current) return;
+    if (phaseRef.current !== 'cashedOut') return;
+
+    busyRef.current = true;
+    setBusy(true);
     try {
       const res = await gamesAPI.crashStop();
-      const d = res.data.data;
-      finalizeFromServer(d);
+      if (!mountedRef.current) return;
+      applyState(res.data?.data);
     } catch (e) {
-      // If server already finalized the round (crash tick got there first),
-      // simulate finalization with whatever we know locally so UI still resets.
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      const cp = crashPointRef.current;
-      if (cp != null) {
-        setCrashPoint(cp);
-        setPhase('crashed');
-        addHistory(cp, true);
-        setTimeout(() => refreshUser(), 200);
-      } else {
-        resetForNextRound();
+      if (!mountedRef.current) return;
+      const state = e.response?.data?.data;
+      if (state) applyState(state);
+      else {
+        // last resort: ask for the truth instead of guessing
+        try {
+          const res = await gamesAPI.crashState();
+          if (mountedRef.current) applyState(res.data?.data);
+        } catch { /* ignore */ }
       }
+    } finally {
+      busyRef.current = false;
+      if (mountedRef.current) setBusy(false);
     }
-  };
-
-  // When crash occurs naturally but server tick was slow, still record round
-  // when user clicks Bet after a crash we just reset state.
-  const resetForNextRound = useCallback(() => {
-    setPhase('idle');
-    setCrashPoint(null);
-    setServerSeed(null);
-    setRoundId(null);
-    setCashoutMult(null);
-    setCashoutPayout(null);
-    setLiveMultiplier(1.0);
-    cashedOutRef.current = false;
-    hasBetRef.current = false;
-  }, []);
-
-  // Auto-reset crashed state after a short delay so UI can be reused
-  useEffect(() => {
-    if (phase !== 'crashed') return;
-    const t = setTimeout(() => {
-      // Don't auto-reset if user still sees crashed view; let clicking Bet reset
-    }, 4000);
-    return () => clearTimeout(t);
-  }, [phase]);
+  }, [applyState]);
 
   const adjustBet = (val) => {
     const curr = parseFloat(betAmount) || 0;
     setBetAmount((curr * val).toFixed(2));
   };
 
-  // ---- Render helpers for chart
-  // Compute current axis ranges. Start with a fixed view (Y up to 2.3x, X up to 12s)
-  // until the line tip hits the right wall (xRatio >= 1), then expand.
-  const elapsed = phase === 'idle' ? 0 : Math.max(0, (Date.now() - (startedAt || Date.now())) / 1000);
-  // We re-render via rAF; when idle just show 0.
-  const [, setFrame] = useState(0);
-  useEffect(() => {
-    if (phase !== 'running' && phase !== 'cashedOut') return;
-    let id;
-    const loop = () => { setFrame(f => (f + 1) % 1000000); id = requestAnimationFrame(loop); };
-    id = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(id);
-  }, [phase]);
+  /* ---------------------------------------------------------------- render */
+  const isLive = phase === 'running' || phase === 'cashedOut';
+  const k = growthKRef.current || GROWTH_K_DEFAULT;
+  const nowServer = serverNow();
 
-  const cp = crashPointRef.current ?? crashPoint;
-  const isCrashed = phase === 'crashed';
-  const effectiveMult = isCrashed && cp ? cp : liveMultiplier;
-  const effectiveElapsed = isCrashed && cp
-    ? Math.log(cp) / (growthKRef.current || GROWTH_K_DEFAULT)
-    : Math.max(0, (Date.now() - (startedAtRef.current || Date.now())) / 1000);
+  const elapsed = isLive
+    ? Math.max(0, (nowServer - startedAtRef.current) / 1000)
+    : (phase === 'ended' && lastRound?.crashPoint > 1 ? Math.log(lastRound.crashPoint) / k : 0);
 
-  // Fixed initial ranges
-  const MAX_X_INIT = INITIAL_TOTAL_S;
-  const MAX_Y_INIT = 2.3;
-  // When multiplier exceeds the displayed Y ceiling or time exceeds the visible
-  // X ceiling, expand ranges so the tip stays within ~90% of the plot area.
-  let maxX = MAX_X_INIT;
-  let maxY = MAX_Y_INIT;
-  if (effectiveMult > MAX_Y_INIT * 0.95 || effectiveElapsed > MAX_X_INIT * 0.95) {
-    maxX = Math.max(MAX_X_INIT, effectiveElapsed * 1.1);
-    maxY = Math.max(MAX_Y_INIT, effectiveMult * 1.1);
+  const displayedMult = multRef.current;
+  const { spanX: dispX, spanY: dispY } = viewRef.current;
+
+  const { line: curveLine, area: curveArea, tipX, tipY } = useMemo(
+    () => buildCurve({ elapsed, dispX, dispY, k, tipMult: displayedMult }),
+    // re-computed every animation frame on purpose (frame is the pump)
+    [elapsed, dispX, dispY, k, displayedMult]
+  );
+
+  const yTicks = useMemo(
+    // keep every label fully inside the board (96% of the visible height)
+    () => yTickValues(snapCeilY(dispY)).filter((v) => v <= 1 + (dispY - 1) * 0.96 + 1e-9),
+    [dispY]
+  );
+  const xTicks = useMemo(() => xTickValues(dispX), [Math.floor(dispX)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cooldownLeft = Math.max(0, cooldownEndsAt - nowServer);
+  const inCooldown = cooldownLeft > 0;
+
+  const showBoard = phase !== 'boot';
+  const showCurve = phase !== 'idle' && phase !== 'boot';
+
+  // ---- board colors
+  const isCrashedView = phase === 'ended' && !!lastRound;
+  const multColor = isCrashedView ? CRASH_RED : '#ffffff';
+
+  // ---- status box content
+  let statusContent = null;
+  if (phase === 'running') {
+    statusContent = <span className={styles.statusMuted}>—</span>;
+  } else if (phase === 'cashedOut') {
+    statusContent = (
+      <>
+        Cashed Out <span className={styles.statusGreen}>{fmt(cashout?.multiplier ?? displayedMult)}×</span>
+      </>
+    );
+  } else if (phase === 'ended') {
+    if (lastRound?.cashedOut) {
+      statusContent = (
+        <>
+          Cashed Out <span className={styles.statusGreen}>{fmt(lastRound.cashoutMultiplier)}×</span>
+        </>
+      );
+    } else {
+      statusContent = <span className={styles.statusRed}>Crashed</span>;
+    }
   }
 
-  // Build curve path
-  const buildPath = () => {
-    const now = effectiveElapsed;
-    if (now <= 0) return { area: '', line: '', tipX: 0, tipY: 0 };
-    // Sample points
-    const STEP = 0.05;
-    const points = [];
-    for (let t = 0; t <= now; t += STEP) {
-      const m = Math.exp((growthKRef.current || GROWTH_K_DEFAULT) * t);
-      points.push({ t, m });
-    }
-    // ensure exact endpoint
-    points.push({ t: now, m: effectiveMult });
-    const toX = (t) => (t / maxX) * 100;
-    const toY = (m) => 100 - ((m - 1) / (maxY - 1)) * 100;
-    let line = '';
-    points.forEach((p, i) => {
-      const x = toX(p.t);
-      const y = Math.max(0, Math.min(100, toY(p.m)));
-      line += (i === 0 ? 'M' : 'L') + x.toFixed(3) + ',' + y.toFixed(3) + ' ';
-    });
-    const tipX = toX(now);
-    const tipY = Math.max(0, Math.min(100, toY(effectiveMult)));
-    const area = line + `L${tipX.toFixed(3)},100 L0,100 Z`;
-    return { line: line.trim(), area, tipX, tipY };
-  };
-  const { line: curveLine, area: curveArea, tipX, tipY } = buildPath();
-
-  const showCenter = phase !== 'idle';
-  const multColor = isCrashed ? 'var(--accent-red)' : '#ffffff';
-  const fillColor = isCrashed ? '#395061' : '#FB9D08';
-  const lineColor = isCrashed ? '#4b6275' : '#ffffff';
-
-  // Action button
-  const actionBtnDisabled =
-    isLocked ||
-    (phase === 'running' && !hasBetRef.current) || // only possible if no bet was placed (shouldn't happen but guard)
-    false;
-
-  // When idle, button is Bet (blue). When running & has bet & not cashed out: Cash Out (secondary/orange? — per spec secondary).
-  // When cashed out: Stop (secondary).
+  // ---- action button
   let actionLabel = 'Bet';
   let actionClass = styles.betButton;
   let actionHandler = handleBet;
-  let actionDisabled = isLocked || phase === 'crashed';
-  if (phase === 'running' && hasBetRef.current && !cashedOutRef.current) {
+  let actionDisabled = false;
+
+  if (isLocked) {
+    actionDisabled = true;
+  } else if (phase === 'boot') {
+    actionDisabled = true;
+  } else if (phase === 'running') {
     actionLabel = 'Cash Out';
     actionClass = styles.cashoutBtn;
     actionHandler = handleCashout;
-    actionDisabled = false;
+    actionDisabled = busy || !activeBet;
   } else if (phase === 'cashedOut') {
     actionLabel = 'Stop';
     actionClass = styles.stopBtn;
     actionHandler = handleStop;
-    actionDisabled = false;
-  } else if (phase === 'crashed') {
-    actionLabel = 'Bet';
-    actionClass = styles.betButton;
-    actionHandler = () => { resetForNextRound(); handleBet(); };
+    actionDisabled = busy;
+  } else if (phase === 'ended' || phase === 'idle') {
+    actionHandler = handleBet;
+    actionDisabled = busy || inCooldown;
+    if (inCooldown) actionLabel = `Wait ${Math.max(1, Math.ceil(cooldownLeft / 1000))}s`;
   }
 
-  // Profit on win display
-  const profitOnWin = (phase === 'idle')
-    ? (betAmountNum * (autoCashoutNum - 1))
-    : (cashoutPayout ? (cashoutPayout - betAmountNum) : (betAmountNum * Math.max(1, liveMultiplier - 1)));
+  // ---- profit column
+  const profitValue = (() => {
+    if (phase === 'cashedOut') return Number(cashout?.payout ?? 0) - (activeBet?.betAmount ?? 0);
+    if (phase === 'running' && activeBet) return activeBet.betAmount * Math.max(0, autoCashoutNum - 1);
+    if (phase === 'ended' && lastRound) return Number(lastRound.netProfit ?? 0);
+    return betAmountNum * (autoCashoutNum - 1);
+  })();
+  const profitLabel = phase === 'ended' && lastRound?.cashedOut ? 'Profit' : 'Profit on Win';
 
-  // ---- Render
+  /* ---------------------------------------------------------------------- */
   return (
     <div className={styles.container}>
       <div className={styles.sidebar}>
@@ -449,14 +659,14 @@ function Crash({ gameRow }) {
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 step="0.00000001"
-                disabled={phase === 'running' || phase === 'cashedOut'}
+                disabled={isLive || busy}
               />
               <span className={styles.btcIcon}>$</span>
             </div>
             <div className={styles.splitButtons}>
-              <button onClick={() => adjustBet(0.5)} disabled={isLocked || phase === 'running' || phase === 'cashedOut'}>½</button>
+              <button onClick={() => adjustBet(0.5)} disabled={isLocked || isLive}>½</button>
               <div className={styles.divider}></div>
-              <button onClick={() => adjustBet(2)} disabled={isLocked || phase === 'running' || phase === 'cashedOut'}>2×</button>
+              <button onClick={() => adjustBet(2)} disabled={isLocked || isLive}>2×</button>
             </div>
           </div>
           <BetError message={betLockedError} />
@@ -474,11 +684,18 @@ function Crash({ gameRow }) {
                 value={autoCashout}
                 onChange={(e) => setAutoCashout(e.target.value)}
                 step="0.01"
-                disabled={phase === 'running' || phase === 'cashedOut'}
+                disabled={isLive || busy}
               />
               <span className={styles.btcIcon}>×</span>
             </div>
-            <Stepper value={autoCashout} onChange={setAutoCashout} step={0.1} min={1.01} decimals={2} disabled={phase === 'running' || phase === 'cashedOut'} />
+            <Stepper
+              value={autoCashout}
+              onChange={setAutoCashout}
+              step={0.1}
+              min={1.01}
+              decimals={2}
+              disabled={isLive || busy}
+            />
           </div>
         </div>
 
@@ -490,22 +707,23 @@ function Crash({ gameRow }) {
           title={isLocked ? betErrorMessage : undefined}
         >
           {actionLabel}
-          {phase === 'running' && hasBetRef.current && !cashedOutRef.current && (
-            <span className={styles.btnMult}> {formatMult(liveMultiplier)}×</span>
+          {phase === 'running' && activeBet && (
+            <span className={styles.btnMult}> {fmt(displayedMult)}×</span>
           )}
         </button>
+        {inCooldown && phase !== 'running' && phase !== 'cashedOut' && (
+          <div className={styles.cooldownHint}>
+            Next round available in {Math.max(1, Math.ceil(cooldownLeft / 1000))}s
+          </div>
+        )}
 
         <div className={styles.controlGroup}>
           <div className={styles.labelRow}>
-            <span>{cashedOutRef.current ? 'Profit' : 'Profit on Win'}</span>
-            <span>${(profitOnWin > 0 ? profitOnWin : 0).toFixed(2)}</span>
+            <span>{profitLabel}</span>
+            <span>${(profitValue > 0 ? profitValue : 0).toFixed(2)}</span>
           </div>
           <div className={styles.readonlyInput}>
-            <input
-              type="text"
-              value={`${(profitOnWin > 0 ? profitOnWin : 0).toFixed(2)}`}
-              readOnly
-            />
+            <input type="text" value={`${(profitValue > 0 ? profitValue : 0).toFixed(2)}`} readOnly />
             <span className={styles.btcIcon}>$</span>
           </div>
         </div>
@@ -516,15 +734,15 @@ function Crash({ gameRow }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-            {/* History pills row */}
+            {/* History pills — newest at the right, older continue to the left */}
             <div className={styles.historyRow}>
               <div className={styles.historyPills}>
                 {history.map((h) => (
                   <span
-                    key={h.id}
+                    key={`${h.roundId}-${h.at}`}
                     className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
                   >
-                    {formatMult(h.value)}×
+                    {fmt(h.value)}×
                   </span>
                 ))}
               </div>
@@ -537,18 +755,17 @@ function Crash({ gameRow }) {
               <span className={styles.historyYou}>‹ You</span>
             </div>
 
-            {/* Chart */}
+            {/* Board */}
             <div className={styles.chartWrap}>
-              {/* Y-axis labels (left) */}
+              {/* Y axis (gray labels, no grid) */}
               <div className={styles.yAxis}>
-                {buildYLabels(maxY).map((v) => (
+                {yTicks.map((v) => (
                   <div
                     key={v}
                     className={styles.yTick}
-                    style={{ bottom: `${((v - 1) / (maxY - 1)) * 100}%` }}
+                    style={{ bottom: `${clamp(((v - 1) / (dispY - 1)) * 100, 0, 100)}%` }}
                   >
-                    <span>{v.toFixed(1)}×</span>
-                    <div className={styles.yTickLine} />
+                    {yTickLabel(v)}
                   </div>
                 ))}
               </div>
@@ -556,86 +773,57 @@ function Crash({ gameRow }) {
               {/* Plot area */}
               <div className={styles.plotArea}>
                 <svg className={styles.svg} viewBox="0 0 100 100" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="crashFillGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={fillColor} stopOpacity={isCrashed ? 0.4 : 0.55} />
-                      <stop offset="100%" stopColor={fillColor} stopOpacity={isCrashed ? 0.05 : 0.08} />
-                    </linearGradient>
-                    <filter id="crashLineShadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="0.9" />
-                    </filter>
-                  </defs>
-
-                  {showCenter && curveArea && (
-                    <path d={curveArea} fill="url(#crashFillGrad)" />
+                  {showCurve && curveArea && (
+                    <path d={curveArea} fill="#FB9D08" />
                   )}
-                  {showCenter && curveLine && (
-                    <>
-                      {/* shadow */}
-                      <path d={curveLine} fill="none" stroke="rgba(0,0,0,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#crashLineShadow)" />
-                      <path d={curveLine} fill="none" stroke={lineColor} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-                    </>
+                  {showCurve && curveLine && (
+                    <path
+                      d={curveLine}
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
                   )}
                 </svg>
 
+                {/* Only the axis lines — no grid */}
+                <div className={styles.axisLineY} />
+                <div className={styles.axisLineX} />
+
                 {/* Tip marker */}
-                {showCenter && !isCrashed && (
+                {showCurve && (isLive || phase === 'ended') && (
                   <div
                     className={styles.tipMarker}
-                    style={{ left: `${tipX}%`, bottom: `${((effectiveMult - 1) / (maxY - 1)) * 100}%` }}
+                    style={{ left: `${clamp(tipX, 0, 99.6)}%`, bottom: `${clamp(tipY, 0, 100)}%` }}
                   />
                 )}
 
-                {/* Center overlay */}
-                {showCenter && (
+                {/* Multiplier + status box UNDER it */}
+                {showBoard && phase !== 'idle' && (
                   <div className={styles.centerOverlay}>
                     <div
-                      className={`${styles.centerMult} ${isCrashed ? styles.centerMultCrashed : ''}`}
+                      className={`${styles.centerMult} ${isCrashedView ? styles.centerMultCrashed : ''}`}
                       style={{ color: multColor }}
                     >
-                      {formatMult(effectiveMult)}<span className={styles.centerX}>×</span>
+                      {fmt(displayedMult)}
+                      <span className={styles.centerX}>×</span>
                     </div>
-                    <div className={styles.statusBox}>
-                      {cashedOutRef.current && !isCrashed ? (
-                        <>Cashed Out <span className={styles.statusGreen}>{formatMult(cashoutMult || effectiveMult)}×</span></>
-                      ) : isCrashed ? (
-                        'Crashed'
-                      ) : phase === 'running' ? (
-                        <span className={styles.statusMuted}>—</span>
-                      ) : null}
-                    </div>
+                    {statusContent && <div className={styles.statusBox}>{statusContent}</div>}
                   </div>
                 )}
-
-                {/* Grid lines */}
-                <div className={styles.gridLines}>
-                  {buildYLabels(maxY).slice(1).map((v) => (
-                    <div
-                      key={v}
-                      className={styles.gridLine}
-                      style={{ bottom: `${((v - 1) / (maxY - 1)) * 100}%` }}
-                    />
-                  ))}
-                </div>
               </div>
 
-              {/* X-axis labels */}
+              {/* X axis — seconds (white). The total is NOT part of the axis. */}
               <div className={styles.xAxis}>
-                {buildXLabels(maxX).map((t) => (
-                  <div
-                    key={t}
-                    className={styles.xTick}
-                    style={{ left: `${(t / maxX) * 100}%` }}
-                  >
-                    {Math.round(t)}s
+                {xTicks.map((t) => (
+                  <div key={t} className={styles.xTick} style={{ left: `${(t / dispX) * 100}%` }}>
+                    {t}s
                   </div>
                 ))}
-                <div
-                  className={styles.xTotal}
-                  style={{ left: '100%' }}
-                >
-                  Total {Math.round(maxX)}s
-                </div>
+                <div className={styles.xTotal}>Total {Math.round(Math.max(X_MIN_SPAN_S, dispX))}s</div>
               </div>
             </div>
           </>
@@ -643,35 +831,6 @@ function Crash({ gameRow }) {
       </div>
     </div>
   );
-}
-
-// Helpers to generate axis ticks that roughly match the reference screenshots
-function buildYLabels(maxY) {
-  // Always 6 labels similar to images, spaced nicely
-  const out = [];
-  // pick a step
-  const candidates = [0.2, 0.3, 0.5, 1, 2, 5, 10];
-  let step = 0.3;
-  for (const c of candidates) {
-    if (maxY / c <= 8) { step = c; break; }
-  }
-  for (let v = 1.0; v <= maxY + 0.001; v += step) {
-    out.push(Math.round(v * 100) / 100);
-  }
-  if (out[out.length - 1] < maxY) out.push(Math.round((out[out.length - 1] + step) * 100) / 100);
-  return out.slice(0, 7);
-}
-function buildXLabels(maxX) {
-  const out = [];
-  const candidates = [1, 2, 3, 5, 10, 15, 20, 30];
-  let step = 3;
-  for (const c of candidates) {
-    if (maxX / c <= 6) { step = c; break; }
-  }
-  for (let t = step; t < maxX - step / 2; t += step) {
-    out.push(Math.round(t));
-  }
-  return out.slice(0, 5);
 }
 
 export default Crash;

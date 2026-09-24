@@ -113,7 +113,11 @@ export const gamesAPI = {
   crashCashout: () => api.post("/games/crash/cashout"),
   crashStop: () => api.post("/games/crash/stop"),
   crashTick: () => api.post("/games/crash/tick"),
+  // Lightweight reconciliation poll (GET so it never fights the POST budget)
+  crashState: () => api.get("/games/crash/state", { params: { _t: Date.now() } }),
   crashActive: () => api.get("/games/crash/active"),
+  // Public snapshot of finished rounds only — safe for guests / first paint
+  crashLast: () => api.get("/games/crash/last"),
 
   snakesLayout: (data) => api.post("/games/snakes/layout", data),
   snakesStart: (data) => api.post("/games/snakes/start", data),
