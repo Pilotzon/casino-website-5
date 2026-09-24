@@ -6,7 +6,10 @@
  *   §2  games page: filter-row spacing (desktop) + centring (mobile)
  *   §3  admin panel: nothing scrolls sideways on a phone, icon-only row buttons
  *   §4  the hazard badge on the bet button opens the explanation modal —
- *       checked on EVERY game that has a bet button
+ *       checked on EVERY game that has a bet button (and the button keeps its
+ *       full sidebar width inside the new wrapper)
+ *   §5  the app-wide "Scroll up" pill (bottom right, tooltip, mobile offset)
+ *   §6  the "bypass disabled games/pages" permission in the UI
  *
  * Run:  npm run test:ui        (from frontend/)
  * ==========================================================================*/
@@ -145,7 +148,7 @@ async function main() {
     ok(/\.tableRow\s*>\s*div:first-child\s*\{[^}]*flex:\s*1 1 100%/.test(mobile),
       'the first cell owns the whole first line');
     ok(/\.tableActions\s*\{[^}]*margin-left:\s*auto/.test(mobile), 'actions are pushed to the right');
-    ok(/\.smallBtn\s*\{[^}]*width:\s*40px[^}]*height:\s*40px/s.test(mobile), 'row buttons become square tiles');
+    ok(/\.smallBtn\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s.test(mobile), 'row buttons become square tiles');
     ok(/\.btnText\s*\{\s*display:\s*none/.test(mobile), 'their text label is hidden (icon-only)');
 
     // no rule may force a width wider than a phone any more
@@ -177,6 +180,10 @@ async function main() {
     ok(/overflow-x:\s*auto/.test(bases), 'the desktop table keeps its scroll fallback', '');
     ok(!/\.smallBtn\s*\{[^}]*height:\s*34px/s.test(phoneCss),
       'the 34px text-button sizing no longer squashes the icon tiles');
+    ok(/\.smallBtn\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s.test(phoneCss),
+      'the icon tiles are a comfortable 44x44 tap target');
+    ok(/\.smallBtn\s+svg\s*\{[^}]*width:\s*24px[^}]*height:\s*24px/s.test(phoneCss),
+      'the icon inside them is 24px (not the 16px inline attribute)');
   }
 
   /* ------------------------------------------- hazard badge on every game */
@@ -284,13 +291,172 @@ async function main() {
     await refreshSiteStatus();
   }
 
-  // the badge must be a sibling (a disabled button swallows clicks)  // the badge must be a sibling (a disabled button swallows clicks)
+  // the badge must be a sibling (a disabled button swallows clicks)
   const global = readCss('src/styles/global.css');
   ok(/\.ui-bet-wrap\s*\{[^}]*position:\s*relative/.test(global), '.ui-bet-wrap is a positioned host');
+  ok(/\.ui-bet-wrap\s*>\s*button\s*\{[^}]*width:\s*100%/s.test(global),
+    'the action button stretches to the wrapper width (no shrink-wrapped button)');
+  {
+    // …and in the real DOM the button really is a direct child of the wrapper
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
+    const { default: Dice } = await import('../../src/components/games/Dice.jsx');
+    const host = mount(
+      React.createElement(ToastProvider, null,
+        React.createElement(ActiveBetProvider, null,
+          React.createElement(Dice, { gameRow: { name: 'dice', display_name: 'Dice', is_enabled: 1, is_mobile_enabled: 1 } })
+        )
+      )
+    );
+    await sleep(160);                       // let React flush the tree
+    const wrap = host.querySelector('.css-ui-bet-wrap') || host.querySelector('.ui-bet-wrap');
+    ok(!!wrap, 'the wrapper is rendered', host.innerHTML.slice(0, 120));
+    ok(!!wrap?.querySelector(':scope > button'),
+      'the bet button is a direct child of .ui-bet-wrap (so width:100% lands on it)');
+    ok(wrap?.children.length === 1,
+      'nothing else sits in the wrapper next to the button while betting is allowed',
+      String(wrap?.children.length));
+    unmountAll();
+  }
+
   const badgeSrc = readCss('src/components/common/BetLockBadge.jsx');
   ok(/<HazardBadge corner/.test(badgeSrc) && /<Modal/.test(badgeSrc),
     'BetLockBadge renders the badge + the shared Modal');
   ok(/description=\{body\}/.test(badgeSrc), 'the modal uses the same icon/title/description anatomy');
+
+  /* ------------------------------------------------------- §5 scroll up pill */
+  console.log('\n=== 5. the app-wide "Scroll up" pill ===');
+  {
+    const css = readCss('src/components/common/BackToTop.module.css');
+    const rule = firstRule(css, '.backToTop');
+    ok(/position:\s*fixed/.test(rule), 'it is pinned to the viewport');
+    ok(/right:\s*18px/.test(rule), 'it sits in the bottom-RIGHT corner', rule.replace(/\s+/g, ' ').slice(0, 90));
+    ok(/bottom:\s*18px/.test(rule), 'and at the bottom edge');
+    ok(!/^\s*left:/m.test(css) || /right:\s*14px/.test(css), 'it is never anchored to the left edge');
+    ok(/border-radius:\s*999px/.test(rule), 'it is a pill', rule.replace(/\s+/g, ' ').slice(0, 120));
+    ok(/transform:\s*translateY\(28px\)/.test(rule), 'it starts parked below the fold', '');
+    ok(/\.backToTop\.visible\s*\{[^}]*translateY\(0\)/s.test(css), 'and slides up into view');
+
+    // tooltip: same white plate as the game-toolbar icon buttons, PC only
+    const toolbar = firstRule(readCss('src/pages/games.module.css'), '.toolBtn::after');
+    const hover = css.slice(css.indexOf('@media (hover: hover) and (pointer: fine)'));
+    const tip = firstRule(hover, '.backToTop::after');
+    ok(/content:\s*attr\(data-tip\)/.test(tip), 'the tooltip text comes from data-tip');
+    for (const prop of ['background: #fff', 'color: #0f212e', 'font-size: 12px', 'font-weight: 700',
+      'padding: 4px 8px', 'border-radius: 4px', 'white-space: nowrap']) {
+      ok(new RegExp(prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ';?').test(toolbar), `toolbar tooltip uses ${prop}`, toolbar.replace(/\s+/g, ' '));
+      ok(new RegExp(prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ';?').test(tip), `the pill tooltip matches: ${prop}`, tip.replace(/\s+/g, ' '));
+    }
+    ok(/\.backToTop:hover::after\s*\{\s*opacity:\s*1/s.test(hover), 'it appears on hover');
+    ok(/@media \(hover: hover\) and \(pointer: fine\)/.test(css), 'and only on devices that really hover (a PC)');
+
+    // mobile: above the fixed bottom navigation bar
+    const phone = css.slice(css.indexOf('@media (max-width: 1024px)'));
+    ok(/\.backToTop\s*\{[^}]*bottom:\s*calc\(64px/.test(phone),
+      'on phones it floats above the 64px bottom nav', phone.slice(0, 140).replace(/\s+/g, ' '));
+
+    const jsx = readCss('src/components/common/BackToTop.jsx');
+    ok(/data-tip="Scroll up"/.test(jsx) && /aria-label="Scroll up"/.test(jsx),
+      'the label is "Scroll up" (tooltip + screen readers)');
+    ok(/d="M12 19V5"/.test(jsx) && /d="M5 12l7-7 7 7"/.test(jsx), 'the icon is an arrow pointing up');
+    ok(/SHOW_AFTER = 300/.test(jsx) && /window\.scrollY > SHOW_AFTER/.test(jsx),
+      'it only appears once the user actually scrolls down');
+    ok(/window\.addEventListener\("scroll"/.test(jsx) && /removeEventListener\("scroll"/.test(jsx),
+      'the scroll listener is cleaned up');
+    ok(/scrollTo\(\{ top: 0, behavior: "smooth" \}\)/.test(jsx), 'clicking it scrolls back to the top');
+
+    const app = readCss('src/App.jsx');
+    ok(/<BackToTop \/>/.test(app), 'App renders the pill for every route');
+
+    // no page may carry a second, competing back-to-top button
+    const betJsx = readCss('src/components/customBets/Pages/Bet.jsx');
+    const betCss = readCss('src/components/customBets/Pages/Bet.module.css');
+    ok(!/backTop/.test(betJsx) && !/backTop/.test(betCss),
+      'the custom-bets page dropped its duplicate back-to-top (one pill per page)');
+
+    // --- behaviour in the DOM
+    const { default: BackToTop } = await import('../../src/components/common/BackToTop.jsx');
+    let scrolled = null;
+    window.scrollTo = (opts) => { scrolled = opts; };
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
+
+    const host = mount(React.createElement(BackToTop));
+    await sleep(80);
+    ok(!host.querySelector('button'), 'it is not rendered while the page is at the top');
+
+    window.scrollY = 900;
+    window.dispatchEvent(new window.Event('scroll'));
+    ok(await waitFor(() => /visible/.test(host.querySelector('button')?.className ?? ''), 1500),
+      'scrolling down brings it in');
+    const pill = host.querySelector('button');
+    ok(pill?.getAttribute('data-tip') === 'Scroll up', 'it carries the tooltip text', pill?.getAttribute('data-tip'));
+    pill.click();
+    ok(scrolled && scrolled.top === 0 && scrolled.behavior === 'smooth', 'clicking scrolls to the top', JSON.stringify(scrolled));
+
+    window.scrollY = 0;
+    window.dispatchEvent(new window.Event('scroll'));
+    ok(await waitFor(() => !host.querySelector('button'), 1500), 'scrolling back to the top hides it again');
+    unmountAll();
+  }
+
+  /* ------------------------------------------------- §6 bypass permission */
+  console.log('\n=== 6. the "bypass disabled games/pages" permission ===');
+  {
+    const { default: Dice } = await import('../../src/components/games/Dice.jsx');
+    const row = { name: 'dice', display_name: 'Dice', is_enabled: 0, is_mobile_enabled: 1 };
+    const mountDice = () => mount(
+      React.createElement(ToastProvider, null,
+        React.createElement(ActiveBetProvider, null, React.createElement(Dice, { gameRow: row }))
+      )
+    );
+
+    // a normal player: the game is locked
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
+    let host = mountDice();
+    await sleep(120);
+    ok(await waitFor(() => !!host.querySelector('.ui-hazard-corner'), 2000),
+      'a player without the permission gets the hazard badge');
+    ok(host.querySelector('.ui-bet-wrap > button')?.disabled === true, 'and a disabled bet button');
+    unmountAll();
+
+    // the permission holder: nothing is locked
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100, can_bypass_disabled: 1 };
+    host = mountDice();
+    await sleep(120);
+    ok(!host.querySelector('.ui-hazard-corner'), 'a permission holder sees no badge on a disabled game');
+    ok(host.querySelector('.ui-bet-wrap > button')?.disabled === false, 'and can press the bet button');
+    unmountAll();
+
+    // the owner always has it
+    __auth.user = { id: 1, username: 'owner', role: 'owner', balance: 100 };
+    host = mountDice();
+    await sleep(120);
+    ok(!host.querySelector('.ui-hazard-corner'), 'the owner bypasses disabled games too');
+    unmountAll();
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
+
+    // the games grid must not call a bypassable game "Unavailable"
+    const games = readCss('src/pages/Games.jsx');
+    ok(/canBypassDisabled = user\?\.role === "owner" \|\| Boolean\(user\?\.can_bypass_disabled\)/.test(games),
+      'the games grid reads the permission');
+    ok(/!isImplemented \|\| \(!Boolean\(game\.is_enabled\) && !canBypassDisabled\)/.test(games),
+      'and only marks a game Unavailable when the player cannot bypass it');
+
+    // the backend: the same rule, everywhere a game is checked
+    const access = readCss('../backend/src/services/gameAccess.js');
+    ok(/function canBypassUser\(user\)/.test(access) && /user\.role === "owner"/.test(access),
+      'the backend has one bypass rule (owner or the explicit permission)');
+    ok(/AsyncLocalStorage/.test(access), 'it travels with the request instead of a global flag');
+    const engine = readCss('../backend/src/services/gameEngine.js');
+    ok(!/!game\.is_enabled/.test(engine), 'every engine check goes through isGameBlocked()');
+    ok((engine.match(/isGameBlocked\(game\)/g) || []).length >= 17,
+      'all of them, in all games', String((engine.match(/isGameBlocked\(game\)/g) || []).length));
+    const crash = readCss('../backend/src/services/crashHandler.js');
+    ok(/if \(isGameBlocked\(game\)\) return fail\(res, 403/.test(crash),
+      'crash honours the permission on its own start route');
+    const auth = readCss('../backend/src/middleware/auth.js');
+    ok(/runWithGameAccess\(canBypassUser\(user\)/.test(auth),
+      'authenticateToken opens the scope for the whole request');
+  }
 
   console.log(`\n──────────── ${pass} passed, ${fail} failed ────────────\n`);
   process.exit(fail ? 1 : 0);

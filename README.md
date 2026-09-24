@@ -37,8 +37,10 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   instead of losing the bet.
 * After a round ends there is a **1 s cooldown** before the next bet
   (`retryInMs` is returned with a 429).
-* `npm run test:crash` (in `backend/`) runs the 51-check engine smoke test
-  against a throw-away database.
+* `npm run test:crash` (in `backend/`) runs the 63-check engine smoke test
+  against a throw-away database; `npm run test:http` boots the real server on a
+  spare port and drives the same endpoints over HTTP (22 checks, also against a
+  throw-away database). `npm test` runs both.
 
 ### Toasts
 
@@ -58,21 +60,46 @@ anatomy as "Sign-up Disabled", explaining exactly why betting is off. Games wire
 it with one line: `<BetLockBadge locked={isLocked} title={disabledTitle}
 description={disabledDesc} />` inside a `.ui-bet-wrap` element.
 
+That wrapper is why the button keeps its full sidebar width: several games style
+their bet button as `inline-flex` (or leave the inline default), and an
+inline-level box inside a plain block wrapper shrink-wraps to its own label —
+`global.css` therefore gives `.ui-bet-wrap > button { width: 100% }`.
+
+**Who is actually blocked?** Only players *without* the admin-panel permission
+**"Bypass disabled games/pages"**. The owner always bypasses; a user needs
+`users.can_bypass_disabled`, which nobody has by default and which is granted
+per user in Admin → Users. The rule lives in exactly one place per layer —
+`services/gameAccess.js` (backend, carried with the request through
+`AsyncLocalStorage`, so the deep engine checks and Crash's own start route all
+agree) and `hooks/useGameDisabled.js` (frontend) — and the games grid does not
+label a bypassable game "Unavailable" either.
+
 ### Admin panel on a phone
 
 Nothing in the admin panel scrolls sideways: at ≤640 px the tables drop their
 column headers, each row becomes a two-line card (name/key, then status + the
-action buttons) and the row buttons turn **icon-only** (power icon for
-enable/disable, phone / phone-off for mobile availability) while keeping their
+action buttons) and the row buttons turn **icon-only** — 44 × 44 tiles with
+24 px icons, so the power / phone glyphs stay readable — while keeping their
 `aria-label` and `title`, so the meaning survives the missing text.
 * `npm run test:board` (in `frontend/`) runs the 92-check DOM test of the Crash
   board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
   component (polling, cash-out, render pump) against a scripted server and
   measures what the board actually renders.
-* `npm run test:ui` (in `frontend/`) runs the 127-check site UI suite
+* `npm run test:ui` (in `frontend/`) runs the 183-check site UI suite
   (`frontend/tests/site-ui/`): the toast kinds, the games-page filter row, the
-  admin panel's phone layout, and the bet-button hazard badge on **every** game.
+  admin panel's phone layout, the bet-button hazard badge on **every** game, the
+  Scroll-up pill and the bypass permission in the UI.
 * `npm test` runs both frontend suites.
+
+### Scroll up
+
+Every page carries one app-wide pill in the bottom-right corner
+(`components/common/BackToTop.jsx`, mounted in `App.jsx`): it slides up from
+below the fold once the user scrolls past 300 px, scrolls smoothly back to the
+top when clicked, and on a mouse-driven PC shows the same white tooltip as the
+icon buttons in the toolbar under the game box ("Scroll up"). On phones it
+floats above the fixed bottom navigation bar, and pages must not ship a second
+back-to-top button of their own.
 
 ### Board rules (frontend)
 

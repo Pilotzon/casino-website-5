@@ -699,20 +699,6 @@ button:active {
   }
 
   /* Back to top */
-  .backTop {
-    height: 30px;
-    padding: 0 10px;
-    font-size: 10px;
-    gap: 6px;
-    right: 14px;
-    bottom: 14px;
-  }
-
-  .backTopArrow {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-  }
 }
 
 @media (min-width: 1600px) {
@@ -2335,50 +2321,6 @@ button:active {
   color: rgba(0, 0, 0, 0.85);
 }
 
-/* Back to top */
-.backTop {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 80;
-  height: 42px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  font-weight: 950;
-  padding: 0 14px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-
-  opacity: 0;
-  transform: translateY(12px);
-  pointer-events: none;
-  transition: opacity 180ms ease, transform 180ms ease, background 120ms ease;
-}
-
-.backTopOn {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.backTop:hover {
-  background: rgba(255, 255, 255, 1);
-}
-
-.backTopArrow {
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.06);
-}
-
 /* -------------------------
    MOBILE ONLY ELEMENTS
    Hidden on desktop by default
@@ -2522,10 +2464,6 @@ button:active {
     display: block;
   }
 
-  /* Back to top - hide on mobile */
-  .backTop {
-    display: none;
-  }
 }
 
 /* -------------------------

@@ -311,9 +311,6 @@ export default function Bet() {
   // deposit toast stack
   const [depositToasts, setDepositToasts] = useState([]);
 
-  // Back to top
-  const [showBackTop, setShowBackTop] = useState(false);
-
   // comment header UI state (visual only)
   const [sortOpen, setSortOpen] = useState(false);
   const [holdersOnly, setHoldersOnly] = useState(false);
@@ -325,7 +322,6 @@ export default function Bet() {
   useEffect(() => {
     const onScroll = () => {
       setFloatOn(window.scrollY > 120);
-      setShowBackTop(window.scrollY > 800);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -1528,12 +1524,6 @@ export default function Bet() {
           </div>
         </div>
       </div>
-
-      {/* Back to top */}
-      <button className={`${styles.backTop} ${showBackTop ? styles.backTopOn : ""}`} type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Back to top">
-        <span className={styles.backTopArrow}>↑</span>
-        Back to top
-      </button>
 
       {/* MOBILE ONLY: Slide-in Detail Panel (Screen 2) */}
       {isMobile && (

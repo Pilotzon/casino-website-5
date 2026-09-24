@@ -815,13 +815,20 @@
     flex-wrap: nowrap;
   }
 
-  /* icon-only row buttons */
+  /* icon-only row buttons — the icon itself has to be big enough to read as a
+     button on a phone, so it grows with the tile (the inline width/height
+     attributes on the <svg> lose to this rule) */
   .smallBtn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     justify-content: center;
     flex: 0 0 auto;
+  }
+
+  .smallBtn svg {
+    width: 24px;
+    height: 24px;
   }
 
   .btnText {

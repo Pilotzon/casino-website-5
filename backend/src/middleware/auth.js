@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { db } = require("../config/database");
+const { canBypassUser, runWithGameAccess } = require("../services/gameAccess");
 
 function isFutureDate(value) {
   if (!value) return false;
@@ -44,7 +45,11 @@ function authenticateToken(req, res, next) {
     }
 
     req.user = user;
-    next();
+
+    // Everything downstream of an authenticated request runs inside a game
+    // access scope: users with the "bypass disabled games" permission keep
+    // playing switched-off games, everyone else does not. See gameAccess.js.
+    return runWithGameAccess(canBypassUser(user), () => next());
   } catch (error) {
     if (error.name === "TokenExpiredError") return res.status(401).json({ success: false, message: "Token expired" });
     return res.status(403).json({ success: false, message: "Invalid token" });
@@ -89,7 +94,8 @@ function optionalAuth(req, res, next) {
     req.user = null;
   }
 
-  next();
+  // Public reads (game lists, crash state) can be opened by a bypass user too.
+  return runWithGameAccess(canBypassUser(req.user), () => next());
 }
 
 function requireAdmin(req, res, next) {

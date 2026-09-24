@@ -8,6 +8,7 @@ const { getMinesMultiplier } = require("../config/minesPayoutTable");
 const { getTowerMultiplier } = require("../config/towerPayoutTable");
 const { KENO_PAYOUTS, getKenoMultiplier } = require("../config/kenoPayoutTable");
 const { getWheelDefinition } = require("../config/wheelPayoutTable");
+const { isGameBlocked } = require("./gameAccess");
 
 const {
   formatNumber,
@@ -110,7 +111,7 @@ class GameEngine {
    */
 static async processFlip(userId, betAmount, selectedSide) {
   const game = Game.findByName("flip");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -177,7 +178,7 @@ static async processFlip(userId, betAmount, selectedSide) {
    */
 static async processDice(userId, betAmount, targetNumber, rollUnder = true) {
   const game = Game.findByName("dice");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   const target = Number(targetNumber);
@@ -255,7 +256,7 @@ static async processDice(userId, betAmount, targetNumber, rollUnder = true) {
    */
   static async processLimbo(userId, betAmount, targetMultiplier) {
     const game = Game.findByName("limbo");
-    if (!game || !game.is_enabled) {
+    if (!game || isGameBlocked(game)) {
       throw new Error("Game is disabled");
     }
 
@@ -318,7 +319,7 @@ static async processDice(userId, betAmount, targetNumber, rollUnder = true) {
 
   static async processPlinko(userId, betAmount, rows = 16, difficulty = "low") {
     const game = Game.findByName("plinko");
-    if (!game || !game.is_enabled) throw new Error("Game is disabled");
+    if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
     const bet = Number(betAmount);
     const r = Number(rows);
@@ -380,7 +381,7 @@ static async processDice(userId, betAmount, targetNumber, rollUnder = true) {
   }
 static async processMines(userId, betAmount, mineCount, gridSize = 5) {
   const game = Game.findByName("mines");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   const mines = Number(mineCount);
@@ -562,7 +563,7 @@ static async cashoutMines(roundId) {
 
   static async processRoulette(userId, bets) {
   const game = Game.findByName("roulette");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   if (!Array.isArray(bets) || bets.length === 0) throw new Error("Invalid bets");
 
@@ -683,7 +684,7 @@ static async blackjackAction(roundId, action, handIndex = 0) {
 
 static async processBlackjack(userId, betAmount) {
   const game = Game.findByName("blackjack");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -1305,7 +1306,7 @@ static _bjSerialize(roundId, gs, userId) {
 
 static async processTowerStart(userId, betAmount, difficulty = "easy") {
   const game = Game.findByName("tower");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -1679,7 +1680,7 @@ static _rrAdvanceUserAttemptIndex(userId) {
  */
 static async processRussianRouletteStart(userId, betAmount) {
   const game = Game.findByName("russian_roulette");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const x = Number(betAmount);
   if (!Number.isFinite(x) || x <= 0) throw new Error("Invalid bet amount");
@@ -1792,7 +1793,7 @@ static async processRussianRoulettePlaceShotBet(roundId, betAmount) {
   if (!round) throw new Error("Round not found");
 
   const game = Game.findByName("russian_roulette");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const gs = round.game_state;
   if (!gs || gs.version !== 2) throw new Error("Invalid game state");
@@ -1850,7 +1851,7 @@ static async processRussianRouletteResolveShot(roundId) {
   if (!round) throw new Error("Round not found");
 
   const game = Game.findByName("russian_roulette");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const gs = round.game_state;
   if (!gs || gs.version !== 2) throw new Error("Invalid game state");
@@ -1976,7 +1977,7 @@ static async processRussianRouletteResolveShot(roundId) {
 
 static async processKeno(userId, betAmount, selectedNumbers, difficulty = "medium") {
   const game = Game.findByName("keno");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -2224,7 +2225,7 @@ static getKenoPayoutTableVersion() {
 
   static async processWheel(userId, betAmount, riskLevel = "medium", segments = 30) {
     const game = Game.findByName("wheel");
-    if (!game || !game.is_enabled) throw new Error("Game is disabled");
+    if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
     const bet = Number(betAmount);
     if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -2399,7 +2400,7 @@ static async snakesLayout(difficulty = "medium") {
 
 static async processSnakesStart(userId, betAmount, difficulty = "medium") {
   const game = Game.findByName("snakes");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -2715,7 +2716,7 @@ static _rpsResolve(player, house) {
 
 static async startRPS(userId, betAmount) {
   const game = Game.findByName("rps");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
@@ -2772,7 +2773,7 @@ static async startRPS(userId, betAmount) {
 
 static async chooseRPS(userId, roundId, playerChoice) {
   const game = Game.findByName("rps");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const rid = Number(roundId);
   if (!Number.isInteger(rid) || rid <= 0) throw new Error("Invalid roundId");
@@ -2899,7 +2900,7 @@ static async chooseRPS(userId, roundId, playerChoice) {
 
 static async cashoutRPS(userId, roundId) {
   const game = Game.findByName("rps");
-  if (!game || !game.is_enabled) throw new Error("Game is disabled");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
 
   const rid = Number(roundId);
   if (!Number.isInteger(rid) || rid <= 0) throw new Error("Invalid roundId");

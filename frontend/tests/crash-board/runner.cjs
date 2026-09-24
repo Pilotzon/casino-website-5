@@ -35,6 +35,14 @@ global.IS_REACT_ACT_ENVIRONMENT = false;
 // but the constructor has to be reachable as a global too
 global.Audio = window.Audio;
 global.MutationObserver = window.MutationObserver;
+// jsdom throws "Not implemented" for media playback; the games only ever
+// pause/play their bet sounds, so no-op both.
+if (window.HTMLMediaElement) {
+  window.HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
+  window.HTMLMediaElement.prototype.pause = function () {};
+  window.HTMLMediaElement.prototype.load = function () {};
+}
+global.HTMLMediaElement = window.HTMLMediaElement;
 global.ResizeObserver = window.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
 global.IntersectionObserver = window.IntersectionObserver || class { observe() {} unobserve() {} disconnect() {} };
 global.HTMLMediaElement = window.HTMLMediaElement;

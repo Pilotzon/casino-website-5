@@ -247,6 +247,80 @@ const U2 = db.prepare("SELECT id FROM users WHERE email = 't2@t.t'").get().id;
     ok(live.payload.data.active === false && live.payload.data.round === null, "no ghost round for a user who never played");
   }
 
+  console.log("\n=== 10. the \"bypass disabled games/pages\" permission ===");
+  {
+    const { canBypassUser, runWithGameAccess } = require(path.join(BACKEND, "src/services/gameAccess"));
+    const GameModel = require(path.join(BACKEND, "src/models/Game"));
+    const setEnabled = (name, on) =>
+      db.prepare("UPDATE games SET is_enabled = ? WHERE name = ?").run(on ? 1 : 0, name);
+    const asUser = { id: U2, role: "user" };
+    const bypassUser = { id: U2, role: "user", can_bypass_disabled: 1 };
+    const ownerUser = { id: U2, role: "owner" };
+
+    // --- who may bypass at all
+    ok(canBypassUser(asUser) === false, "a normal user may not bypass");
+    ok(canBypassUser(bypassUser) === true, "the permission holder may");
+    ok(canBypassUser(ownerUser) === true, "the owner always may");
+    ok(canBypassUser(null) === false, "anonymous never may");
+
+    // --- crash, switched off by an admin
+    setEnabled("crash", 0);
+    GameModel.clearCache?.();
+    await sleep(1100);
+    const blocked = await call(crash.startCrash, U2, { betAmount: 1 });
+    ok(blocked.statusCode === 403, "everyone is blocked while the game is off", `status=${blocked.statusCode}`);
+
+    await sleep(1100);
+    setBalance(U2, 100);
+    const allowed = await runWithGameAccess(canBypassUser(bypassUser), () =>
+      call(crash.startCrash, U2, { betAmount: 1 })
+    );
+    ok(allowed.statusCode === 200, "the permission holder still bets", `${allowed.statusCode} ${JSON.stringify(allowed.payload).slice(0, 120)}`);
+    await runWithGameAccess(true, () => call(crash.stopCrash, U2));   // tidy up
+    await sleep(1200);
+
+    // --- the mobile switch, same rule (only the mobile client is blocked)
+    setEnabled("crash", 1);
+    db.prepare("UPDATE games SET is_mobile_enabled = 0 WHERE name = 'crash'").run();
+    await sleep(1100);
+    const mobileReq = { user: { id: U2 }, body: { betAmount: 1 }, headers: { "x-mobile": "1" } };
+    const mobileRes = makeRes();
+    await crash.startCrash(mobileReq, mobileRes);
+    ok(mobileRes.statusCode === 403, "mobile is refused while the mobile switch is off", `status=${mobileRes.statusCode}`);
+    await sleep(1100);
+    const mobileBypassReq = { user: { id: U2, can_bypass_disabled: 1 }, body: { betAmount: 1 }, headers: { "x-mobile": "1" } };
+    const mobileBypassRes = makeRes();
+    await runWithGameAccess(true, () => crash.startCrash(mobileBypassReq, mobileBypassRes));
+    ok(mobileBypassRes.statusCode === 200, "a permission holder on mobile still bets", `status=${mobileBypassRes.statusCode}`);
+    await runWithGameAccess(true, () => call(crash.stopCrash, U2));
+    db.prepare("UPDATE games SET is_mobile_enabled = 1 WHERE name = 'crash'").run();
+    await sleep(1200);
+
+    // --- the engine layer (every game re-checks on its own)
+    const GameEngine = require(path.join(BACKEND, "src/services/gameEngine"));
+    setEnabled("flip", 0);
+    await sleep(1100);
+    setBalance(U2, 100);
+    let engineErr = null;
+    try {
+      await GameEngine.processFlip(U2, 1, "heads");
+    } catch (e) {
+      engineErr = e;
+    }
+    ok(!!engineErr && /disabled/i.test(engineErr.message), "the engine refuses a switched-off game too", String(engineErr && engineErr.message));
+
+    const before = balanceOf(U2);
+    const engineOut = await runWithGameAccess(canBypassUser(bypassUser), () => GameEngine.processFlip(U2, 1, "heads"));
+    ok(!!engineOut?.success === true && !!engineOut.round?.id,
+      "…but plays it for a permission holder", JSON.stringify(engineOut).slice(0, 120));
+    ok(Math.abs(balanceOf(U2) - before) !== 0, "and the bet really settled (balance moved)");
+    setEnabled("flip", 1);
+
+    // --- outside a request there is no bypass at all
+    ok(require(path.join(BACKEND, "src/services/gameAccess")).isBypassActive() === false,
+      "no request scope → no bypass (scripts and background jobs stay safe)");
+  }
+
   console.log(`\n──────────── ${pass} passed, ${fail} failed ────────────\n`);
   process.exit(fail ? 1 : 0);
 })();

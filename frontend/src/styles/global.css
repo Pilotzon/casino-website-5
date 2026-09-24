@@ -1653,6 +1653,16 @@ textarea::placeholder {
   min-width: 0;
 }
 
+/* The action button always fills its wrapper edge to edge.
+   Before the badge existed the button was a direct flex child of the sidebar,
+   so `align-items: stretch` sized it. Inside a plain block wrapper an
+   inline-level box (the default for <button>, and explicit `inline-flex` in
+   e.g. Crash) shrink-wraps to its own label — the button then looked as if it
+   had no width at all. */
+.ui-bet-wrap > button {
+  width: 100%;
+}
+
 /* ---- Hazard badge: dark grey rounded tile with a yellow triangle ---- */
 .ui-hazard {
   display: inline-flex;

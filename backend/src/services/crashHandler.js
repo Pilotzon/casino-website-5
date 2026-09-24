@@ -5,6 +5,7 @@ const Round = require("../models/Round");
 const GameModel = require("../models/Game");
 const { db } = require("../config/database");
 const { v4: uuidv4 } = require("uuid");
+const { isGameBlocked, isMobileBlocked } = require("./gameAccess");
 
 /**
  * ==========================================================================
@@ -532,7 +533,10 @@ async function startCrash(req, res) {
 
     const game = GameModel.findByName("crash");
     if (!game) return fail(res, 404, "Game not found");
-    if (!game.is_enabled) return fail(res, 403, "Crash is currently disabled.");
+    // Switched off by an admin → normal players are blocked, holders of the
+    // "bypass disabled games" permission keep playing (see gameAccess.js).
+    if (isGameBlocked(game)) return fail(res, 403, "Crash is currently disabled.");
+    if (isMobileBlocked(game, req)) return fail(res, 403, "Betting is disabled on mobile for this game.");
 
     const userId = req.user.id;
     const betAmount = Number(req.body.betAmount);

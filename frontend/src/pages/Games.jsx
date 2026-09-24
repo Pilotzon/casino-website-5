@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { gamesAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 import Flip from "../components/games/Flip";
 import Dice from "../components/games/Dice";
@@ -367,6 +368,11 @@ function clamp01(n) {
 }
 
 function Games() {
+  // Holders of the "bypass disabled games/pages" permission (owner included)
+  // keep playing games an admin switched off, so the grid must not label them
+  // "Unavailable" for them.
+  const { user } = useAuth();
+  const canBypassDisabled = user?.role === "owner" || Boolean(user?.can_bypass_disabled);
   const { gameName } = useParams();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
@@ -986,7 +992,8 @@ function Games() {
         <div className={styles.grid}>
           {sortedGames.map((game) => {
               const isImplemented = implementedGames.has(game.name);
-              const isUnavailable = !isImplemented || !Boolean(game.is_enabled);
+              const isUnavailable =
+                !isImplemented || (!Boolean(game.is_enabled) && !canBypassDisabled);
               const count = playingCounts[game.name] ?? Math.floor(100 + Math.random() * 1500);
               return (
                 <button
@@ -1002,7 +1009,7 @@ function Games() {
                   title={
                     !isImplemented
                       ? "Unavailable"
-                      : !game.is_enabled
+                      : !game.is_enabled && !canBypassDisabled
                       ? "Disabled"
                       : game.display_name
                   }

@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "init-db": "node src/config/initDatabase.js",
-    "test:crash": "node scripts/crash-engine-test.js"
+    "test:crash": "node scripts/crash-engine-test.js",
+    "test:http": "node scripts/http-smoke-test.js",
+    "test": "npm run test:crash && npm run test:http"
   },
   "keywords": [
     "casino",
