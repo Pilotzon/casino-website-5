@@ -885,11 +885,8 @@
   .table {
     border-radius: var(--radius-md);
   }
-  .smallBtn {
-    height: 34px;
-    padding: 0 10px;
-    font-size: 13px;
-  }
+  /* the row buttons are icon-only at this width (see the 640px block), so the
+     34px text-button sizing must NOT squeeze them — they stay 40x40 targets */
   .tableActions {
     gap: 6px;
   }

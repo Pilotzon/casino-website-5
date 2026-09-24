@@ -69,7 +69,7 @@ enable/disable, phone / phone-off for mobile availability) while keeping their
   board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
   component (polling, cash-out, render pump) against a scripted server and
   measures what the board actually renders.
-* `npm run test:ui` (in `frontend/`) runs the 123-check site UI suite
+* `npm run test:ui` (in `frontend/`) runs the 127-check site UI suite
   (`frontend/tests/site-ui/`): the toast kinds, the games-page filter row, the
   admin panel's phone layout, and the bet-button hazard badge on **every** game.
 * `npm test` runs both frontend suites.

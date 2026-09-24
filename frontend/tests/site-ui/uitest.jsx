@@ -165,6 +165,18 @@ async function main() {
     ok(labels >= 3, 'every row button wraps its text in the hideable span', String(labels));
     ok(/M12 3\.5v8/.test(jsx), 'a power icon was added to the enable/disable buttons');
     ok(/x1="4" y1="4" x2="20" y2="20"/.test(jsx), 'the phone icon gets a slash when mobile is on');
+
+    // nothing else in the panel may reintroduce a sideways scrollbar
+    const phoneCss = css.slice(css.indexOf('@media (max-width: 640px)'));
+    const bases = css.slice(0, css.indexOf('@media (max-width: 640px)'));
+    ok(!/overflow-x:\s*(auto|scroll)/.test(phoneCss),
+      'no rule after the breakpoint turns a scroller back on', (phoneCss.match(/overflow-x:[^;]+/g) || []).join(' | '));
+    const floors = (phoneCss.match(/min-width:\s*(\d+)px/g) || [])
+      .map((m) => parseInt(m.match(/(\d+)px/)[1], 10)).filter((n) => n >= 300);
+    ok(floors.length === 0, 'no phone-block rule forces a width a phone cannot fit', floors.join(','));
+    ok(/overflow-x:\s*auto/.test(bases), 'the desktop table keeps its scroll fallback', '');
+    ok(!/\.smallBtn\s*\{[^}]*height:\s*34px/s.test(phoneCss),
+      'the 34px text-button sizing no longer squashes the icon tiles');
   }
 
   /* ------------------------------------------- hazard badge on every game */
