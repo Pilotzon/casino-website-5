@@ -40,6 +40,8 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  /* a little breathing room between the hero and the search/sort row */
+  margin-top: 14px;
   margin-bottom: 16px;
   min-width: 0;
 }
@@ -1568,14 +1570,18 @@
     top: 0;
     z-index: 20;
     background: var(--color-bg-page);
+    /* Centred on the SAME axis as the grid below it. The old full-bleed trick
+       (negative margins + a wider box) nudged the row to the right whenever the
+       page container was not padded exactly like the row assumed — and it made
+       the bar wider than the viewport on very narrow phones. */
+    margin: 0 auto 12px;
+    width: 100%;
+    max-width: 100%;
     padding: 8px 0;
-    margin: 0 -var(--space-lg);
-    padding-left: var(--space-lg);
-    padding-right: var(--space-lg);
+    box-sizing: border-box;
+    justify-content: center;
     /* floating effect */
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    width: calc(100% + 2 * var(--space-lg));
-    box-sizing: border-box;
   }
   .searchWrap {
     flex: 1 1 auto;

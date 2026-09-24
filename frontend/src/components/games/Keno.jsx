@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -499,9 +500,12 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
           Clear Table
         </button>
 
-        <button className={styles.bigButton} onClick={play} disabled={isLocked || isBusy || selected.length < 1} type="button" data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button className={styles.bigButton} onClick={play} disabled={isLocked || isBusy || selected.length < 1} type="button" data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
           Bet
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
       </div>
 
       <div className={styles.gameStage}>

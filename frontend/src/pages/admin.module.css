@@ -185,9 +185,16 @@
   gap: 10px;
   padding: 12px 14px;
   align-items: center;
-  /* ensure the row grid is at least as wide as its columns so the scroll
-     container activates instead of compressing below readable widths */
-  min-width: 520px;
+}
+
+/* Wide screens keep a floor on the column widths so a very narrow desktop
+   window scrolls the table rather than squashing it. Phones get a completely
+   different row layout (see the 640px block) — nothing scrolls there. */
+@media (min-width: 641px) {
+  .tableHead,
+  .tableRow {
+    min-width: 520px;
+  }
 }
 
 .tableHead {
@@ -233,8 +240,15 @@
   flex-wrap: wrap;
 }
 
+/* Label inside a row button — hidden on phones so the button becomes
+   icon-only (the icon, aria-label and title carry the meaning). */
+.btnText {
+  display: inline;
+}
+
 .smallBtn {
   composes: ui-action-button from global;
+  gap: 6px;
   height: 36px;
   padding: 0 12px;
   border: 0;
@@ -754,6 +768,77 @@
 }
 
 /* ---- responsive ---- */
+/* =========================================================
+   Phones (<=640px): tables become two-line cards and the row
+   buttons become ICON-ONLY, so NOTHING in the admin panel needs
+   a horizontal scrollbar. The column headers are dropped — every
+   value in a row is self-describing ("Enabled", "Mobile Off") —
+   and each button keeps its meaning through its icon, aria-label
+   and title.
+   ========================================================= */
+@media (max-width: 640px) {
+
+  /* the rows can never be wider than the card again */
+  .table {
+    overflow: hidden;
+  }
+
+  .tableHead {
+    display: none;
+  }
+
+  .tableRow,
+  .tableRow:has(> div:nth-child(3):last-child) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 12px;
+    min-width: 0;
+  }
+
+  .tableRow > div {
+    min-width: 0;
+  }
+
+  /* first cell (name + key) owns the whole first line */
+  .tableRow > div:first-child {
+    flex: 1 1 100%;
+  }
+
+  .tableRow > div:not(:first-child) {
+    flex: 0 0 auto;
+  }
+
+  .tableActions {
+    margin-left: auto;
+    flex-wrap: nowrap;
+  }
+
+  /* icon-only row buttons */
+  .smallBtn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+
+  .btnText {
+    display: none;
+  }
+
+  /* long labels/lines must never push a row wider than the card */
+  .field input,
+  .field select,
+  .roleSelect,
+  .mutedSmall,
+  .resultCount {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
 @media (max-width: 980px) {
   .userGrid {
     grid-template-columns: 1fr;
@@ -798,19 +883,10 @@
     overflow-x: hidden;
   }
   .table {
-    /* Scroll container on small screens: rounded corners preserved */
     border-radius: var(--radius-md);
-    -webkit-overflow-scrolling: touch;
-  }
-  .tableHead,
-  .tableRow {
-    padding: 10px 12px;
-    gap: 8px;
-    /* give the grid a reasonable minimum so columns don't overlap */
-    min-width: 480px;
   }
   .smallBtn {
-    height: 32px;
+    height: 34px;
     padding: 0 10px;
     font-size: 13px;
   }

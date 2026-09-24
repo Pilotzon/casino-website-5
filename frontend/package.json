@@ -22,7 +22,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:board": "node tests/crash-board/build.mjs && node tests/crash-board/runner.cjs"
+    "test:board": "node tests/crash-board/build.mjs && node tests/crash-board/runner.cjs",
+    "test:ui": "node tests/site-ui/build.mjs && node tests/site-ui/runner.cjs",
+    "test": "npm run test:board && npm run test:ui"
   },
   "browserslist": {
     "production": [

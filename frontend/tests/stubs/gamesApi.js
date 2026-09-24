@@ -34,3 +34,26 @@ export const gamesAPI = {
   crashCashout: () => respond('cashout'),
   crashStop: () => respond('stop'),
 };
+
+/* ---- the axios-like default export used by plain modules (useSiteStatus …) */
+export const __site = {
+  status: { signup_enabled: true, maintenance_mode: false },
+  calls: [],
+};
+
+const client = {
+  get: (url) => {
+    __site.calls.push(url);
+    if (/pages\/status/.test(url)) {
+      return Promise.resolve({ data: { success: true, data: { ...__site.status } } });
+    }
+    return Promise.resolve({ data: { success: true, data: null } });
+  },
+  post: () => Promise.resolve({ data: { success: true, data: null } }),
+  put: () => Promise.resolve({ data: { success: true, data: null } }),
+  patch: () => Promise.resolve({ data: { success: true, data: null } }),
+  delete: () => Promise.resolve({ data: { success: true, data: null } }),
+  interceptors: { request: { use() {} }, response: { use() {} } },
+};
+
+export default client;

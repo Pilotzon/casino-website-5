@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -593,9 +594,12 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
           </button>
         </div>
 
-        <button className={styles.betButton} onClick={handleDeal} disabled={isLocked || !canDeal} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button className={styles.betButton} onClick={handleDeal} disabled={isLocked || !canDeal} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
           {ui.busy ? "..." : "Bet"}
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
       </div>
 
       <div className={styles.gameStage}>

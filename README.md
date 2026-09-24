@@ -39,10 +39,40 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   (`retryInMs` is returned with a 429).
 * `npm run test:crash` (in `backend/`) runs the 51-check engine smoke test
   against a throw-away database.
-* `npm run test:board` (in `frontend/`) runs the 83-check DOM test of the Crash
+
+### Toasts
+
+One toast system for the whole site (`context/ToastContext.jsx`), with these
+kinds: `success`, `error`, `info`, `warning` and **`loss`**. A lost round is an
+outcome, not a failure — `toast.loss("You lost 20.00 $ this round")` renders the
+"Loss" title with a falling-chart icon instead of the red "Error" cross
+(`toast.error` stays for real failures: rejected bets, network problems, …).
+
+### Disabled betting
+
+When an administrator disables a game (or the site enters maintenance), every
+game shows a red hazard badge on the top-right corner of its bet button. The
+badge is a **sibling** of the button — a disabled `<button>` swallows clicks, so
+a badge inside it could never work — and clicking it opens the same modal
+anatomy as "Sign-up Disabled", explaining exactly why betting is off. Games wire
+it with one line: `<BetLockBadge locked={isLocked} title={disabledTitle}
+description={disabledDesc} />` inside a `.ui-bet-wrap` element.
+
+### Admin panel on a phone
+
+Nothing in the admin panel scrolls sideways: at ≤640 px the tables drop their
+column headers, each row becomes a two-line card (name/key, then status + the
+action buttons) and the row buttons turn **icon-only** (power icon for
+enable/disable, phone / phone-off for mobile availability) while keeping their
+`aria-label` and `title`, so the meaning survives the missing text.
+* `npm run test:board` (in `frontend/`) runs the 92-check DOM test of the Crash
   board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
   component (polling, cash-out, render pump) against a scripted server and
   measures what the board actually renders.
+* `npm run test:ui` (in `frontend/`) runs the 123-check site UI suite
+  (`frontend/tests/site-ui/`): the toast kinds, the games-page filter row, the
+  admin panel's phone layout, and the bet-button hazard badge on **every** game.
+* `npm test` runs both frontend suites.
 
 ### Board rules (frontend)
 
@@ -62,6 +92,8 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   running seconds later" glitch.
 * History pills show the **crash point** of every finished round — green when
   the player won that round, gray when they lost.
+* The post-round cooldown lives **on the button itself** (`Wait 1s`) — there is
+  no extra sentence under it.
 * The rectangular status box only appears when it has something to say:
   `Cashed Out 2.00×` (multiplier in green) after a cash-out, `Crashed` (white)
   once the round crashes; it disappears when the next bet is placed.

@@ -61,6 +61,28 @@ const IconWarning = () => (
   </svg>
 );
 
+/* Loss: a chart line falling — reads as "the round went against you", which is
+   NOT an error (nothing failed). */
+const IconTrendDown = () => (
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
+    <path
+      d="M3 7.5l5.2 5.2 3.4-3.4 3.6 3.6"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M15.2 12.9h3.6v-3.6"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path d="M3 19.5h18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+  </svg>
+);
+
 const IconX = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <path
@@ -75,6 +97,7 @@ const IconX = () => (
 const iconByType = {
   success: <IconCheck />,
   error: <IconCross />,
+  loss: <IconTrendDown />,
   info: <IconInfo />,
   warning: <IconWarning />,
 };
@@ -138,6 +161,11 @@ export const ToastProvider = ({ children }) => {
   const error = (message, opts) =>
     showAppToast({ type: "error", title: "Error", message, duration: opts?.duration });
 
+  /* A LOSS is a game outcome, not a failure: "You lost 20.00 $" must not be
+     titled "Error". Callers pass an optional explicit title. */
+  const loss = (message, opts) =>
+    showAppToast({ type: "loss", title: opts?.title || "Loss", message, duration: opts?.duration });
+
   const info = (message, opts) =>
     showAppToast({ type: "info", title: "Info", message, duration: opts?.duration });
 
@@ -149,7 +177,7 @@ export const ToastProvider = ({ children }) => {
   const dismiss = (toastId) => toast.dismiss(toastId);
 
   return (
-    <ToastContext.Provider value={{ success, error, info, warning, loading, dismiss }}>
+    <ToastContext.Provider value={{ success, error, loss, info, warning, loading, dismiss }}>
       <Toaster
         position="top-right"
         gutter={10}

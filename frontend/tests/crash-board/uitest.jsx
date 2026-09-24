@@ -18,9 +18,9 @@ import { resolve } from 'node:path';
 import Crash from '../../src/components/games/Crash.jsx';
 import RefreshGuard from '../../src/components/common/RefreshGuard.jsx';
 import { ActiveBetProvider } from '../../src/context/ActiveBetContext.jsx';
-import { __api as api } from './stubs/gamesApi.js';
-import { __auth } from './stubs/authContext.jsx';
-import { __toasts as toasts } from './stubs/toastContext.jsx';
+import { __api as api } from '../stubs/gamesApi.js';
+import { __auth } from '../stubs/authContext.jsx';
+import { __toasts as toasts } from '../stubs/toastContext.jsx';
 
 // injected by build.mjs (the bundle is CommonJS, so `import.meta` is not available)
 const here = typeof __TEST_DIR__ === 'string' ? __TEST_DIR__ : process.cwd();
@@ -389,6 +389,29 @@ async function main() {
     unmountAll();
   }
 
+  /* ------------------------------------------------------------------ §8 */
+  console.log('\n=== 8. mobile contract (stage, chart height, pill scroller) ===');
+  {
+    const css = readFileSync(resolve(here, '../../src/components/games/crash.module.css'), 'utf8');
+    const mobile = css.slice(css.indexOf('@media (max-width: 900px)'), css.indexOf('@media (max-width: 420px)'));
+    ok(mobile.length > 0, 'a phone breakpoint exists');
+    ok(/\.chartWrap\s*\{[^}]*grid-template-rows:\s*minmax\(clamp\(/.test(mobile),
+      'chart gets an explicit height on phones (it does not collapse)');
+    ok(/\.chartWrap\s*\{[^}]*width:\s*100%/.test(mobile), 'chart fills the stage width (centred)');
+    ok(/\.historyScroll\s*\{[^}]*overflow-x:\s*auto/.test(mobile), 'history pills scroll horizontally');
+    ok(/scrollbar-width:\s*thin/.test(mobile), 'the pill scroller shows a thin scrollbar');
+    ok(/\.historyPills\s*\{[^}]*direction:\s*rtl/.test(mobile),
+      'pills keep the newest round at the right while scrolling');
+    ok(/\.yTickBox\s*\{[^}]*font-size:\s*18px/.test(mobile), 'Y tick labels are bigger on phones');
+    ok(/\.xTick\s*\{[^}]*font-size:\s*17px/.test(mobile), 'X tick labels are bigger on phones');
+    ok(/\.xTotalTop\s*\{[^}]*font-size:\s*18px/.test(mobile), 'the top clock is bigger on phones');
+    ok(/\.centerMult\s*\{[^}]*15vw/.test(mobile), 'multiplier scales up on phones');
+    ok(/\.statusBox\s*\{[^}]*font-size:\s*23px/.test(mobile), 'status box text is bigger on phones');
+    ok(/\.yAxisSpine\s*\{[^}]*width:\s*7px/.test(mobile), 'spine stays thicker than the labels');
+    const jsx = readFileSync(resolve(here, '../../src/components/games/Crash.jsx'), 'utf8');
+    ok(/historyScroll[\s\S]{0,200}historyPills/.test(jsx), 'pills live inside the scroller element');
+  }
+
   /* ------------------------------------------------------------------ §9 */
   console.log('\n=== 9. X axis: seconds are real (perpendicular from the tip) ===');
   {
@@ -481,28 +504,46 @@ async function main() {
     unmountAll();
   }
 
-  /* ------------------------------------------------------------------ §8 */  /* ------------------------------------------------------------------ §8 */
-  console.log('\n=== 8. mobile contract (stage, chart height, pill scroller) ===');
+  /* ----------------------------------------------------------------- §12 */
+  console.log('\n=== 12. cooldown: the button counts down on its own ===');
+  {
+    api.state = {
+      serverNow: Date.now(), growthK: K, cooldownMs: 1000,
+      cooldownEndsAt: Date.now() + 1500, cooldownRemainingMs: 1500,
+      balance: 90, active: false, round: null,
+      lastRound: {
+        roundId: 'rCool', betAmount: 10, crashPoint: 1.2, cashedOut: false, cashoutMultiplier: null,
+        payout: 0, netProfit: -10, win: false, startedAt: Date.now() - 3000, endedAt: Date.now(), own: true,
+      },
+      history: [{ roundId: 'rCool', value: 1.2, won: false, at: 'now' }],
+    };
+    const c10 = mountBoard();
+    ok(await waitFor(() => /^Wait \ds$/.test(txt(c10, 'betButton') ?? ''), 2500),
+      'the button itself counts the cooldown down', txt(c10, 'betButton'));
+    ok(!/Next round available/i.test(c10.textContent || ''),
+      'the "Next round available in Ns" sentence is gone completely');
+    unmountAll();
+  }
+
+  /* ----------------------------------------------------------------- §13 */
+  console.log('\n=== 13. round-6 polish (tip dot size, cash-out label) ===');
   {
     const css = readFileSync(resolve(here, '../../src/components/games/crash.module.css'), 'utf8');
-    const mobile = css.slice(css.indexOf('@media (max-width: 900px)'), css.indexOf('@media (max-width: 420px)'));
-    ok(mobile.length > 0, 'a phone breakpoint exists');
-    ok(/\.chartWrap\s*\{[^}]*grid-template-rows:\s*minmax\(clamp\(/.test(mobile),
-      'chart gets an explicit height on phones (it does not collapse)');
-    ok(/\.chartWrap\s*\{[^}]*width:\s*100%/.test(mobile), 'chart fills the stage width (centred)');
-    ok(/\.historyScroll\s*\{[^}]*overflow-x:\s*auto/.test(mobile), 'history pills scroll horizontally');
-    ok(/scrollbar-width:\s*thin/.test(mobile), 'the pill scroller shows a thin scrollbar');
-    ok(/\.historyPills\s*\{[^}]*direction:\s*rtl/.test(mobile),
-      'pills keep the newest round at the right while scrolling');
-    ok(/\.yTickBox\s*\{[^}]*font-size:\s*18px/.test(mobile), 'Y tick labels are bigger on phones');
-    ok(/\.xTick\s*\{[^}]*font-size:\s*17px/.test(mobile), 'X tick labels are bigger on phones');
-    ok(/\.xTotalTop\s*\{[^}]*font-size:\s*18px/.test(mobile), 'the top clock is bigger on phones');
-    ok(/\.centerMult\s*\{[^}]*15vw/.test(mobile), 'multiplier scales up on phones');
-    ok(/\.statusBox\s*\{[^}]*font-size:\s*23px/.test(mobile), 'status box text is bigger on phones');
-    ok(/\.yAxisSpine\s*\{[^}]*width:\s*7px/.test(mobile), 'spine stays thicker than the labels');
+    const tip = css.slice(css.indexOf('.tipMarker {'), css.indexOf('.tipMarkerCrashed'));
+    ok(/\.tipMarker\s*\{[^}]*width:\s*24px/.test(css), 'tip dot is 24px wide', tip.replace(/\s+/g, ' ').slice(0, 120));
+    ok(/\.tipMarker\s*\{[^}]*height:\s*24px/.test(css), 'tip dot is 24px tall');
+    ok(/\.tipMarker\s*\{[^}]*transition:\s*background\s+180ms\s+ease/.test(css),
+      'its colour change eases in over 180ms');
+    ok(!/\n\s*\.tipMarker\s*\{\s*width:\s*21px/.test(css), 'no phone rule shrinks the dot again');
+    ok(/\.tipMarkerCrashed\s*\{[^}]*background/.test(css), 'crashed state is still a background swap only');
+
     const jsx = readFileSync(resolve(here, '../../src/components/games/Crash.jsx'), 'utf8');
-    ok(/historyScroll[\s\S]{0,200}historyPills/.test(jsx), 'pills live inside the scroller element');
+    ok(/phase === 'cashedOut'\)\s*\{\s*actionLabel = 'End Animation';/.test(jsx),
+      'cash-out turns the button into "End Animation"');
+    ok(/actionLabel = 'End Animation';\s*\n\s*actionClass = styles\.stopBtn;/.test(jsx),
+      'it keeps the stop button styling');
   }
+
 
   console.log(`\n──────────── ${pass} passed, ${fail} failed ────────────\n`);
   process.exit(fail ? 1 : 0);

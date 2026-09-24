@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -530,14 +531,17 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         </div>
 
         {!inGame ? (
-          <button
-            className={styles.betButton}
-            onClick={start}
-            type="button"
-            data-bet-sound="true"
-           disabled={isLocked} title={isLocked ? betErrorMessage : undefined}>
+          <span className="ui-bet-wrap">
+            <button
+              className={styles.betButton}
+              onClick={start}
+              type="button"
+              data-bet-sound="true"
+              disabled={isLocked} title={isLocked ? betErrorMessage : undefined}>
             Bet
-          </button>
+            </button>
+            <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+          </span>
         ) : (
           <button
             className={styles.betButton}

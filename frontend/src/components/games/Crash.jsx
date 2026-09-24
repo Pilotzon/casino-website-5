@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { gamesAPI } from '../../services/api';
 import Stepper from "../common/Stepper";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import styles from './crash.module.css';
@@ -656,7 +657,8 @@ function Crash({ gameRow }) {
       const d = res.data?.data;
       cashoutPendingRef.current = false;
       applyState(d);
-      if (d?.crashed) toast.error('Crashed before your cash out went through');
+      // the crash beat our cash-out: the bet is lost, nothing errored
+      if (d?.crashed) toast.loss('Crashed before your cash out went through');
       else if (d?.cashedOut) toast.success(`Cashed out at ${fmt(d.multiplier)}× · +${Number(d.payout ?? 0).toFixed(2)}`);
     } catch (e) {
       if (!mountedRef.current) return;
@@ -875,7 +877,7 @@ function Crash({ gameRow }) {
     actionHandler = handleCashout;
     actionDisabled = busy || !activeBet;
   } else if (phase === 'cashedOut') {
-    actionLabel = 'Stop';
+    actionLabel = 'End Animation';
     actionClass = styles.stopBtn;
     actionHandler = handleStop;
     actionDisabled = busy;
@@ -959,23 +961,21 @@ function Crash({ gameRow }) {
           </div>
         </div>
 
-        <button
-          className={actionClass}
-          onClick={actionHandler}
-          data-bet-sound="true"
-          disabled={actionDisabled}
-          title={isLocked ? betErrorMessage : undefined}
-        >
-          {actionLabel}
-          {phase === 'running' && activeBet && (
-            <span className={styles.btnMult}> {fmt(displayedMult)}×</span>
-          )}
-        </button>
-        {inCooldown && phase !== 'running' && phase !== 'cashedOut' && (
-          <div className={styles.cooldownHint}>
-            Next round available in {Math.max(1, Math.ceil(cooldownLeft / 1000))}s
-          </div>
-        )}
+        <span className="ui-bet-wrap">
+          <button
+            className={actionClass}
+            onClick={actionHandler}
+            data-bet-sound="true"
+            disabled={actionDisabled}
+            title={isLocked ? betErrorMessage : undefined}
+          >
+            {actionLabel}
+            {phase === 'running' && activeBet && (
+              <span className={styles.btnMult}> {fmt(displayedMult)}×</span>
+            )}
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         <div className={styles.controlGroup}>
           <div className={styles.labelRow}>

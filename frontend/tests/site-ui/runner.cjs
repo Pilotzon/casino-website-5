@@ -35,6 +35,8 @@ global.IS_REACT_ACT_ENVIRONMENT = false;
 // but the constructor has to be reachable as a global too
 global.Audio = window.Audio;
 global.MutationObserver = window.MutationObserver;
+global.Image = window.Image;
+global.HTMLImageElement = window.HTMLImageElement;
 global.ResizeObserver = window.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
 global.IntersectionObserver = window.IntersectionObserver || class { observe() {} unobserve() {} disconnect() {} };
 global.HTMLMediaElement = window.HTMLMediaElement;

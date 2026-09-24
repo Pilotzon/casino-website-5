@@ -240,8 +240,8 @@
 
 .tipMarker {
   position: absolute;
-  width: 19px;
-  height: 19px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #ffffff;
   /* bottom:% + translateY(50%) => the circle's CENTRE is exactly on the tip */
@@ -365,15 +365,6 @@
   padding-left: 12px;
 }
 
-/* Cooldown hint under the action button */
-.cooldownHint {
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
 /* =========================================================
    Mobile / tablet (<=900px): the betting panel moves below the
    board (global .game-shell does that), so the stage has to stand
@@ -451,8 +442,6 @@
   .xTotalTop { font-size: 18px; }
   .centerMult { font-size: clamp(52px, 15vw, 92px); }
   .statusBox { font-size: 23px; padding: 10px 18px; margin-top: 12px; }
-  .tipMarker { width: 21px; height: 21px; }
-  .cooldownHint { font-size: 14px; }
 }
 
 /* Very narrow phones: keep the label column from eating the plot. */

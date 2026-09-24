@@ -5,6 +5,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -775,9 +776,12 @@ export default function Roulette({ gameRow }) {
           </div>
         </div>
 
-        <button className={styles.betButton} onClick={isMobile ? handleMobileBet : handleBet} disabled={isLocked || spinning} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button className={styles.betButton} onClick={isMobile ? handleMobileBet : handleBet} disabled={isLocked || spinning} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
           Bet
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
       </div>
 
       {/* ==================== GAME STAGE ==================== */}

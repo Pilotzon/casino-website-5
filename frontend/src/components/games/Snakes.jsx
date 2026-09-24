@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -994,9 +995,12 @@ export default function Snakes({ gameRow }) {
           </div>
         </div>
 
-        <button className={styles.betButton} onClick={start} disabled={isLocked || !canBet} type="button" data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button className={styles.betButton} onClick={start} disabled={isLocked || !canBet} type="button" data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
           Bet
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         {!landedOnSnake && !hasWon && (
           <button className={styles.rollButton} onClick={roll} disabled={!canRoll} type="button">

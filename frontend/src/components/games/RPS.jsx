@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -422,7 +423,10 @@ export default function RPS({ gameRow }) {
         </div>
 
         {!inProgress ? (
-          <button className={styles.betButton} onClick={start} disabled={isLocked || isRevealing} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>Bet</button>
+          <span className="ui-bet-wrap">
+            <button className={styles.betButton} onClick={start} disabled={isLocked || isRevealing} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>Bet</button>
+            <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+          </span>
         ) : (
           <div className={styles.betRow}>
             <button className={styles.cashoutBtn} onClick={cashout} disabled={!canCashout}>Cashout</button>

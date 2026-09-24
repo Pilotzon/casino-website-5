@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -434,10 +435,11 @@ export default function RussianRoulette({ gameRow }) {
 
       if (totalPayout > 0) showWinPayout(totalPayout);
 
+      // Losing a round is an outcome, not an error — it gets the "Loss" toast.
       if (Number.isFinite(netProfit) && netProfit < 0) {
-        toast.error(`You lost ${(-netProfit).toFixed(2)} $ this round`);
+        toast.loss(`You lost ${(-netProfit).toFixed(2)} $ this round`);
       } else if (totalPayout === 0 && totalWager > 0) {
-        toast.error(`You lost ${totalWager.toFixed(2)} $ this round`);
+        toast.loss(`You lost ${totalWager.toFixed(2)} $ this round`);
       }
 
       setPhase("phase2_done");
@@ -600,9 +602,12 @@ export default function RussianRoulette({ gameRow }) {
             <BetError message={betError} />
         </div>
 
-        <button className={limboStyles.betButton} onClick={startRound} disabled={isLocked || busy} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
-          {phase === "phase1_spinning" ? "Spinning..." : "Bet"}
-        </button>
+        <span className="ui-bet-wrap">
+          <button className={limboStyles.betButton} onClick={startRound} disabled={isLocked || busy} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
+            {phase === "phase1_spinning" ? "Spinning..." : "Bet"}
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         <div className={limboStyles.controlGroup} style={{ marginTop: 10 }}>
           <div className={limboStyles.labelRow}>

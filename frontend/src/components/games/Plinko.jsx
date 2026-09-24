@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -736,12 +737,15 @@ function Plinko({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
         </div>
 
-        <button className={styles.betButton} disabled={isLocked || bet <= 0}
-          onClick={handleDrop}
-                    data-bet-sound="true"
-         title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button className={styles.betButton} disabled={isLocked || bet <= 0}
+            onClick={handleDrop}
+            data-bet-sound="true"
+            title={isLocked ? betErrorMessage : undefined}>
           Bet
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
       </div>
 
       <div className={styles.gameStage}>

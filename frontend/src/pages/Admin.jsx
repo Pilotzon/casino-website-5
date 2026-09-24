@@ -797,21 +797,36 @@ function Admin() {
                       {g.is_mobile_enabled !== 0 ? "Mobile On" : "Mobile Off"}
                     </div>
                     <div className={styles.tableActions}>
+
+                      {/* Switch the game on/off (power icon, label hidden on phones) */}
                       <button
                         className={styles.smallBtn}
                         onClick={() => handleToggleGame(g.id, g.is_enabled)}
+                        aria-label={g.is_enabled ? "Disable game" : "Enable game"}
+                        title={g.is_enabled ? "Disable game" : "Enable game"}
                       >
-                        {g.is_enabled ? "Disable" : "Enable"}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+                          <path d="M12 3.5v8" />
+                          <path d="M7.1 6.6a7.5 7.5 0 1 0 9.8 0" />
+                        </svg>
+                        <span className={styles.btnText}>{g.is_enabled ? "Disable" : "Enable"}</span>
                       </button>
+
+                      {/* Mobile availability (phone / phone-off icon) */}
                       <button
                         className={styles.smallBtn}
                         onClick={() => handleToggleGameMobile(g.id, g.is_mobile_enabled)}
+                        aria-label={g.is_mobile_enabled !== 0 ? "Disable mobile" : "Enable mobile"}
+                        title={g.is_mobile_enabled !== 0 ? "Disable mobile" : "Enable mobile"}
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14" aria-hidden="true" style={{ marginRight: 4 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
                           <rect x="6" y="2" width="12" height="20" rx="2" ry="2" />
                           <line x1="12" y1="18" x2="12.01" y2="18" />
+                          {g.is_mobile_enabled !== 0 && <line x1="4" y1="4" x2="20" y2="20" />}
                         </svg>
-                        {g.is_mobile_enabled !== 0 ? "Disable Mobile" : "Enable Mobile"}
+                        <span className={styles.btnText}>
+                          {g.is_mobile_enabled !== 0 ? "Disable Mobile" : "Enable Mobile"}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -850,9 +865,14 @@ function Admin() {
                           className={styles.smallBtn}
                           onClick={() => handleTogglePage(p.page_key, p.is_enabled)}
                           disabled={adminLocked}
-                          title={adminLocked ? "Admins cannot modify Admin Panel page" : ""}
+                          aria-label={p.is_enabled ? "Disable page" : "Enable page"}
+                          title={adminLocked ? "Admins cannot modify Admin Panel page" : (p.is_enabled ? "Disable page" : "Enable page")}
                         >
-                          {p.is_enabled ? "Disable" : "Enable"}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+                            <path d="M12 3.5v8" />
+                            <path d="M7.1 6.6a7.5 7.5 0 1 0 9.8 0" />
+                          </svg>
+                          <span className={styles.btnText}>{p.is_enabled ? "Disable" : "Enable"}</span>
                         </button>
                       </div>
                     </div>

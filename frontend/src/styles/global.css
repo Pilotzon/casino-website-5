@@ -1643,6 +1643,16 @@ textarea::placeholder {
 .ui-reserved {
   visibility: hidden;
 }
+/* ---- Wrapper for a game's action button ---- 
+   Hosts the clickable hazard badge on the button's top-right corner. The badge
+   has to be a SIBLING of the button: a disabled <button> swallows every mouse
+   event, so a badge inside it could never open the explanation modal. */
+.ui-bet-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
 /* ---- Hazard badge: dark grey rounded tile with a yellow triangle ---- */
 .ui-hazard {
   display: inline-flex;
@@ -1703,6 +1713,12 @@ html[data-maintenance="on"] .sidebar-bet-button {
   filter: none;
   cursor: not-allowed;
   overflow: visible;
+}
+
+/* …unless the game renders the real, clickable badge (see BetLockBadge) — then
+   the decorative corner mark would just sit on top of it. */
+html[data-maintenance="on"] .ui-bet-wrap .sidebar-bet-button::after {
+  content: none;
 }
 
 html[data-maintenance="on"] .sidebar-bet-button::after {

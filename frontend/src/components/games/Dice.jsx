@@ -2,6 +2,7 @@ import Stepper from "../common/Stepper";
 import { useState, useEffect, useMemo, useRef } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -329,9 +330,12 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             <BetError message={betError} />
         </div>
 
-        <button className={styles.betButton} onClick={handleRoll} disabled={isLocked || isRolling} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button className={styles.betButton} onClick={handleRoll} disabled={isLocked || isRolling} data-bet-sound="true" title={isLocked ? betErrorMessage : undefined}>
           {isRolling ? "Rolling..." : "Bet"}
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         <div className={styles.controlGroup}>
           <div className={styles.labelRow}>

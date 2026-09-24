@@ -21,9 +21,9 @@ const p = (...s) => resolve(here, ...s);
 const stubPlugin = {
   name: 'crash-board-test-stubs',
   setup(b) {
-    b.onResolve({ filter: /[/\\]services[/\\]api$/ }, () => ({ path: p('stubs/gamesApi.js') }));
-    b.onResolve({ filter: /[/\\]context[/\\]AuthContext$/ }, () => ({ path: p('stubs/authContext.jsx') }));
-    b.onResolve({ filter: /[/\\]context[/\\]ToastContext$/ }, () => ({ path: p('stubs/toastContext.jsx') }));
+    b.onResolve({ filter: /[/\\]services[/\\]api$/ }, () => ({ path: p('../stubs/gamesApi.js') }));
+    b.onResolve({ filter: /[/\\]context[/\\]AuthContext$/ }, () => ({ path: p('../stubs/authContext.jsx') }));
+    b.onResolve({ filter: /[/\\]context[/\\]ToastContext$/ }, () => ({ path: p('../stubs/toastContext.jsx') }));
 
     // CSS modules -> class-name proxy
     b.onResolve({ filter: /\.module\.css$/ }, (args) => ({ path: args.path, namespace: 'css-module-stub' }));

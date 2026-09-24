@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -405,14 +406,17 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
         </div>
 
-        <button
-          className={`${styles.bigButton} ${inProgress ? styles.cashout : styles.bet}`}
-          onClick={() => (inProgress ? cashout() : start())}
-          disabled={mainDisabled} title={isLocked ? betErrorMessage : undefined} data-bet-sound="true"
-          type="button"
-        >
+        <span className="ui-bet-wrap">
+          <button
+            className={`${styles.bigButton} ${inProgress ? styles.cashout : styles.bet}`}
+            onClick={() => (inProgress ? cashout() : start())}
+            disabled={mainDisabled} title={isLocked ? betErrorMessage : undefined} data-bet-sound="true"
+            type="button"
+            >
           {mainLabel}
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         <button className={styles.secondaryButton} disabled={!canReveal} onClick={randomPick} type="button">
           Random Pick

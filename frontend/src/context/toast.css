@@ -141,10 +141,12 @@
 /* Variant colors */
 .appToast--success .appToast__accent .appToast__icon { color: #2ee86a; }
 .appToast--error   .appToast__accent .appToast__icon { color: #ff2d55; }
+.appToast--loss    .appToast__accent .appToast__icon { color: #ff5a7a; }
 .appToast--info    .appToast__accent .appToast__icon { color: #4d88ff; }
 .appToast--warning .appToast__accent .appToast__icon { color: #fca311; }
 
 .appToast--success .appToast__progress { background: #2ee86a; }
 .appToast--error   .appToast__progress { background: #7fa8b8; } /* keep like screenshot */
+.appToast--loss    .appToast__progress { background: #ff5a7a; }
 .appToast--info    .appToast__progress { background: #4d88ff; }
 .appToast--warning .appToast__progress { background: #fca311; }

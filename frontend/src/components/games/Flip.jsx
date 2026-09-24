@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { useAuth } from "../../context/AuthContext";
@@ -333,14 +334,17 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             <BetError message={betError} />
         </div>
 
-        <button
-          className={styles.betButton}
-          onClick={handleBet}
-          disabled={isLocked || isBusy}
-          data-bet-sound="true"
-         title={isLocked ? betErrorMessage : undefined}>
+        <span className="ui-bet-wrap">
+          <button
+            className={styles.betButton}
+            onClick={handleBet}
+            disabled={isLocked || isBusy}
+            data-bet-sound="true"
+            title={isLocked ? betErrorMessage : undefined}>
           {isBusy ? "Flipping..." : "Bet"}
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         <button
           className={styles.randomButton}

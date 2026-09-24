@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
 import { gamesAPI } from "../../services/api";
@@ -430,15 +431,18 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
           </div>
         </div>
 
-        <button
-          className={styles.bigButton}
-          onClick={handleSpin}
-          data-bet-sound="true"
-          disabled={isLocked || spinning || bet <= 0 || loadingLayout} title={isLocked ? betErrorMessage : undefined}
-          type="button"
-        >
+        <span className="ui-bet-wrap">
+          <button
+            className={styles.bigButton}
+            onClick={handleSpin}
+            data-bet-sound="true"
+            disabled={isLocked || spinning || bet <= 0 || loadingLayout} title={isLocked ? betErrorMessage : undefined}
+            type="button"
+            >
           {loadingLayout ? "Loading..." : spinning ? "Spinning..." : "Bet"}
-        </button>
+          </button>
+          <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
+        </span>
 
         {/* Error is always rendered (space reserved) so a failure never
             pushes the Bet button down — empty state is invisible. */}
