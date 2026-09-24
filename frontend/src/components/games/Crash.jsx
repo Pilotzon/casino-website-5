@@ -24,11 +24,17 @@ import styles from './crash.module.css';
  *     drawn until that payload exists (`phase === 'boot'`).
  *
  *  Chart notes (see crash.module.css for the visual spec):
- *   • area under the curve = SOLID #FB9D08 (no gradient), white curve;
+ *   • area under the curve = SOLID #FB9D08 (no gradient), white curve, muted
+ *     #2E4552 on crash, one soft blurred shadow under it;
  *   • no grid lines — only the two axis lines of the board;
- *   • the "camera" (visible span) only ever grows, and it grows by 10% BEFORE
- *     the tip touches the right wall, then eases into place over ~160ms, so
- *     the tip can never jump backwards when it reaches the wall.
+ *   • the "camera" (visible span) only ever grows and always keeps 10% of
+ *     headroom ahead of the tip, so the tip can never reach (and jump off) the
+ *     right wall; once the crash point is known both the curve and the camera
+ *     are clipped to that moment, so nothing creeps right after the crash;
+ *   • the multiplier, the curve, the tip, the camera and the "Total Ns"
+ *     counter are PURE functions of the current time (see the render pump) —
+ *     no value is ever smoothed in a ref, which is what used to make the
+ *     number stall and then jump while the graph kept moving.
  */
 
 const GROWTH_K_DEFAULT = 0.066; // m(t) = e^(k*t) — mirrors the backend
