@@ -1,14 +1,24 @@
+/* extra breathing room under the description, and a wider/taller card
+   (size="md" on <Modal> + this body override) */
+.body {
+  padding-top: 22px;
+  padding-bottom: 6px;
+  min-height: 132px;
+  display: flex;
+  align-items: center;
+}
+
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
 }
 
 .stay,
 .leave {
   width: 100%;
-  height: 46px;
+  height: 54px;
   border: none;
   border-radius: var(--radius-md, 10px);
   font-family: inherit;

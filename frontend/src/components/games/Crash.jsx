@@ -32,6 +32,7 @@ import styles from './crash.module.css';
  */
 
 const GROWTH_K_DEFAULT = 0.066; // m(t) = e^(k*t) — mirrors the backend
+const OFFSET_SAMPLES = 8;       // server clock samples kept (≈2s at the live poll rate)
 const X_MIN_SPAN_S = 12;        // first 12s of every round are shown 1:1
 const Y_MIN_CEIL = 2.3;         // visible multiplier ceiling at the start
 const X_HEADROOM = 1.1;         // camera grows 10% ahead of the tip
@@ -42,17 +43,8 @@ const POLL_HIDDEN_MS = 2000;    // tab in background
 const CRASH_RED = '#EF005E';    // crashed multiplier (red text)
 const CRASH_DEAD = '#2E4552';   // line + fill colour once the round crashed
 const LINE_WIDTH = 3;           // white curve stroke (screen px)
-
-/**
- * The line's drop shadow, cast onto the solid fill underneath. dy is in board
- * units (the plot is 100 units tall); the layers fade out downwards, and every
- * layer stays black at 50% → ~10%, exactly like a real shadow.
- */
-const LINE_SHADOW_LAYERS = [
-  { dy: 0.5, alpha: 0.5, width: 3.6 },
-  { dy: 1.1, alpha: 0.26, width: 3.2 },
-  { dy: 1.8, alpha: 0.12, width: 2.8 },
-];
+const SHADOW_DY = 1.2;          // shadow offset, board units (plot is 100 tall)
+const SHADOW_ALPHA = 0.5;       // 50% transparent, as specified
 
 /* ------------------------------------------------------------------ utils */
 const SAMPLES = 140; // path resolution (per frame, per layer)
@@ -106,21 +98,28 @@ function xTickValues(span) {
 
 /**
  * Build the SVG path of the curve for the currently visible window.
- * Returns the line, the (solid) area under it, the tip position and the
- * shadow layers — all derived from the SAME samples, so the tip marker, the
- * shadow and the line can never disagree.
+ * Everything (line, solid area, tip position, shadow) comes from the SAME
+ * samples, so the tip marker, the shadow and the line can never disagree.
+ *
+ * `capMult` is the crash point when it is known: the curve is then drawn only
+ * up to the crash moment, so the tip can never creep further right (that used
+ * to look like the line rising while the dot only moved sideways).
  */
-function buildCurve({ elapsed, dispX, dispY, k, tipMult }) {
+function buildCurve({ elapsed, dispX, dispY, k, tipMult, capMult }) {
   const tMax = Math.max(0, Math.min(elapsed, dispX));
   const toX = (t) => (t / dispX) * 100;
   const toY = (m) => 100 - ((Math.min(Math.max(m, 1), dispY) - 1) / (dispY - 1)) * 100;
+  const mAt = (t) => {
+    const m = Math.exp(k * t);
+    return capMult != null ? Math.min(m, capMult) : m;
+  };
 
   const path = (dy) => {
     let out = '';
     for (let i = 0; i <= SAMPLES; i += 1) {
       const t = (i / SAMPLES) * tMax;
       const x = toX(t);
-      const y = clamp(toY(Math.exp(k * t)) + dy, -4, 104);
+      const y = clamp(toY(mAt(t)) + dy, -4, 104);
       out += `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
     }
     return out.trim();
@@ -128,17 +127,16 @@ function buildCurve({ elapsed, dispX, dispY, k, tipMult }) {
 
   if (tMax <= 0.001) {
     const y0 = clamp(toY(1), 0, 100);
-    return { line: '', area: '', tipX: 0, tipY: y0, shadows: [] };
+    return { line: '', area: '', tipX: 0, tipY: y0, shadow: '' };
   }
 
   let line = path(0);
   const tipX = toX(tMax);
-  const tipY = clamp(toY(tipMult ?? Math.exp(k * tMax)), 0, 100);
-  // close the line exactly on the tip value that the marker uses
+  const tipY = clamp(toY(tipMult ?? mAt(tMax)), 0, 100);
+  // close the line exactly on the tip value the marker uses
   line += ` L${tipX.toFixed(2)},${tipY.toFixed(2)}`;
   const area = `${line} L${tipX.toFixed(2)},100 L0,100 Z`;
-  const shadows = LINE_SHADOW_LAYERS.map((layer) => path(layer.dy));
-  return { line, area, tipX, tipY, shadows };
+  return { line, area, tipX, tipY, shadow: path(SHADOW_DY) };
 }
 
 /* =============================================================== component */
@@ -186,6 +184,7 @@ function Crash({ gameRow }) {
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
   const [busy, setBusy] = useState(false);             // request in flight
   const [totalStartAt, setTotalStartAt] = useState(() => Date.now()); // "Total Ns"
+  const [totalFrozenAt, setTotalFrozenAt] = useState(null);          // frozen at the crash
   const [, setFrame] = useState(0);                    // rAF render pump
 
   /* ----------------------------------------------------------------- refs */
@@ -194,6 +193,7 @@ function Crash({ gameRow }) {
   const crashPointRef = useRef(null);   // only ever set when the round is over for us
   const growthKRef = useRef(GROWTH_K_DEFAULT);
   const serverOffsetRef = useRef(0);    // serverNow - Date.now()
+  const offsetSamplesRef = useRef([]);  // recent (stamp - Date.now()) samples
   const activeBetRef = useRef(null);
   const lastRoundRef = useRef(null);
   const cooldownRef = useRef(0);
@@ -201,9 +201,14 @@ function Crash({ gameRow }) {
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
   const lastBalanceRef = useRef(null);
+  const lastStateAtRef = useRef(0);                // newest server timestamp applied
+  const endedRoundsRef = useRef([]);               // round ids already seen finished
+  const cashoutPendingRef = useRef(false);         // optimistic cash-out in flight
+  const roundIdRef = useRef(null);                 // round currently on the board
   const cooldownActiveRef = useRef(false);
   const lastSecondRef = useRef(0);                 // "Total Ns" tick detection
   const lastFrameAtRef = useRef(0);                // render-pump watchdog
+  const totalFrozenRef = useRef(null);             // frozen "Total Ns" value
   const totalStartAtRef = useRef(Date.now());      // "Total Ns" origin (page load / last bet)
 
   const serverNow = () => Date.now() + serverOffsetRef.current;
@@ -227,7 +232,38 @@ function Crash({ gameRow }) {
    */
   const applyState = useCallback((d) => {
     if (!d || typeof d !== 'object') return;
-    if (typeof d.serverNow === 'number') serverOffsetRef.current = d.serverNow - Date.now();
+
+    // ---- ignore STALE responses -------------------------------------------
+    // Requests can finish out of order (a 250ms poll sent after a cash-out can
+    // land before its response, especially on a slow link). Applying the older
+    // payload would "un-crash" the board — the round briefly showed Crashed,
+    // then went back to normal and the toast appeared seconds later.
+    const stamp = Number(d.serverNow);
+    if (Number.isFinite(stamp)) {
+      if (stamp + 1 < lastStateAtRef.current) {
+        // A slow response may still carry terminal news about the round we are
+        // showing (e.g. the answer to our cash-out that says "too late, it
+        // crashed"). "The round is over" can never be walked back, so it is
+        // always safe to apply — dropping it left the board running forever.
+        const endedId = d.lastRound?.roundId ?? null;
+        const terminal = d.active === false && !!endedId && endedId === roundIdRef.current;
+        if (!terminal) return; // older than what we show: ignore it
+      }
+      lastStateAtRef.current = Math.max(lastStateAtRef.current, stamp);
+
+      // ---- stable clock estimate -----------------------------------------
+      // `stamp` is stamped when the server *builds* the payload, so the
+      // measured offset is always (true offset - network/queue delay). Using
+      // the newest sample directly made the time base jump BACKWARDS whenever
+      // a slow response landed: the multiplier dipped, the curve and the tip
+      // slid left, and the board looked like it had frozen for a moment.
+      // Keeping the best (largest) offset of the last few samples makes the
+      // base monotone, so time on the board only ever moves forward.
+      const samples = offsetSamplesRef.current;
+      samples.push(stamp - Date.now());
+      if (samples.length > OFFSET_SAMPLES) samples.shift();
+      serverOffsetRef.current = Math.max(...samples);
+    }
     if (typeof d.growthK === 'number' && d.growthK > 0) growthKRef.current = d.growthK;
     if (Array.isArray(d.history)) setHistory(d.history);
     if (typeof d.balance === 'number' && Math.abs((lastBalanceRef.current ?? -1) - d.balance) > 1e-9) {
@@ -242,10 +278,26 @@ function Crash({ gameRow }) {
       setCooldownEndsAt(0);
     }
 
+    const liveRoundId = d.active && d.round ? d.round.roundId : null;
+
+    // A round we already saw FINISHED can never become live again — such a
+    // payload is ignored (the balance/history above are still applied) so a
+    // late response can never "un-crash" the board.
+    if (liveRoundId && endedRoundsRef.current.includes(liveRoundId)) return;
+
     const round = d.active ? d.round : null;
 
     if (round) {
       // ---- a live round we own (fresh bet, another tab, or after refresh)
+      // A NEW round must never inherit anything from the previous one — most
+      // importantly the crash point (otherwise the fresh round instantly showed
+      // as "Crashed" whenever the old crash point was just above 1.00x).
+      if (round.roundId !== roundIdRef.current) {
+        roundIdRef.current = round.roundId;
+        crashPointRef.current = null;
+        cashoutPendingRef.current = false;
+        autoToastedRef.current = null;
+      }
       startedAtRef.current = round.startedAt;
       if (round.crashPoint != null) crashPointRef.current = round.crashPoint;
 
@@ -255,9 +307,16 @@ function Crash({ gameRow }) {
       const srvMult = Number(round.currentMultiplier);
       if (Number.isFinite(srvMult) && srvMult > 1.0001) {
         const clientMult = Math.exp(growthKRef.current * Math.max(0, (serverNow() - round.startedAt) / 1000));
-        if (clientMult > srvMult * 1.08 || clientMult < srvMult * 0.92) {
+        // Only ever correct FORWARD (we are behind the server). A correction
+        // that moves the clock back would rewind the graph — the sample window
+        // above already fixes a fast client clock on its own.
+        if (clientMult < srvMult * 0.92) {
           const wantedElapsedMs = (Math.log(srvMult) / growthKRef.current) * 1000;
-          serverOffsetRef.current += round.startedAt + wantedElapsedMs - serverNow();
+          const wanted = round.startedAt + wantedElapsedMs - Date.now();
+          if (wanted > serverOffsetRef.current) {
+            serverOffsetRef.current = wanted;
+            offsetSamplesRef.current = [wanted];
+          }
         }
       }
 
@@ -266,14 +325,23 @@ function Crash({ gameRow }) {
       setActiveBet(bet);
       setLastRound(null);
       lastRoundRef.current = null;
+
+      // Our own cash-out is on its way to the server: keep the optimistic
+      // cash-out view until the response (or the server state) confirms it,
+      // instead of flipping back to "running" on the next poll.
+      if (!round.cashedOut && cashoutPendingRef.current) return;
+
       setBetAmount(String(round.betAmount));
       if (round.autoCashout) setAutoCashout(String(round.autoCashout));
 
       if (round.cashedOut) {
+        cashoutPendingRef.current = false;
         setCashout({ multiplier: round.cashoutMultiplier, payout: round.payout });
         if (round.autoCashout && autoToastedRef.current !== round.roundId && round.cashoutMultiplier >= round.autoCashout - 1e-9) {
           autoToastedRef.current = round.roundId;
-          toast.success(`Auto cashed out at ${fmt(round.cashoutMultiplier)}× · +${Number(round.payout ?? 0).toFixed(2)}`);
+          // another tab/device cashed out before us: say so (the local
+          // cash-out path already toasted for this device)
+          toast.success(`Cashed out at ${fmt(round.cashoutMultiplier)}× · +${Number(round.payout ?? 0).toFixed(2)}`);
         }
         setPhaseSafe('cashedOut');
       } else {
@@ -286,6 +354,10 @@ function Crash({ gameRow }) {
     // ---- no live round for us
     const ended = d.lastRound || null;
     if (ended) {
+      if (ended.roundId && !endedRoundsRef.current.includes(ended.roundId)) {
+        endedRoundsRef.current = [...endedRoundsRef.current.slice(-4), ended.roundId];
+      }
+      if (ended.roundId) roundIdRef.current = ended.roundId;
       crashPointRef.current = ended.crashPoint ?? null;
       lastRoundRef.current = ended;
       setLastRound(ended);
@@ -402,20 +474,25 @@ function Crash({ gameRow }) {
   /* ------------------------------------------------- animation render pump */
   // The multiplier, the camera and the curve are all PURE functions of the
   // current time (see the render body), so this loop only decides *when* to
-  // repaint. Nothing is smoothed in a ref, which is what removes the old
+  // repaint. Nothing is smoothed in a ref, which is what removed the old
   // "the graph keeps rising but the multiplier stops, then jumps" behaviour.
   //
-  // It is also armed defensively: a body that throws (or a browser that paused
-  // requestAnimationFrame, e.g. a background tab) can never leave the board
-  // frozen — a 1.5s heartbeat re-arms the loop and repaints either way.
+  // Two drivers keep the board moving smoothly:
+  //   • requestAnimationFrame (the normal 60fps path), and
+  //   • a 40ms timer that takes over whenever rAF has not run for 60ms
+  //     (throttled/embedded frames) — that is what used to look like the board
+  //     "freezing for a moment and then jumping", because the only updates left
+  //     were the 250ms server polls.
   useEffect(() => {
     let raf = null;
     let stopped = false;
 
     const repaint = () => setFrame((f) => (f + 1) % 1000000);
+    let rafRuns = 0;      // counts real rAF callbacks
+    let seenRafRuns = 0;
 
-    const loop = () => {
-      if (stopped) return;
+    // one pump step: decide whether this frame needs a repaint
+    const tick = () => {
       lastFrameAtRef.current = Date.now();
       try {
         const st = phaseRef.current;
@@ -432,8 +509,8 @@ function Crash({ gameRow }) {
           tickle = true;
         }
 
-        // the "Total Ns" counter ticks once per second
-        const second = Math.floor((Date.now() - totalStartAtRef.current) / 1000);
+        // the "Total Ns" counter ticks once per second (and stops on crash)
+        const second = totalFrozenRef.current ?? Math.floor((Date.now() - totalStartAtRef.current) / 1000);
         if (second !== lastSecondRef.current) {
           lastSecondRef.current = second;
           tickle = true;
@@ -443,6 +520,12 @@ function Crash({ gameRow }) {
       } catch (err) {
         console.error('[crash] render pump error:', err);
       }
+    };
+
+    const loop = () => {
+      if (stopped) return;
+      rafRuns += 1;
+      tick();
       raf = requestAnimationFrame(loop);
     };
 
@@ -453,22 +536,23 @@ function Crash({ gameRow }) {
 
     arm();
 
-    // heartbeat: also keeps the board moving if rAF is throttled to a stop
-    const watchdog = setInterval(() => {
+    // timer driver: keeps ~25fps even if rAF is throttled, and re-arms rAF if
+    // it stopped completely (a frozen tab, an error inside a frame, …)
+    const driver = setInterval(() => {
       if (stopped) return;
-      const stale = Date.now() - (lastFrameAtRef.current || 0);
-      if (stale > 2000) arm();
-      const st = phaseRef.current;
-      if (st === 'running' || st === 'cashedOut' || cooldownRef.current > serverNow()) repaint();
-      else {
-        const second = Math.floor((Date.now() - totalStartAtRef.current) / 1000);
-        if (second !== lastSecondRef.current) repaint();
+      if (rafRuns === seenRafRuns) {
+        // requestAnimationFrame did not fire in this window → drive the
+        // board from the timer so it keeps animating smoothly
+        tick();
+      } else {
+        seenRafRuns = rafRuns;
       }
-    }, 1500);
+      if (Date.now() - (lastFrameAtRef.current || 0) > 1500) arm();
+    }, 40);
 
     return () => {
       stopped = true;
-      clearInterval(watchdog);
+      clearInterval(driver);
       if (raf) cancelAnimationFrame(raf);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -496,6 +580,8 @@ function Crash({ gameRow }) {
       setBetError(null);
       setTotalStartAt(Date.now());          // "Total Ns" restarts with the bet
       totalStartAtRef.current = Date.now();
+      totalFrozenRef.current = null;
+      setTotalFrozenAt(null);
       applyState(res.data?.data);
     } catch (e) {
       if (!mountedRef.current) return;
@@ -515,26 +601,53 @@ function Crash({ gameRow }) {
     if (busyRef.current) return;
     if (phaseRef.current !== 'running' || !activeBetRef.current) return;
 
+    // ---- optimistic: show the cash-out immediately -------------------------
+    // On a slow link the round used to sit there "frozen" for seconds after the
+    // click, and only then did the box and the toast appear. The number shown
+    // is the multiplier for right now (the same formula the server uses); the
+    // server response below is still the truth and can override it.
+    const nowMult = Math.min(
+      Math.exp((growthKRef.current || GROWTH_K_DEFAULT) * Math.max(0, (serverNow() - startedAtRef.current) / 1000)),
+      crashPointRef.current ?? Number.POSITIVE_INFINITY
+    );
+    const estMult = Math.max(1, Math.floor(nowMult * 100) / 100);
+    const estPayout = Math.max(0, Math.round((activeBetRef.current?.betAmount ?? 0) * estMult * 1e8) / 1e8);
+    cashoutPendingRef.current = true;
+    setCashout({ multiplier: estMult, payout: estPayout, pending: true });
+    setPhaseSafe('cashedOut');
+
     busyRef.current = true;
     setBusy(true);
     try {
       const res = await gamesAPI.crashCashout();
       if (!mountedRef.current) return;
       const d = res.data?.data;
+      cashoutPendingRef.current = false;
       applyState(d);
       if (d?.crashed) toast.error('Crashed before your cash out went through');
       else if (d?.cashedOut) toast.success(`Cashed out at ${fmt(d.multiplier)}× · +${Number(d.payout ?? 0).toFixed(2)}`);
     } catch (e) {
       if (!mountedRef.current) return;
+      cashoutPendingRef.current = false;
       const msg = e.response?.data?.message || e.message || 'Cash out failed';
       toast.error(msg);
       const state = e.response?.data?.data;
-      if (state) applyState(state);
+      if (state) {
+        applyState(state);
+      } else {
+        // nothing authoritative came back: fall back to the truth on the server
+        setCashout(null);
+        setPhaseSafe('running');
+        try {
+          const res = await gamesAPI.crashState();
+          if (mountedRef.current) applyState(res.data?.data);
+        } catch { /* the poll will sort it out */ }
+      }
     } finally {
       busyRef.current = false;
       if (mountedRef.current) setBusy(false);
     }
-  }, [applyState, toast]);
+  }, [applyState, setPhaseSafe, toast]);
 
   const handleStop = useCallback(async () => {
     if (busyRef.current) return;
@@ -588,16 +701,24 @@ function Crash({ gameRow }) {
   const crashReached = (isLive && crashPointRef.current != null && displayedMult >= crashPointRef.current - 1e-9)
     || phase === 'ended';
 
+  // The graph is drawn only up to the crash moment once that is known (after a
+  // cash-out, or once the round ended). Without this cap the curve kept rising
+  // while the clamped multiplier/dot stayed put — the tip then looked like it
+  // was sliding sideways instead of climbing.
+  const capMult = phase === 'ended' ? (lastRound?.crashPoint ?? null) : crashPointRef.current;
+  const crashElapsedS = capMult != null && capMult > 1 ? Math.log(capMult) / k : null;
+  const drawElapsed = crashElapsedS != null ? Math.min(elapsed, crashElapsedS) : elapsed;
+
   // Camera: the visible span grows 10% AHEAD of the tip, continuously from the
   // first frame, so the tip can never touch the right wall (it used to teleport
-  // left when it did).
-  const dispX = Math.max(X_MIN_SPAN_S, elapsed * X_HEADROOM);
+  // left when it did). Once the crash is reached everything freezes.
+  const dispX = Math.max(X_MIN_SPAN_S, drawElapsed * X_HEADROOM);
   const dispY = Math.max(Y_MIN_CEIL, displayedMult * Y_HEADROOM);
 
-  const { line: curveLine, area: curveArea, tipX, tipY, shadows: curveShadows } = useMemo(
-    () => buildCurve({ elapsed, dispX, dispY, k, tipMult: displayedMult }),
+  const { line: curveLine, area: curveArea, tipX, tipY, shadow: curveShadow } = useMemo(
+    () => buildCurve({ elapsed: drawElapsed, dispX, dispY, k, tipMult: displayedMult, capMult }),
     // re-computed on every repaint on purpose (the rAF pump drives this)
-    [elapsed, dispX, dispY, k, displayedMult]
+    [drawElapsed, dispX, dispY, k, displayedMult, capMult]
   );
 
   const yTicks = useMemo(
@@ -607,12 +728,25 @@ function Crash({ gameRow }) {
   );
   const xTicks = useMemo(() => xTickValues(dispX), [Math.floor(dispX)]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Freeze "Total Ns" the moment the graph crashes; release it for the next bet.
+  useEffect(() => {
+    if (crashReached && totalFrozenRef.current == null) {
+      const frozen = Math.max(0, Math.floor((Date.now() - totalStartAtRef.current) / 1000));
+      totalFrozenRef.current = frozen;
+      setTotalFrozenAt(frozen);
+    } else if (!crashReached && totalFrozenRef.current != null) {
+      totalFrozenRef.current = null;
+      setTotalFrozenAt(null);
+    }
+  }, [crashReached]);
+
+
   const cooldownLeft = Math.max(0, cooldownEndsAt - nowServer);
   const inCooldown = cooldownLeft > 0;
-  // "Total Ns" — NOT part of the chart: it simply counts seconds since the
-  // board was loaded (so it starts at 0 on every refresh) and restarts with
-  // every new bet.
-  const totalSeconds = Math.max(0, Math.floor((Date.now() - totalStartAt) / 1000));
+  // "Total Ns" — NOT part of the chart: it counts seconds since the board was
+  // loaded (so it starts at 0 on every refresh), restarts with every new bet
+  // and STOPS counting when the graph crashes.
+  const totalSeconds = Math.max(0, totalFrozenAt ?? Math.floor((Date.now() - totalStartAt) / 1000));
 
   const showBoard = phase !== 'boot';
   const showCurve = phase !== 'idle' && phase !== 'boot';
@@ -805,7 +939,7 @@ function Crash({ gameRow }) {
                     className={styles.yTick}
                     style={{ bottom: `${clamp(((v - 1) / (dispY - 1)) * 100, 0, 100)}%` }}
                   >
-                    {yTickLabel(v)}
+                    <span className={styles.yTickBox}>{yTickLabel(v)}</span>
                   </div>
                 ))}
               </div>
@@ -813,22 +947,28 @@ function Crash({ gameRow }) {
               {/* Plot area */}
               <div className={styles.plotArea}>
                 <svg className={styles.svg} viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <defs>
+                    {/* ONE soft, blurred shadow instead of stacked hard copies */}
+                    <filter id="crashShadowBlur" x="-15%" y="-15%" width="130%" height="130%">
+                      <feGaussianBlur stdDeviation="0.55" />
+                    </filter>
+                  </defs>
                   {/* solid area under the curve (never a gradient) */}
                   {showCurve && curveArea && <path d={curveArea} fill={fillColor} />}
-                  {/* drop shadow of the line, cast onto the fill below it */}
-                  {showCurve && curveShadows.map((d, i) => (
+                  {/* the line's shadow, cast onto the fill below it */}
+                  {showCurve && curveShadow && (
                     <path
-                      key={`sh-${i}`}
-                      d={d}
+                      d={curveShadow}
                       fill="none"
                       stroke="#000000"
-                      strokeOpacity={LINE_SHADOW_LAYERS[i].alpha}
-                      strokeWidth={LINE_SHADOW_LAYERS[i].width}
+                      strokeOpacity={SHADOW_ALPHA}
+                      strokeWidth={LINE_WIDTH + 0.6}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       vectorEffect="non-scaling-stroke"
+                      filter="url(#crashShadowBlur)"
                     />
-                  ))}
+                  )}
                   {showCurve && curveLine && (
                     <path
                       d={curveLine}
@@ -845,7 +985,7 @@ function Crash({ gameRow }) {
                 {/* Tip marker — sits exactly on the tip of the curve */}
                 {showCurve && (isLive || phase === 'ended') && (
                   <div
-                    className={styles.tipMarker}
+                    className={`${styles.tipMarker} ${crashReached ? styles.tipMarkerCrashed : ''}`}
                     style={{
                       left: `${clamp(tipX, 0, 99.6)}%`,
                       // tipY is an SVG coordinate (0 = top); `bottom` counts

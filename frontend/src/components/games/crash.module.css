@@ -16,6 +16,8 @@
   --crash-board: #0F212C;      /* chart background               */
   --crash-axis: rgba(255, 255, 255, 0.18);
   --crash-tick-y: #8092A5;     /* Y tick text (gray)             */
+  --crash-tick-bg: #253844;    /* Y tick label box               */
+  --crash-dead: #2E4552;       /* crashed line / fill / dot      */
   --crash-tick-x: #FFFFFF;     /* X tick text (white)            */
 }
 
@@ -180,14 +182,14 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 2.5px;
-  transform: translateX(-1px);
+  width: 4px;
+  transform: translateX(-2px);
   background: var(--crash-axis);
   border-radius: 2px;
   pointer-events: none;
   z-index: 0;
 }
-/* Y tick: gray text, centred on the spine, no grid line, no badge */
+/* Y tick: gray text in a small rounded rectangle, centred on the spine */
 .yTick {
   position: absolute;
   right: 0;
@@ -195,13 +197,19 @@
   display: flex;
   justify-content: center;
   transform: translateY(50%);
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--crash-tick-y);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
   line-height: 1;
   z-index: 1;
+}
+.yTickBox {
+  display: inline-block;
+  background: var(--crash-tick-bg);
+  color: var(--crash-tick-y);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .plotArea {
@@ -224,16 +232,21 @@
 
 .tipMarker {
   position: absolute;
-  width: 15px;
-  height: 15px;
+  width: 19px;
+  height: 19px;
   border-radius: 50%;
   background: #ffffff;
   /* bottom:% + translateY(50%) => the circle's CENTRE is exactly on the tip */
   transform: translate(-50%, 50%);
-  box-shadow: 0 0 0 4px rgba(255,255,255,0.15), 0 4px 14px rgba(0,0,0,0.45);
+  /* no outline ring — just a soft shadow so it reads as a dot on the line */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
   z-index: 3;
   pointer-events: none;
-  transition: none;
+  transition: background 180ms ease;
+}
+.tipMarkerCrashed {
+  background: var(--crash-dead);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
 }
 
 /* Center overlay text — multiplier on top, status box UNDER it */

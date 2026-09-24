@@ -61,6 +61,8 @@ export default function RefreshGuard() {
       isOpen={promptOpen}
       onClose={() => setPromptOpen(false)}
       title="Refreshing the page will not save"
+      size="md"
+      bodyClassName={styles.body}
       icon={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1" />
