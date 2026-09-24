@@ -1,0 +1,384 @@
+/* frontend/src/components/games/mines.module.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+
+/* =========================================================
+   Mines-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  /* Mines Tile Configuration */
+  --mines-tile-face: #2F4553;
+  /* Tile fill — exact Casino value */
+  --mines-tile-shadow: #213643;
+  /* Bottom-edge bevel — exact Casino value */
+  --mines-tile-hover: #557086;
+  /* Lighten on hover */
+  --mines-tile-hole: #071824;
+  /* Empty hole color */
+
+  --mines-tile-radius: 8px;
+  /* exact Casino value */
+  --mines-tile-gap: 12px;
+  /* fixed: 8-10px per spec */
+  /* bevel scales with the board, floored at 7px so smaller laptop
+     boards never look flat; capped at 10px so huge boards stay sane */
+  --mines-base-height: clamp(7px, 0.9cqi, 10px);
+  /* The static 3D height */
+}
+
+/* ========================================= */
+/* SIDEBAR                       */
+/* ========================================= */
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+  ;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+}
+
+
+.controlsHeader {
+  margin-bottom: 4px;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Mines-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+/* Mines coin chip inside the bet input — a plain icon slot at the right
+   end of the text area (no separator; the input reads as one field) */
+.coinChip {
+  color: var(--bitcoin);
+  font-weight: 800;
+  font-size: 14px;
+  padding: 0 12px 0 4px;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  background: transparent;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+/* Mines-like dropdown */
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+/* Chevron — the shared selector caret (global.css) */
+.hasCaret {
+  composes: ui-select-caret from global;
+}
+
+.profitInput {
+  background: var(--color-bg-input-profit);
+  /* #141f28 — Total Profit field */
+}
+
+.bigButton {
+  composes: sidebar-bet-button from global;
+}
+
+.secondaryButton {
+  composes: sidebar-secondary-button from global;
+}
+
+
+.coinChipSmall {
+  /* plain $ glyph — identical to the bet input and to every other game
+     (was a filled round coin badge, the only one of its kind) */
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--bitcoin);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ========================================= */
+/* GAME BOARD & TILES             */
+/* ========================================= */
+
+/* position:relative — the win popup overlays the board dead-centre */
+.gameStage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  /* board fills + centers in the panel */
+  align-items: center;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  position: relative;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  /* proportional — scales with the panel; inline-size container so the
+     tile bevels (cqi) track the board size on every screen */
+  container-type: inline-size;
+  gap: var(--mines-tile-gap);
+  width: 100%;
+}
+
+/* Desktop: the grid scales up to fill the game panel (both dimensions),
+   keeping its square aspect ratio; leftover space splits evenly. */
+@media (min-width: 901px) {
+  .gameStage {
+    container-type: size;
+  }
+
+  .grid {
+    width: min(100cqw, calc(100cqh - 48px));
+  }
+}
+
+.tile {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  border-radius: var(--mines-tile-radius);
+
+  background-color: var(--mines-tile-face);
+  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
+
+  /* CHANGED: Added transition for transform/shadow/bg-color 
+     This handles the reset animation when starting a new game.
+  */
+  transition: transform 0s ease, box-shadow 0s ease, background-color 0.35s ease;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 5.5px;
+}
+
+/* Hover: LEVITATE THE WHOLE TILE 
+   Transition here can be 'none' or '0.1s' for responsiveness. 
+   Keeping it short so clicking feels snappy.
+*/
+.tile:not(.tileRevealed):hover {
+  background-color: var(--mines-tile-hover);
+  transform: translateY(-3.5px);
+  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
+  cursor: pointer;
+  transition: transform 0s ease, box-shadow 0s ease;
+}
+
+/* Active (Click): UNREVEALED TILE
+   Instantly snaps back.
+*/
+.tile:not(.tileRevealed):active {
+  background-color: var(--mines-tile-hover);
+  transform: translateY(0) scale(1);
+  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
+  transition: none;
+}
+
+.tile:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+/* Revealed: Becomes a hole sitting on the "ground" */
+.tileRevealed {
+  background-color: var(--mines-tile-hole);
+  box-shadow: 0 0 0 var(--mines-tile-shadow);
+  /* Shrink shadow to zero */
+  transform: translateY(var(--mines-base-height));
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: default;
+}
+
+/* Active (Click): REVEALED TILE (Mines/Gems)
+   Forced scale(1) to stop the global button zoom.
+*/
+.tileRevealed:active {
+  transform: translateY(var(--mines-base-height)) scale(1);
+  transition: none;
+}
+
+/* Icon / Gem / Mine Animation */
+.icon {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+
+  /* The ONLY smooth animation: Zoom In */
+  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* ✅ Win popup — shared, dead-centre overlay (global.css).
+   Scoped rule keeps Mines' signature 3px border. */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.container .winPopup {
+  border: 3px solid rgb(0, 187, 0);
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+@keyframes zoomIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+  }
+
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    /* fluid again on small screens */
+    max-width: 100%;
+    gap: 12px;
+  }
+}
+
+/* ========================================= */
+/* LOSS DARKENING (AFTER HIT MINE)            */
+/* ========================================= */
+
+/* Darken ONLY the unrevealed tiles after losing */
+.gridLost .tile:not(.tileRevealed) {
+  background-color: #1a2f3b;
+  /* darker than --mines-tile-face */
+  box-shadow: 0 var(--mines-base-height) 0 #162a34;
+  /* darker base */
+  filter: saturate(0.85) brightness(0.95);
+}
+
+/* Keep holes slightly dim too (optional, matches "lost" feel) */
+.gridLost .tileRevealed {
+  filter: brightness(0.92);
+}
+
+/* Keep icons readable */
+.gridLost .icon {
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6));
+}
+
+/* ===== Mobile polish (Mines) ===== */
+@media (max-width: 600px) {
+
+  .container {
+    --mines-base-height: 6px;
+    /* The static 3D height */
+  }
+
+  .sidebar {
+    border-bottom-right-radius: 0;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+  }
+
+  .grid {
+    gap: 10px;
+    max-width: 520px;
+  }
+
+  .tile {
+    border-radius: 8px;
+    /* same as desktop — exact Casino value */
+  }
+
+  .bigButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .grid {
+    gap: 8px;
+  }
+}

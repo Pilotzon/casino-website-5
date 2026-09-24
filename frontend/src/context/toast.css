@@ -1,0 +1,150 @@
+:root {
+  --toast-w: 420px;
+}
+
+@media (max-width: 520px) {
+  :root {
+    --toast-w: calc(100vw - 24px);
+  }
+}
+
+.appToast {
+  width: var(--toast-w);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+
+  background: #213743;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+  font-family: Inter;
+}
+
+/* Swipe IN from outside (right -> in) */
+.appToast--enter {
+  animation: toastIn 260ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+/* Swipe OUT to outside (right) */
+.appToast--leave {
+  animation: toastOut 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0%);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0%);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+}
+
+/* Left icon panel */
+.appToast__accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 58px;
+  background: rgba(0, 0, 0, 0.18);
+  display: grid;
+  place-items: center;
+}
+
+.appToast__icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+
+.appToast__body {
+  padding: 12px 44px 12px 74px;
+  color: #eaf2f6;
+}
+
+.appToast__title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  line-height: 1.1;
+}
+
+.appToast__msg {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.72;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.appToast__close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  border-radius: 9px;
+}
+
+.appToast__close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Bottom progress */
+.appToast__progressWrap {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.appToast__progress {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  animation-name: toastShrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* PAUSE progress on hover */
+.appToast:hover .appToast__progress {
+  animation-play-state: paused !important;
+}
+
+@keyframes toastShrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Variant colors */
+.appToast--success .appToast__accent .appToast__icon { color: #2ee86a; }
+.appToast--error   .appToast__accent .appToast__icon { color: #ff2d55; }
+.appToast--info    .appToast__accent .appToast__icon { color: #4d88ff; }
+.appToast--warning .appToast__accent .appToast__icon { color: #fca311; }
+
+.appToast--success .appToast__progress { background: #2ee86a; }
+.appToast--error   .appToast__progress { background: #7fa8b8; } /* keep like screenshot */
+.appToast--info    .appToast__progress { background: #4d88ff; }
+.appToast--warning .appToast__progress { background: #fca311; }

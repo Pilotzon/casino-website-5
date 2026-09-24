@@ -1,0 +1,1888 @@
+/* Adobe Typekit / Proxima Nova */
+@import url("https://p.typekit.net/p.css?s=1&k=aba0ebl&ht=tk&f=139.173.175.176.10296&a=6570577&app=typekit&e=css");
+
+@font-face {
+  font-family: "proxima-nova";
+  src: url("https://use.typekit.net/af/2555e1/00000000000000007735e603/30/l?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n7&v=3") format("woff2"),
+    url("https://use.typekit.net/af/2555e1/00000000000000007735e603/30/d?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n7&v=3") format("woff"),
+    url("https://use.typekit.net/af/2555e1/00000000000000007735e603/30/a?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n7&v=3") format("opentype");
+  font-display: auto;
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: normal;
+}
+
+@font-face {
+  font-family: "proxima-nova";
+  src: url("https://use.typekit.net/af/78aca8/00000000000000007735e60d/30/l?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n6&v=3") format("woff2"),
+    url("https://use.typekit.net/af/78aca8/00000000000000007735e60d/30/d?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n6&v=3") format("woff"),
+    url("https://use.typekit.net/af/78aca8/00000000000000007735e60d/30/a?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n6&v=3") format("opentype");
+  font-display: auto;
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: normal;
+}
+
+@font-face {
+  font-family: "proxima-nova";
+  src: url("https://use.typekit.net/af/efe4a5/00000000000000007735e609/30/l?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n4&v=3") format("woff2"),
+    url("https://use.typekit.net/af/efe4a5/00000000000000007735e609/30/d?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n4&v=3") format("woff"),
+    url("https://use.typekit.net/af/efe4a5/00000000000000007735e609/30/a?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=n4&v=3") format("opentype");
+  font-display: auto;
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: normal;
+}
+
+@font-face {
+  font-family: "proxima-nova";
+  src: url("https://use.typekit.net/af/3322cc/00000000000000007735e616/30/l?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=i4&v=3") format("woff2"),
+    url("https://use.typekit.net/af/3322cc/00000000000000007735e616/30/d?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=i4&v=3") format("woff"),
+    url("https://use.typekit.net/af/3322cc/00000000000000007735e616/30/a?primer=9e9145798bfc6b7954a6cb7abc2ead67980260945baf1d129a2d2e98d0352745&fvd=i4&v=3") format("opentype");
+  font-display: auto;
+  font-style: italic;
+  font-weight: 400;
+  font-stretch: normal;
+}
+
+.tk-proxima-nova {
+  font-family: "proxima-nova", sans-serif;
+}
+
+:root {
+  /* =========================================================
+     THEME TOKENS — the single source of truth for the whole UI.
+     Every stylesheet references these variables (no hard-coded
+     chrome colours anywhere else), so changing a value HERE
+     restyles the entire site. Derived tokens below point at the
+     primary ones with var(), e.g. the navbar follows the page
+     background and the Bet button follows the accent blue —
+     override a derived token only if you want it to differ.
+     ========================================================= */
+
+  /* -- Color Palette (exact, inspected from real Casino Mines) - */
+  --color-bg-page: #172B39;
+  /* outer page background + behind navbar */
+  --color-bg-navbar: var(--color-bg-page);
+  /* navbar blends into the page background (no border) */
+
+  --color-bg-shell: #1a242d;
+  /* boxed container's own background */
+  --color-divider-panel: #253241;
+  /* vertical divider between sidebar and game panel */
+  --shadow-shell: 0;
+  /* diffuse ambient lift off the page */
+  --color-bg-panel: #213545;
+  /* sidebar background */
+  --color-bg-game: #0F212C;
+  /* game grid panel background (behind the tiles) */
+
+  --color-bg-input: #152430;
+  /* bet amount input, mines dropdown, gems input */
+  --color-bg-input-profit: var(--color-bg-input);
+  /* Total Profit field — same fill as every other input */
+  --color-border-input: #3E586C;
+  /* default input border */
+  --color-border-input-focus: #fff;
+  /* input border on focus, no glow/shadow */
+
+  --color-bg-tile: #2f4553;
+  /* empty game grid tile */
+  --color-bg-tile-hover: #3a5265;
+  /* tile hover state */
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #A1BFD6;
+  /* inactive mode-switcher label, secondary UI text */
+  --color-text-label: #A1BFD6;
+  /* field labels: "Bet Amount", "Mines", "Gems" */
+  --color-text-info: #A1BFD6;
+  /* small secondary info text (e.g. "$0.00") */
+  --color-text-muted: #838D95;
+  /* disabled button text, e.g. Random Pick */
+  --color-text-muted-on-blue: #a9c6ff;
+  /* disabled text on BLUE (primary) buttons — muted blue, never grey */
+  --color-text-placeholder: var(--color-text-secondary);
+  /* input placeholders (e.g. "0.00") — the bluish secondary tone */
+
+  --color-accent-blue: #2377ff;
+  /* the ONE accent blue: Bet/Register buttons, toggles, links */
+  --color-accent-blue-hover: #2377ffc9;
+  /* brightness lift on hover, no scale change */
+  --color-accent-blue-active: #2377ffaa;
+  /* slightly darker while pressed */
+
+  --color-bet-btn-bg: var(--color-accent-blue);
+  /* Bet button background */
+  --color-btn-secondary-bg: #3E586C;
+  /* Sign In button (navbar) */
+  --color-btn-secondary-hover: #3E586Caa;
+  --color-btn-split-bg: #3E586C;
+  /* 1/2 / 2x quick-multiplier buttons */
+  --color-btn-split-divider: #152430;
+  /* thin divider between 1/2 and 2x */
+  --color-btn-random-bg: #3E586C;
+  /* Random Pick button */
+  --color-btn-random-bg-disabled: #2D4355;
+  --color-bar-background: #213643;
+  --color-bar-foreground: #0A1D2A;
+
+  --color-switcher-bg: var(--color-bg-input);
+  /* Manual/Auto toggle track */
+  --color-switcher-border: #1b2734;
+  /* 1px outline on the toggle track */
+  --color-switcher-active: #3E586C;
+  /* active tab capsule inside toggle */
+
+  --color-bg-input-hover: #1d2e3b;
+
+  /* -- Corner Radius Scale -------------------------------- */
+  --radius-sm: 4px;
+  /* grid tiles */
+  --radius-md: 8px;
+  /* inputs, buttons, dropdowns */
+  --radius-lg: 12px;
+  /* the outer boxed game+sidebar container */
+  --radius-xl: 12px;
+  --radius-pill: 9999px;
+  /* mode switcher track, balance display pill */
+  --radius-full: var(--radius-pill);
+  /* legacy alias */
+
+  /* -- Spacing Scale -------------------------------------- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 22px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* -- Game stage & bottom-panel spacing (GLOBAL RULES) ----
+     --bottom-panel-space: the ONE knob for how far any "bottom
+       panel" (stats row, multiplier row, history bar…) sits from
+       the BOTTOM, LEFT and RIGHT edges of its game stage.
+       Absolute panels get it via .ui-stage-bottom insets; in-flow
+       panels sit inside the stage padding, which is derived from
+       the same value — so every game inherits 16px automatically.
+     --stage-pad: game-stage padding, EQUAL on all four sides
+       (top/bottom/left/right) — never rectangular. */
+  --bottom-panel-space: 16px;
+  --stage-pad: var(--bottom-panel-space);
+
+  /* -- Sidebar vertical rhythm ------------------------------
+     Two tiers, like Casino: a TIGHT gap between a label and the
+     control it belongs to, a LARGER gap between distinct control
+     groups. Never one flat value for everything. */
+  --sidebar-group-gap: 20px;
+  --sidebar-control-gap: 6px;
+  --sidebar-button-gap: 12px; /* gap INTO the big sidebar buttons (tighter than group gap) */
+
+  /* -- Shared control typography ---------------------------
+     ONE size for all sidebar UI text: field labels, mode toggle,
+     Bet/secondary/side action buttons and bottom-panel labels all
+     use this token so they always match exactly. */
+  --font-size-control: 17px;
+  /* the ONLY other UI size: modal titles (+ the Keno bottom message) */
+  --font-size-modal-title: 21px;
+  --ui-modal-pad: 20px;
+
+  /* -- Layout --------------------------------------------- */
+  --nav-height: 72px;
+  /* fixed navbar height */
+  --layout-sidebar-width: 320px;
+  /* boxed sidebar column width (unchanged) */
+  --layout-frame-space: 24px;
+  /* boxed container margin: viewport edges + navbar */
+  --layout-bottom-space: 44px;
+  /* page background breathing room below the box */
+  --layout-max-width: 1400px;
+  /* boxed container width cap (narrower than full bleed) */
+  /* The navbar container and the game area container both use this — they
+     are always the same width by construction, never hand-matched px. */
+  --layout-nav-max-width: var(--layout-max-width);
+
+  /* ---- Shared box dimensions ----------------------------------------
+     Login/Sign Up (navbar, Button size "sm") define the standard
+     control box. Anything that must match those buttons (e.g. the game
+     header sound control) uses THESE tokens instead of copied pixels. */
+  --auth-btn-height: 40px;
+  --auth-btn-padding-x: 16px;
+
+  /* Sidebar padding — 15px top/left/right (spec), bottom keeps the
+     breathing room. Shared by every game sidebar — change it here
+     once, it applies everywhere. */
+  --sidebar-padding: 10px 10px var(--space-lg) 10px;
+  /* Sidebar input fields: even padding on all four sides */
+  --sidebar-input-padding: 8px;
+
+  /* =========================================================
+     Shared Sidebar Controls (single source of truth)
+     Bet amount fields, split buttons, mode toggles, readonly
+     selects and bet buttons used by every game sidebar.
+     Game CSS modules must reference these tokens / compose the
+     .sidebar-* classes below instead of redefining their own.
+     ========================================================= */
+  --sidebar-input-bg: var(--color-bg-input);
+  --sidebar-input-text: #ffffff;
+  --sidebar-input-radius: var(--radius-md);
+  --sidebar-input-height: 44px;
+  --sidebar-divider: var(--color-btn-split-divider);
+  /* #1e2936 line between ½ and 2× */
+  --sidebar-split-divider: var(--color-btn-split-divider);
+  --sidebar-mode-active-bg: var(--color-switcher-active);
+  --sidebar-mode-active-color: #ffffff;
+  --sidebar-btn-secondary-bg: var(--color-btn-secondary-bg);
+  --sidebar-btn-secondary-text: #ffffff;
+  --sidebar-readonly-input-muted: #213545;
+
+
+  /* Unified input outlines — flat: 1px border, no glow/shadow */
+  --ui-outline: var(--color-border-input);
+  --ui-outline-focus: var(--color-border-input-focus);
+  --ui-input-radius: var(--radius-md);
+  --ui-input-border: 1px;
+  --ui-input-shadow: none;
+
+  /* Bet button (shared across all games) — primary action blue */
+  --bet-btn-bg: var(--color-accent-blue);
+  --bet-btn-text: #ffffff;
+  --bet-btn-radius: var(--radius-md);
+  --bet-btn-height: 44px;
+  /* Press animation — single source for EVERY button site-wide
+     (shared Button component, side action buttons, sidebar controls):
+     pure scale-down, ~100ms, no colour change. */
+  --ui-press-scale: 0.98;
+  --ui-press-duration: 100ms;
+  --bet-btn-press-scale: var(--ui-press-scale);
+  /* legacy alias — new code references --ui-press-scale */
+  --bet-btn-press-duration: 100ms;
+
+  /* Shared game accents — win/loss feedback INSIDE games.
+     Deliberately green/red: these are game semantics, not chrome. */
+  --accent-green: #00e701;
+  --accent-red: #FB7984;
+  --bitcoin: #fca311;
+
+  /* =========================================================
+     Legacy aliases — pre-overhaul token names mapped onto the
+     steel blue palette so existing stylesheets inherit the new
+     theme without per-file rewrites. Do not use in new code.
+     ========================================================= */
+  --bg-body: var(--color-bg-game);
+  --bg-elevated: var(--color-bg-panel);
+  --bg-sidebar: var(--color-bg-panel);
+  --bg-panel: var(--color-bg-panel);
+  --bg-surface: var(--color-bg-tile);
+  --bg-input: var(--color-bg-input);
+  --bg-input-hover: var(--color-bg-tile-hover);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --border-default: var(--color-border-input);
+  --border-focus: var(--color-border-input-focus);
+  --border-active: var(--color-accent-blue);
+  --accent-primary: var(--color-accent-blue);
+  --accent-primary-hover: var(--color-accent-blue-hover);
+  --accent-blue: var(--color-accent-blue);
+
+  /* Kept for non-chrome consumers (dashboard/admin/toasts) */
+  --text-primary: #ffffff;
+  --text-tertiary: #7a8a9e;
+  --accent-success: #00e701;
+  --accent-success-hover: #00fa01;
+  --accent-danger: #ed4137;
+  --accent-danger-hover: #ff4137;
+  --accent-warning: #ff9f00;
+
+  /* Game Specific (game art semantics — untouched) */
+  --game-heads: #ff9f00;
+  --game-tails: #3e73ff;
+  --game-red: #ed4137;
+  --game-black: #1a2c38;
+  --game-green: #00e701;
+
+  /* Shadows — the UI is flat. Only two neutral elevation shadows exist:
+     modals (--shadow-modal) and homepage feature cards (--shadow-card).
+     No colored/blue glows anywhere. */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 20%), 0 1px 2px 0 rgb(0 0 0 / 12%);
+  --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 20%), 0 1px 2px 0 rgb(0 0 0 / 12%);
+  --shadow-lg: 0 1px 3px 0 rgb(0 0 0 / 20%), 0 1px 2px 0 rgb(0 0 0 / 12%);
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow: none;
+  /* retired — kept only so legacy consumers resolve to "no glow" */
+  --shadow-muted: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px;
+
+  /* Typography */
+  --font-primary: 'proxima-nova', -apple-system, BlinkMacSystemFont;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  /* Base document size — bumped per the site-wide font-size pass.
+     Fixed-px sizes (e.g. the Bet button) deliberately do NOT track this. */
+  --font-size-base: 17px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  font-size: var(--font-size-base);
+  /* base size — slightly larger than the browser default */
+  background: var(--color-bg-page);
+  /* page background */
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Form elements don't inherit fonts by default — force them onto the
+   site-wide Proxima Nova + "salt" everywhere */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-input-hover);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-focus);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-accent-blue);
+  color: var(--color-text-primary);
+}
+
+/* Focus Styles — keyboard-only, neutral (no blue ring / glow anywhere).
+   Text inputs never get an outline: their focus state is purely the
+   #4a6a80 border colour change defined on the input itself. */
+*:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Disabled State */
+:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Link Reset */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Button Reset */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+/* Input Reset */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+/* Remove number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Utility Classes */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* =========================================================
+   Shared Sidebar Controls — canonical classes
+   Defined ONCE here. Game CSS modules pull these in with
+   `composes: sidebar-* from global;` instead of redefining
+   input/button styling per game.
+
+   Site-wide button interaction spec:
+     * hover -> color swap only (no scale change)
+     * press -> transform: scale(0.9), ~100ms, pure scale
+     * state borders are always rendered (invisible when
+       inactive) so toggling never shifts layout
+   ========================================================= */
+
+/* ---- Boxed game shell (sidebar + game area container) ----
+   Fixed-height rounded box: navbar on top, box inset by
+   --space-xl, footer only reachable by page scroll. Games'
+   root .container composes this class. */
+.game-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  /* no frame border — the shell is set apart from the page by its own
+     background (#1a242d on #172B39) and the rounded corner alone */
+  background: var(--color-bg-shell);
+  /* #1a242d shows behind the two panels */
+  box-shadow: var(--shadow-shell);
+  /* neutral ambient shadow, no colour */
+  overflow: hidden;
+}
+
+/* Mobile: the two panels stack, GAME FIRST — the board sits at the top of
+   the shell and the betting controls (always the first panel in the DOM)
+   move underneath it. The old right-hand divider becomes a top divider. */
+@media (max-width: 900px) {
+  .game-shell {
+    flex: none;
+    flex-direction: column;
+  }
+
+  .game-shell>div:first-of-type {
+    order: 2;
+    border-right: none;
+    border-top: 1px solid var(--color-divider-panel);
+  }
+}
+
+/* ---- Manual/Auto mode switcher ----
+   Track: #0f171e pill with 4px inner padding.
+   Inactive: plain #b1bad2 text on the track — NO border of any kind.
+   Active:   #384856 filled capsule + white text — the ONLY difference
+             between the two states is the fill. No border, no outline,
+             no ring. */
+.sidebar-mode-toggle {
+  background: var(--color-switcher-bg);
+  border: 1px solid var(--color-switcher-border);
+  /* #1b2734 track outline */
+  border-radius: var(--radius-pill);
+  padding: 4px;
+  display: flex;
+  gap: 4px; /* small gap BETWEEN the option pills (pills are a bit smaller) */
+  width: 100%;
+  position: relative;
+}
+
+.sidebar-mode-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  /* no border at all — not even a transparent one */
+  outline: none;
+  box-shadow: none;
+  /* available modes read WHITE; disabled keeps the muted grey below */
+  color: var(--color-text-primary);
+  padding: 8px 0;
+  min-width: 0;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  transition: transform var(--bet-btn-press-duration) ease, background-color 140ms ease, color 140ms ease;
+  text-align: center;
+}
+
+.sidebar-mode-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  /* unchosen option: pill gets a little BRIGHTER on hover */
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-mode-btn:active:not(:disabled) {
+  transform: scale(var(--bet-btn-press-scale));
+}
+
+/* keyboard focus only (never triggered by mouse) — neutral, never blue */
+.sidebar-mode-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.sidebar-mode-btn:disabled {
+  opacity: 1;
+  /* text colour NEVER changes — always white, even when unavailable */
+  color: var(--color-text-primary);
+  cursor: not-allowed;
+}
+
+.sidebar-mode-active,
+.sidebar-mode-active:hover {
+  background: var(--color-switcher-active);
+  /* #384856 capsule */
+  color: var(--color-text-primary);
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+/* chosen option: pill gets a little DARKER on hover */
+.sidebar-mode-active:hover {
+  background: #33414e;
+}
+
+/* ---- Control group / label row ----
+   Rhythm: the label sits TIGHT above the control it names
+   (--sidebar-control-gap) — the larger gap BETWEEN groups comes
+   from the sidebar's own --sidebar-group-gap. Two tiers, never flat. */
+.sidebar-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-control-gap);
+}
+
+.sidebar-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  color: var(--color-text-label);
+  /* #8596a6 field labels */
+}
+
+/* small secondary info next to a label (e.g. "$0.00") */
+.sidebar-label-row span:not(:first-child) {
+  color: var(--color-text-info);
+  /* #a0aab8 */
+}
+
+/* ---- Bet amount input (input + split buttons) ---- */
+.sidebar-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  height: var(--sidebar-input-height);
+  overflow: hidden;
+  transition: border-color 140ms ease;
+  box-shadow: var(--shadow-md);
+}
+
+/* Hover tint only when the field actually holds an editable input */
+.sidebar-input-group:hover:has(> input:not(:disabled):not([readonly])) {
+  background: var(--color-bg-input-hover);
+}
+
+/* an error line right under the field paints the field's border red too */
+.sidebar-input-group:has(+ .bet-error),
+.sidebar-input-group:has(+ .bet-error):focus-within {
+  border-color: var(--accent-red);
+}
+
+.sidebar-input-group:focus-within {
+  border-color: var(--color-border-input-focus);
+  /* border color only, no glow */
+}
+
+/* Even padding on all four sides — the value sits 8px from the field's
+   left edge like from its top/bottom/right (no excess left gap). */
+.sidebar-input-group>input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--sidebar-input-text);
+  padding: var(--sidebar-input-padding);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  outline: none;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+}
+
+.sidebar-input-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: var(--sidebar-input-padding);
+}
+
+.sidebar-input-wrapper input,
+.sidebar-input-wrapper select {
+  background: transparent;
+  border: none;
+  color: var(--sidebar-input-text);
+  width: 100%;
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  outline: none;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+}
+
+.sidebar-currency-icon {
+  color: var(--bitcoin);
+  margin-right: 0;
+  font-weight: 700;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+
+/* ---- ½ / 2× quick-set buttons ----
+   Merged into the right edge of the bet input: full input height, no
+   gap, no padding, no own radius (the input group's overflow:hidden +
+   8px radius rounds only the outer-right corners). The pair is one
+   continuous #2f3d4c block split by a single 1px #1e2936 line. */
+.sidebar-split-buttons {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  flex: 0 0 auto;
+  background: var(--color-btn-split-bg);
+  /* #2f3d4c */
+}
+
+.sidebar-split-buttons button {
+  background: var(--color-btn-split-bg);
+  /* #2f3d4c */
+  border: none;
+  border-radius: 0;
+  /* flush — no independent rounded corners */
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  padding: 0 14px;
+  height: 100%;
+  min-width: 40px;
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  transition: transform var(--bet-btn-press-duration) ease, filter 140ms ease;
+  position: relative;
+}
+
+.sidebar-split-buttons button:hover:not(:disabled) {
+  filter: brightness(1.1);
+  /* brightness only, no scale */
+}
+
+.sidebar-split-buttons button:active:not(:disabled) {
+  transform: scale(var(--bet-btn-press-scale));
+}
+
+.sidebar-split-buttons button:disabled {
+  opacity: 1;
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* the single thin line between ½ and 2× (rendered as the .divider element
+   every game places between the two buttons). Short and subtle — it does
+   NOT span the full input height — and white per the site spec. When the
+   bet input is disabled it switches to the dark divider colour so the
+   disabled state reads at a glance. */
+.sidebar-divider {
+  width: 1px;
+  height: 20px;
+  align-self: center;
+  background: var(--color-text-primary);
+  /* white */
+  opacity: 0.9;
+  flex: 0 0 auto;
+}
+
+.sidebar-input-group:has(input:disabled) .sidebar-divider {
+  background: var(--color-btn-split-divider);
+  opacity: 1;
+}
+
+/* ---- Readonly input / dropdown ----
+   Even padding on all four sides, same as the bet amount field. */
+.sidebar-readonly-input {
+  position: relative;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  height: var(--sidebar-input-height);
+  display: flex;
+  align-items: center;
+  padding: var(--sidebar-input-padding);
+  transition: border-color 140ms ease;
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-readonly-input:focus-within {
+  border-color: var(--color-border-input-focus);
+}
+
+.sidebar-readonly-input input,
+.sidebar-readonly-input select {
+  background: transparent;
+  border: none;
+  color: var(--sidebar-input-text);
+  width: 100%;
+  flex: 1;
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  outline: none;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+}
+
+/* Selects keep the container's even padding but reserve extra room on the
+   right so the value never runs under the shared chevron. */
+.sidebar-readonly-input select {
+  padding-right: 26px;
+}
+
+.sidebar-readonly-input:has(input:read-only),
+.sidebar-readonly-input:has(select:disabled) {
+  background-color: var(--color-bg-panel);
+}
+
+/* A read-only display field is not an interactive control: no hover or
+   press affordance, no click caret, no text selection, no focus ring. */
+.sidebar-readonly-input:has(input:read-only) {
+  pointer-events: none;
+  cursor: default;
+}
+
+.sidebar-readonly-input:has(input:read-only):focus-within {
+  border-color: var(--color-border-input);
+}
+
+.sidebar-readonly-input input:read-only {
+  cursor: default;
+  user-select: none;
+}
+
+.sidebar-readonly-input select {
+  height: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.sidebar-readonly-input select option,
+.sidebar-readonly-input select optgroup {
+  background: var(--color-bg-input);
+  color: var(--sidebar-input-text);
+}
+
+/* ---- Bet button (primary CTA of every game sidebar) ---- */
+.sidebar-bet-button {
+  background: var(--color-bet-btn-bg);
+  /* #2377ff — exact Casino value */
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  height: var(--bet-btn-height);
+  font-weight: 800;
+  font-size: var(--font-size-control);
+  cursor: pointer;
+  /* tighter, more natural gap into the big button (item: sidebar rhythm) */
+  margin-top: calc(var(--sidebar-button-gap) - var(--sidebar-group-gap));
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  transition: transform var(--bet-btn-press-duration) ease, background-color 140ms ease;
+  box-shadow: var(--shadow-md);
+}
+
+/* Hover: brightness lift only, never a scale change */
+.sidebar-bet-button:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+/* Press: pure scale-down, no color change, ~100ms, back to 100% on release */
+.sidebar-bet-button:active:not(:disabled) {
+  transform: scale(var(--bet-btn-press-scale));
+  filter: brightness(0.9);
+}
+
+/* Disabled: solid muted fill + muted text at FULL opacity (no opacity fade) */
+.sidebar-bet-button:disabled {
+  opacity: 1;
+  background: var(--color-btn-random-bg);
+  /* #2d3b48 */
+  color: var(--color-text-muted);
+  /* #8092a5 */
+  filter: none;
+  cursor: not-allowed;
+}
+
+/* ---- Secondary sidebar button (Random Pick / roll / continue) ---- */
+.sidebar-secondary-button {
+  background: var(--color-btn-random-bg);
+  /* #2d3b48 */
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  height: var(--bet-btn-height);
+  font-weight: 800;
+  font-size: var(--font-size-control);
+  cursor: pointer;
+  margin-top: calc(var(--sidebar-button-gap) - var(--sidebar-group-gap));
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  transition: transform var(--bet-btn-press-duration) ease, background-color 140ms ease;
+  box-shadow: var(--shadow-muted);
+}
+
+.sidebar-secondary-button:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.sidebar-secondary-button:active:not(:disabled) {
+  transform: scale(var(--bet-btn-press-scale));
+}
+
+/* Disabled (e.g. Random Pick): #2d3b48 bg + #8092a5 text, full opacity */
+.sidebar-secondary-button:disabled {
+  filter: brightness(0.9);
+  opacity: 1;
+  background: var(--color-btn-random-bg-disabled);
+  color: var(--color-text-muted);
+  /* #8092a5 */
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   Shared Stage UI — canonical classes for game-stage chrome
+   Win popups, side action buttons, select carets, mobile
+   overlay modals and stats/bottom panels are defined ONCE
+   here. Game CSS modules pull these in with
+   `composes: ui-* from global;` and only override the
+   properties that legitimately differ per game (coloured
+   state borders etc.) — never the geometry.
+   ========================================================= */
+
+/* ---- Side action button (Blackjack Hit/Stand/…, Flip sides) ----
+   One look for every side action: #3E586C fill, 44px tall, 8px
+   radius; hover brightens, press scales, disabled fades. The
+   "active/selected" state brightens — no border added or removed,
+   so state changes never shift the layout. */
+.ui-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 15px;
+  background: var(--color-btn-secondary-bg);
+  border-radius: 8px;
+  color: var(--color-text-primary); /* ALWAYS white (hover never changes it) */
+  font-weight: 700;
+  font-size: var(--font-size-control); /* same size as every other UI text */
+  box-shadow: var(--shadow-md); /* shared drop shadow on EVERY side button */
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  transition: transform var(--ui-press-duration) ease, filter 140ms ease, color 140ms ease;
+}
+
+.ui-action-button:hover:not(:disabled) {
+  filter: brightness(0.9);
+  /* same hover-darken the sidebar bet buttons use — one behaviour
+     for every side button */
+}
+
+.ui-action-button:active:not(:disabled) {
+  transform: scale(var(--ui-press-scale));
+}
+
+.ui-action-button:disabled {
+  opacity: 1;
+  color: var(--color-text-muted); /* the only time the text isn't white */
+  filter: brightness(0.9); /* fill + icons a touch darker too */
+  cursor: not-allowed;
+}
+
+/* selected/active state — recolor only, zero layout shift */
+.ui-action-active {
+  filter: brightness(1.2);
+  color: var(--color-text-primary);
+}
+
+/* Blue primary variant (e.g. Russian Roulette "Shoot") — same box,
+   geometry and hover/press behaviour as the neutral variant, accent
+  blue fill so it reads as THE action. Combine with .ui-action-button
+  via two composes declarations, e.g.
+  composes: ui-action-button from global; composes: ui-action-primary from global;
+  (a comma-separated multi-class "from global" breaks postcss-modules). */
+.ui-action-primary {
+  background: var(--color-accent-blue);
+  color: var(--color-text-primary);
+}
+
+.ui-action-primary:disabled {
+  color: var(--color-text-muted-on-blue);
+}
+
+/* every input placeholder site-wide: bluish, regular weight */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-placeholder);
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* ---- Select chevron (the Wheel game's selector look, one source) ----
+   For select fields wrapped in a .ui-select-caret container (games). */
+.ui-select-caret {
+  position: relative;
+}
+
+.ui-select-caret::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateY(-50%) rotate(45deg);
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  pointer-events: none;
+}
+
+/* For raw <select> elements that are not wrapped in a container
+   (selects cannot carry ::after) — same white chevron, right 14px,
+   and the same left inset the wrapped selects get from their
+   container padding. */
+.ui-caret-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 36px 0 12px;
+  /* raw <select>s don't inherit type: pin the sidebar's control typography */
+  font-family: var(--font-primary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  font-feature-settings: "salt" on;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+/* ---- Win / result popup — true overlay, dead-centre in the stage ----
+   Always `position: absolute` (an overlay, never in-flow), centred
+   with top/left 50% + translate(-50%,-50%) — identical on desktop
+   AND mobile, so it can never push layout or stick to an edge.
+   Games compose this and only override the semantic border colour.
+   The element must be a direct child of the (positioned) game stage. */
+.ui-win-popup {
+  position: absolute;
+  /* ONE position for EVERY game: centred X/Y, raised 40px */
+  top: calc(50% - 40px);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  background: var(--color-bg-game);
+  /* game grid panel — popup blends with the stage */
+  border: 2px solid rgba(0, 172, 0, 0.9);
+  border-radius: 16px;
+  padding: 18px 24px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  min-width: 240px;
+  max-width: calc(100% - 32px);
+  pointer-events: none;
+  z-index: 60;
+  animation: ui-win-pop 160ms ease-out;
+}
+
+@keyframes ui-win-pop {
+  from {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.6;
+  }
+
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.ui-win-popup-title {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.7px;
+  color: var(--accent-green);
+  text-transform: uppercase;
+}
+
+.ui-win-popup-amount {
+  margin-top: 8px;
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--color-text-primary);
+}
+
+/* ---- Inline bet error (below the bet amount input) ----
+   Lives INSIDE the bet-amount control group in every game. The vertical
+   padding + negative bottom margin make the gap ABOVE and BELOW the
+   message identical (control gap + 8px on both sides) in every sidebar. */
+.bet-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  margin: 0 0 calc(var(--sidebar-control-gap) - var(--sidebar-group-gap));
+  color: var(--accent-red);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  line-height: 1.2;
+  animation: bet-error-in 140ms ease both;
+}
+
+.bet-error svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+@keyframes bet-error-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- Shared modal anatomy (EVERY modal on the site) ----
+   [icon] Title ............................. [X]
+   description (bluish, regular)  — or inputs / an option selector
+   ...content...
+   centered bold bluish bottom text ("Learn more", "Not signed up? …") */
+.ui-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ui-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ui-modal-head-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--color-text-primary);
+  flex: 0 0 auto;
+}
+
+.ui-modal-head-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ui-modal-heading {
+  font-size: var(--font-size-modal-title);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.1px;
+  color: var(--color-text-primary);
+  text-transform: none;
+  margin: 0;
+}
+
+.ui-modal-desc {
+  margin: 12px 0 0;
+  font-size: var(--font-size-control);
+  line-height: 1.4; /* tight, like the rest of the site */
+  font-weight: 400; /* description is never bold */
+  color: var(--color-text-secondary); /* bluish */
+}
+
+/* Bottom text of every modal ("Learn more", "Not signed up? ...") */
+.ui-modal-foot {
+  margin-top: 18px;
+  padding-bottom: 2px;
+  text-align: center;
+  font-size: var(--font-size-control);
+  font-weight: 700; /* bottom text is bluish BOLD */
+  color: var(--color-text-secondary);
+}
+
+.ui-modal-foot button,
+.ui-modal-foot a {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.ui-modal-foot button:hover,
+.ui-modal-foot a:hover {
+  text-decoration: underline;
+}
+
+/* Close (X) — bare icon, no background ever; hover highlights, press scales */
+.ui-modal-close {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 120ms ease, transform var(--ui-press-duration) ease;
+}
+
+.ui-modal-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.ui-modal-close:hover {
+  color: var(--color-text-primary);
+}
+
+.ui-modal-close:active {
+  transform: scale(var(--ui-press-scale));
+}
+
+/* Option selector inside a modal — EXACT same style as Manual/Auto */
+.ui-modal-options {
+  margin-top: 14px;
+}
+
+/* ---- Pressable: universal 0.98 press feedback (headers/cards) ---- */
+.pressable {
+  transition: transform 90ms ease;
+}
+
+.pressable:active {
+  transform: scale(0.98);
+}
+
+/* ---- Modal overlay + card (ONE look for every modal) ----
+   Desktop: centred card, drop shadow, dark backdrop, slide-up in / out.
+   Mobile (≤768px): bottom sheet — slides up from the bottom, rounded top
+   corners only, a drag handle at the top; the page behind zooms out a
+   little and darkens (see body.ui-modal-open below). */
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 2000;
+  padding: 16px;
+  /* open: background darkens in ... */
+  animation: ui-modal-darken-in 200ms ease both;
+}
+
+/* ... while the card slides up smoothly from the bottom */
+.ui-modal-overlay> * {
+  animation: ui-modal-slide-up 240ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+/* closing: the exact reverse (doubled selector wins in any chunk order) */
+.ui-modal-overlay.ui-modal-closing {
+  animation: ui-modal-darken-out 190ms ease-in both;
+}
+
+.ui-modal-overlay.ui-modal-closing> * {
+  animation: ui-modal-slide-down 190ms ease-in both;
+}
+
+@keyframes ui-modal-darken-in {
+  from { background: rgba(0, 0, 0, 0); }
+  to { background: rgba(0, 0, 0, 0.6); }
+}
+
+@keyframes ui-modal-darken-out {
+  from { background: rgba(0, 0, 0, 0.6); }
+  to { background: rgba(0, 0, 0, 0); }
+}
+
+@keyframes ui-modal-slide-up {
+  from { transform: translateY(36px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes ui-modal-slide-down {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(36px); opacity: 0; }
+}
+
+.ui-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: min(86vh, 800px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-shell);
+  border-radius: 14px;
+  /* SQUARE padding: the head icon sits the same distance from the top
+     as from the left, the X the same from the top as from the right */
+  padding: var(--ui-modal-pad);
+  box-shadow: var(--shadow-modal);
+}
+
+.ui-modal-card-md { max-width: 560px; }
+.ui-modal-card-lg { max-width: 820px; }
+
+.ui-modal-handle { display: none; }
+
+.ui-modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ui-modal-body::-webkit-scrollbar { width: 8px; }
+.ui-modal-body::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; }
+
+@media (max-width: 768px) {
+  .ui-modal-overlay {
+    place-items: end stretch;
+    padding: 0;
+  }
+
+  .ui-modal-card,
+  .ui-modal-card-md,
+  .ui-modal-card-lg {
+    max-width: none;
+    max-height: 88vh;
+    border-radius: 18px 18px 0 0; /* rounded UPWARDS only */
+    padding: 10px var(--ui-modal-pad) calc(var(--ui-modal-pad) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* drag handle at the top of the sheet — a real control: pull down to
+     dismiss (generous hit area around the thin bar) */
+  .ui-modal-handle {
+    display: block;
+    position: relative;
+    width: 44px;
+    height: 5px;
+    margin: 0 auto 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .ui-modal-handle::before {
+    content: "";
+    position: absolute;
+    inset: -14px -40px;
+  }
+
+  .ui-modal-card {
+    touch-action: pan-y;
+  }
+
+  .ui-modal-overlay> * {
+    animation: ui-sheet-up 280ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  }
+
+  .ui-modal-overlay.ui-modal-closing> * {
+    animation: ui-sheet-down 220ms ease-in both;
+  }
+
+  @keyframes ui-sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  @keyframes ui-sheet-down {
+    from { transform: translateY(0); }
+    to { transform: translateY(100%); }
+  }
+
+  /* page behind the sheet zooms out a little (animated both ways) */
+  body.ui-modal-open .ui-zoom-target {
+    transform: scale(0.95);
+  }
+}
+
+/* zoom target: the page content (main + footer) */
+.ui-zoom-target {
+  transform-origin: 50% var(--ui-zoom-origin-y, 50%);
+  will-change: transform;
+  transition: transform 260ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.ui-modal-title {
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--color-text-label);
+  text-transform: uppercase;
+}
+
+.ui-modal-number {
+  margin-top: 8px;
+  font-size: 30px;
+  font-weight: 900;
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.ui-modal-grid {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+/* info rows read as READ-ONLY INPUTS — same fill, border, radius, shadow */
+.ui-modal-item {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: 10px var(--sidebar-input-padding);
+  box-shadow: var(--shadow-md), 0 4px 10px rgba(0, 0, 0, 0.25); /* clearly visible on the dark sheet */
+}
+
+.ui-modal-item-label {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--color-text-label);
+}
+
+.ui-modal-item-value {
+  margin-top: 6px;
+  font-size: var(--font-size-control);
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-primary);
+}
+
+.ui-modal-btn {
+  margin-top: 12px;
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-btn-secondary-bg); /* secondary, like every side button */
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: filter 140ms ease, transform 100ms ease;
+}
+
+.ui-modal-btn:hover {
+  filter: brightness(0.9);
+}
+
+.ui-modal-btn:active {
+  transform: scale(0.98);
+}
+
+/* ---- Stats / bottom panels — anchored to the stage bottom ----
+   GLOBAL 16px RULE: every bottom panel sits exactly
+   --bottom-panel-space (16px) from the BOTTOM, LEFT and RIGHT edges
+   of the game stage — never a different value per side, never a
+   per-game override. The panel stretches between the left/right
+   insets, which also guarantees it is perfectly centred at every
+   viewport width (desktop AND mobile). Width/game-specific chrome
+   stays in the module; these three insets do not. */
+.ui-stage-bottom {
+  position: absolute;
+  bottom: var(--bottom-panel-space);
+  left: var(--bottom-panel-space);
+  right: var(--bottom-panel-space);
+}
+
+/* In-flow variant of the same rule: for games whose bottom panel is
+   part of the layout (not absolutely anchored). Give the panel this
+   class (or rely on the stage's equal --stage-pad padding) so it
+   still ends up 16px from the bottom/left/right stage edges. */
+.game-bottom-panel {
+  margin-bottom: var(--bottom-panel-space);
+  margin-left: var(--bottom-panel-space);
+  margin-right: var(--bottom-panel-space);
+}
+
+/* ---- Hover stat panels — ONE shared design (Keno, Plinko, Wheel, …) ----
+   The Flip/Limbo read-only-input pattern: a floating panel whose stats
+   are label + bordered input-style fields (never plain text boxes).
+   Games compose these classes and only supply positioning.
+   Mobile rule: stats stay horizontal in one row when they fit; a lone
+   trailing stat (the 4th of 4, 7th of 7…) stretches across the full
+   row instead of leaving an orphaned tiny box. */
+.ui-hover-panel {
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms linear;
+  box-shadow: var(--shadow-md);
+}
+
+.ui-hover-panel-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Chunk-order-proof visibility: game modules can be emitted BEFORE this
+   file in the bundle, so the plain single-class visible rule loses to the
+   hidden base above. The doubled selector always wins (and deliberately
+   does NOT touch transform — games place panels with their own rules). */
+.ui-hover-panel.ui-hover-panel-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ui-hover-boxes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ui-hover-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ui-hover-label {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: #b1bad3;
+}
+
+.ui-hover-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  height: 44px;
+  box-shadow: var(--shadow-md);
+}
+
+.ui-hover-input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  font-size: var(--font-size-control);
+  padding: 0 var(--sidebar-input-padding);
+}
+
+.ui-hover-suffix {
+  position: absolute;
+  right: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 900;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 600px) {
+  .ui-hover-boxes {
+    gap: 8px;
+  }
+
+  .ui-hover-field {
+    height: 40px;
+  }
+
+  /* the stretched-remainder rule: any lone trailing stat spans full width */
+  .ui-hover-boxes > .ui-hover-box:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
+  }
+}
+
+.ui-panel-surface {
+  background: var(--color-bg-panel);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+/* ---- Reserved space (no layout shift on reveal) ----
+   "Hidden" elements keep their box: visibility hides the paint but
+   the space stays reserved, so revealing them never jumps the page.
+   Pair with a transparent border/background when the hidden state
+   would otherwise show a chrome element. */
+.ui-reserved {
+  visibility: hidden;
+}
+/* ---- Hazard badge: dark grey rounded tile with a yellow triangle ---- */
+.ui-hazard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #2a3541;
+  color: var(--accent-warning);
+  box-shadow: var(--shadow-md);
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.ui-hazard-click {
+  cursor: pointer;
+}
+
+.ui-hazard-click:hover {
+  filter: brightness(1.15);
+}
+
+/* the badge never moves on press — same transform in every state */
+.ui-hazard-corner,
+.ui-hazard-corner:hover,
+.ui-hazard-corner:active,
+.ui-hazard-corner:focus {
+  transform: translate(50%, -50%);
+}
+
+.ui-hazard:not(.ui-hazard-corner):active {
+  transform: none;
+}
+
+.ui-hazard svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* centred exactly on the host's top-right corner */
+.ui-hazard-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  z-index: 3;
+}
+
+/* ---- Maintenance mode: every bet button is disabled + badged ---- */
+html[data-maintenance="on"] .sidebar-bet-button {
+  position: relative;
+  pointer-events: none;
+  background: var(--color-btn-random-bg); /* same as :disabled */
+  color: var(--color-text-muted);
+  filter: none;
+  cursor: not-allowed;
+  overflow: visible;
+}
+
+html[data-maintenance="on"] .sidebar-bet-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  transform: translate(50%, -50%);
+  border-radius: 6px;
+  background-color: #2a3541;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9f00' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 3.9L1.8 18.3A2 2 0 0 0 3.5 21.3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+  box-shadow: var(--shadow-md);
+}
+
+/* ---- Vertical +/− stepper (every enabled numeric input except Bet Amount) ---- */
+.ui-stepper {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  flex: 0 0 auto;
+  width: 28px; /* narrower than the ½ / 2× pair */
+  height: 100%;
+  margin-left: auto;
+  background: var(--color-btn-split-bg); /* #2f3d4c */
+}
+
+.ui-stepper button {
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-btn-split-bg);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: transform var(--bet-btn-press-duration) ease, filter 140ms ease;
+}
+
+.ui-stepper button:first-child {
+  border-top-right-radius: var(--radius-md);
+  border-bottom: 1px solid var(--color-btn-split-divider);
+}
+
+.ui-stepper button:last-child {
+  border-bottom-right-radius: var(--radius-md);
+}
+
+.ui-stepper button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ui-stepper button:hover {
+  filter: brightness(1.1);
+}
+
+.ui-stepper button:active {
+  transform: scale(var(--bet-btn-press-scale));
+}
+
+/* hide the browser's own spinner wherever a stepper is used */
+.sidebar-input-group input[type="number"]::-webkit-outer-spin-button,
+.sidebar-input-group input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sidebar-input-group input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ---- Mobile: hide the vertical +/− numeric stepper ----
+   On small touch screens the native number keyboard has its own +/- and
+   the extra stepper widget just chews horizontal space. */
+@media (max-width: 768px) {
+  .ui-stepper {
+    display: none !important;
+  }
+  /* When the stepper is hidden, the nested input keeps its rounded corners
+     on the right side so the group doesn't look cut off. */
+  .sidebar-input-group:has(.ui-stepper) {
+    border-top-right-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+  }
+}
+
+/* ---- Auto mode pill: blocked cursor when Auto isn't available ----
+   Add class .sidebar-mode-auto-disabled to the Auto <button> when the
+   game does not support Auto mode. For games that simply `disabled` the
+   button, the base :disabled rule already shows not-allowed. */
+.sidebar-mode-auto-disabled {
+  cursor: not-allowed !important;
+}
+.sidebar-mode-auto-disabled:hover {
+  background: transparent !important;
+}
+
+/* ---- Hazard badge tweaks: flat tile, subtle dark-grey border ---- */
+.ui-hazard {
+  box-shadow: none;
+  border: 1px solid #3a4652;
+}
+
+html[data-maintenance="on"] .sidebar-bet-button::after {
+  box-shadow: none;
+  border: 1px solid #3a4652;
+  box-sizing: border-box;
+}
+
+/* ---- Shared page-level error banner (dashboard etc.) ---- */
+.ui-page-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  border-left: 3px solid var(--accent-red);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.ui-page-error-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--accent-red);
+  margin-top: 1px;
+}
+.ui-page-error-icon svg { width: 100%; height: 100%; }
+.ui-page-error-title {
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin-right: 6px;
+}
+.ui-page-error-message {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* ---- Shared empty state (dashboard etc.) ---- */
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 16px;
+  text-align: center;
+}
+.ui-empty-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--color-text-muted);
+  opacity: 0.9;
+}
+.ui-empty-icon svg { width: 100%; height: 100%; }
+.ui-empty-title {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+.ui-empty-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  max-width: 32ch;
+  line-height: 1.4;
+}
+
+/* Dashboard hero gradient wash */
+:root {
+  --dashboard-hero-grad: radial-gradient(700px 320px at 18% 0%, rgba(35,119,255,0.18), transparent 62%), radial-gradient(500px 280px at 92% 18%, rgba(0,231,1,0.08), transparent 65%);
+}

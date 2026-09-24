@@ -1,0 +1,304 @@
+/* PC left navigation rail — dark #0F212C, collapsible to icons-only.
+   Rendered ONLY on desktop (≥901px); mobile keeps the top drawer. It
+   runs from the VERY TOP of the page (above the top navbar's line) and
+   sits OVER the navbar's left corner — the navbar's own shadow cut
+   continues down the rail's right edge with the same drop shadow. */
+.sideNav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1001; /* over the fixed top navbar (1000) */
+  width: var(--rail-w, 240px);
+  background: #0f212c;
+  display: none;
+  flex-direction: column;
+  /* NO side shadow of its own — the top navbar's cut continues here
+     instead (see ::after) */
+  padding: 0 10px 0;
+  transition: width 160ms ease;
+  overflow: hidden;
+  transform: translateZ(0); /* own compositor layer -> jitter-free width animation */
+}
+
+/* The top navbar's shadow "cut" continued across the rail: the rail's
+   top band is the SAME height as the navbar and casts the SAME drop
+   shadow downward, so the navbar's cut runs uninterrupted from the
+   right edge of the page to the left edge of the rail. */
+.sideNav::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: #0f212c; /* the rail colour continues to the very top */
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35); /* same as the navbar */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* everything inside the rail paints above the cut band */
+.sideNav > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hamburger lives in the top-left of the whole site: centred in the
+   first --nav-height band so it aligns with the navbar row. */
+.hamburgerBtn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  /* ALWAYS on the left of the rail — never centred */
+  margin: calc((var(--nav-height) - 40px) / 2) 0 0 4px;
+  transition: margin 160ms ease;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.hamburgerBtn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.hamburgerBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* The link list floats as one rounded card above the rail background.
+   Its top gap matches the rail's side padding, and overflow:hidden lets
+   the highlight fill rows edge-to-edge while the card stays round. */
+/* The list scrolls inside the rail (more games / pages will come) */
+.scroller {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 26px; /* clear air below the navbar cut — never stuck to it */
+  padding-bottom: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.scroller::-webkit-scrollbar { width: 6px; }
+.scroller::-webkit-scrollbar-track { background: transparent; }
+.scroller::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 999px; }
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 0px; /* items sit flush, zero vertical gap */
+  background: #172a38;
+  border-radius: 14px;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Section headers ("Pages", "Games") — the globals' bluish text tone */
+.sectionLabel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 36px; /* FIXED height: collapsed keeps it, so icons never shift */
+  box-sizing: border-box;
+  line-height: 20px;
+  padding: 4px 14px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  color: var(--color-text-secondary);
+  user-select: none;
+}
+
+.divider {
+  height: 1px;
+  margin: 6px 14px; /* 13px tall in BOTH states */
+  background: rgba(255, 255, 255, 0.1);
+  transition: margin 160ms ease;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 13px; /* 13 + 22 icon + 13 = the 48px collapsed column */
+  /* items NEVER re-centre or re-pad: the icon column stays put while
+     the label collapses — the rail edge just sweeps across (no jitter) */
+  border: none;
+  /* square rows: the highlight expands to the FULL item box; only the
+     list's top/bottom items carry the card's rounding */
+  border-radius: 0;
+  background: transparent;
+  /* label is ALWAYS white — hover changes background + icon only */
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.linkIcon {
+  color: var(--color-text-secondary); /* icons carry the hover change */
+  transition: color 120ms ease;
+}
+
+.link:hover:not(:disabled) .linkIcon,
+.linkActive .linkIcon {
+  color: var(--color-text-primary);
+}
+
+.link:first-child {
+  border-radius: 9px 9px 0 0;
+}
+
+.link:last-child {
+  border-radius: 0 0 9px 9px;
+}
+
+/* hover fills the whole row, full width and full height */
+.link:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.linkActive,
+.linkActive:hover:not(:disabled) {
+  background: var(--color-switcher-active); /* shared active capsule */
+  color: var(--color-text-primary);
+}
+
+.linkIcon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+.linkIcon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.linkLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* smooth label collapse (never display:none — that is what jittered) */
+  max-width: 150px;
+  opacity: 1;
+  transition: max-width 160ms ease, opacity 120ms ease;
+}
+
+/* disabled page: grey text + blocked cursor (same language as mode buttons) */
+.linkDisabled,
+.linkDisabled:hover {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* Collapsed: icons only, rail narrows */
+.collapsed {
+  width: var(--rail-w, 84px); /* 10 + 48 column + scrollbar lane + 10 */
+  overflow: hidden;
+}
+
+.collapsed .scroller {
+  scrollbar-gutter: stable; /* the lane sits NEXT to the icons, never over them */
+}
+
+/* Collapsed rail: the same small white tooltip the game toolbar uses,
+   to the RIGHT of the hovered icon */
+.collapsed .link {
+  position: relative;
+}
+
+.collapsed .link[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #fff;
+  color: #0f212e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 1100;
+}
+
+.collapsed .link[data-tip]:hover::after {
+  opacity: 1;
+}
+
+.collapsed .links {
+  overflow: visible;
+}
+
+.collapsed .linkLabel {
+  max-width: 0;
+  opacity: 0;
+}
+
+.collapsed .link {
+  gap: 12px; /* unchanged: the icon column never moves between states */
+}
+
+/* the list keeps scrolling when collapsed too (native title tooltips
+   take over, since a scrolling box clips the custom ones) */
+
+/* collapsed rail: section headers keep their HEIGHT (text fades out) and
+   dividers stay visible, just narrower — every icon keeps the exact same
+   vertical position as in the expanded rail */
+.collapsed .sectionLabel {
+  color: transparent;
+}
+
+.collapsed .divider {
+  margin: 6px 10px;
+}
+
+.collapsed .linkLabel {
+  display: none;
+}
+
+/* collapsed: page + game rows are exactly as wide as the rail's inner
+   column so the icon stays at the same x in both states */
+.collapsed .links {
+  width: 48px;
+  margin-right: auto;
+}
+
+/* Desktop/laptop only — tablet and mobile keep the top drawer */
+@media (min-width: 1025px) {
+  .sideNav {
+    display: flex;
+  }
+}

@@ -1,0 +1,324 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+
+/* =========================================================
+   Limbo-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Limbo-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+/* ===== Stage ===== */
+.gameStage {
+  flex: 1;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* content centered in the panel */
+  justify-content: center;
+  overflow: hidden;
+  /* nothing scrolls inside the box */
+  gap: 16;
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+}
+
+/* Desktop big number */
+.bigMultiplier {
+  font-size: 120px;
+  font-weight: 900;
+  letter-spacing: -3px;
+  line-height: 1;
+  color: var(--color-text-primary);
+  user-select: none;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.bigWin {
+  color: var(--accent-green);
+}
+
+.bigLoss {
+  color: var(--accent-red);
+}
+
+/* Win popup — shared, dead-centre overlay (global.css). The stage is
+   position:relative, so this floats over the number without pushing it. */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Bottom stack (target multiplier + recent multipliers) — anchored to
+   the bottom of the game stage. The global .ui-stage-bottom insets give
+   it exactly 16px bottom/left/right (always centred) — no width math here. */
+.bottomStack {
+  composes: ui-stage-bottom from global;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* Both bottom panels (stats + recent multipliers) share the same surface
+   (global.css) and the same width — they simply fill .bottomStack. */
+.bottomPanel {
+  composes: ui-panel-surface from global;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-md);
+}
+
+.bottomBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bottomLabel {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+
+.bottomInputWrap {
+  composes: sidebar-input-group from global;
+  position: relative;
+  box-shadow: var(--shadow-md);
+}
+
+/* Even 8px padding like every sidebar input (global); the scoped rule
+   only reserves room on the right for the × / % suffix. */
+.container .bottomInput {
+  padding-right: 72px;
+}
+
+.bottomInputWrap .percentSuffix {
+  right: 12px; /* the (readonly) win chance has no stepper */
+}
+
+.bottomInput {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.xSuffix,
+.percentSuffix {
+  position: absolute;
+  right: 40px; /* clear the stepper column */
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 900;
+}
+
+.recentPanel {
+  composes: ui-panel-surface from global;
+  width: 100%;
+  /* identical width to .bottomPanel above */
+  box-sizing: border-box;
+  box-shadow: var(--shadow-md);
+}
+
+/* Hidden until the first round — INVISIBLE but space-reserved (the empty
+   "—" placeholder keeps the height constant), so its first appearance
+   never shifts the layout. */
+.recentHidden {
+  visibility: hidden;
+}
+
+.recentLabel {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+
+}
+
+.recentRow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.recentEmpty {
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 800;
+}
+
+.recentChip {
+  padding: 7px 12px;
+  background: #0f212e;
+  /* neutral slot (win/loss classes override color) */
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.chipWin {
+  background: rgba(0, 231, 1, 0.2);
+  color: var(--accent-green);
+}
+
+.chipLoss {
+  background: rgba(241, 44, 76, 0.2);
+  color: var(--accent-red);
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom-right-radius: 0px;
+  }
+
+  .bigMultiplier {
+    font-size: 76px;
+  }
+
+  .bottomStack {
+    width: 100%;
+  }
+}
+
+/* ===== Better mobile layout (<= 600px) ===== */
+@media (max-width: 600px) {
+  .sidebar {
+    border-bottom-right-radius: 0px;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+    justify-content: flex-start;
+  }
+
+  .bigMultiplier {
+    font-size: 64px;
+    letter-spacing: -2px;
+    margin: 16px 0 10px 0;
+  }
+
+  /* Mobile: the bottom stack leaves the flow and sits under the number
+     (scoped so it overrides the shared stage anchor). The win popup
+     stays a true overlay on every screen size. */
+  .container .bottomStack {
+    position: relative;
+    left: auto;
+    right: auto; /* MUST be released too — a stale right:16px shifts the panel left */
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    gap: 10px;
+  }
+
+  /* stat inputs stay in one horizontal row on mobile (same as desktop) */
+  .bottomPanel {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .recentRow {
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+}

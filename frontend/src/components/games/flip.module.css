@@ -1,0 +1,325 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+
+/* =========================================================
+   Flip-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+  ;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+}
+
+.controlsHeader {
+  margin-bottom: 4px;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Flip-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+.profitInput {
+  background: var(--color-bg-input-profit);
+  /* #141f28 — Total Profit field */
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+/* ✅ Win popup — shared, dead-centre overlay (global.css).
+   Flip adds nothing: the stage already is position:relative. */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Random Pick — unified secondary button (defined once in global.css) */
+.randomButton {
+  composes: sidebar-secondary-button from global;
+}
+
+.sideSelector {
+  display: flex;
+  gap: 10px;
+}
+
+/* Heads/Tails — the canonical side action button (global.css);
+   Blackjack's Hit/Stand/… compose the same class. */
+.sideBtn {
+  composes: ui-action-button from global;
+  flex: 1;
+  justify-content: space-between;
+}
+
+/* Active: recolor only — zero layout shift */
+.activeSide {
+  composes: ui-action-active from global;
+}
+
+.textSide {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+  ;
+}
+
+.activeSide .textSide {
+  color: var(--color-text-primary);
+}
+
+.dotHeads {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c58d0e;
+}
+
+.dotTails {
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  transform: rotate(45deg);
+}
+
+.gameStage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* coin fills + centers in the panel */
+  align-items: center;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  position: relative;
+}
+
+.coinVideoWrap {
+  width: 260px;
+  height: 260px;
+  /* desktop override below: scales with the panel, proportions kept */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 80px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.coinVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform: translateZ(0);
+  will-change: contents;
+  outline: none;
+  background: transparent;
+}
+
+/* Desktop: coin scales to fill the game panel, aspect ratio kept
+   (sized down slightly from the old 64cqh/80cqw/460px cap) */
+@media (min-width: 901px) {
+  .gameStage {
+    container-type: size;
+  }
+
+  .coinVideoWrap {
+    width: min(58cqh, 72cqw, 420px);
+    height: auto;
+    aspect-ratio: 1;
+  }
+}
+
+/* History — shared bottom-anchored panel (global.css) */
+.historyBar {
+  composes: ui-stage-bottom from global;
+  composes: ui-panel-surface from global;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: auto;
+}
+
+.historyLabel {
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  color: var(--text-secondary);
+
+}
+
+.historyGrid {
+  /* Flip.jsx renders exactly as many slots as fit this strip; the
+     leftover width is spread evenly across the gaps -> always centred,
+     never a horizontal scrollbar */
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 10px;
+  background-color: var(--color-bar-foreground);
+  border-radius: var(--radius-sm);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.slot {
+  flex: 0 0 auto;
+  width: 22px; /* taller than wide */
+  height: 32px;
+  background: var(--color-bg-tile);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hHead {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fca311;
+}
+
+.hTail {
+  width: 11px;
+  height: 11px;
+  background: #3b82f6;
+  transform: rotate(45deg);
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  }
+
+  /* Panel flows under the coin on stacked layouts too — the global
+     16px stage padding keeps it off the edges and dead-centre
+     (a fixed 90% width here used to leave it off-centre). */
+  .container .historyBar {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    margin-top: 14px;
+  }
+}
+
+/* ===== Mobile polish (Flip) ===== */
+@media (max-width: 600px) {
+  .sidebar {
+  }
+
+  .gameStage {
+    padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  }
+
+  .coinVideoWrap {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 18px;
+  }
+
+  /* Mobile: the history panel leaves the flow and sits under the coin.
+     Scoped selector so it overrides the shared stage anchor. */
+  .container .historyBar {
+    position: relative;
+    left: auto;
+    right: auto; /* released too — a stale right:16px shifts the panel left */
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    margin-top: 14px;
+  }
+
+  .historyGrid {
+    overflow: hidden;
+  }
+}

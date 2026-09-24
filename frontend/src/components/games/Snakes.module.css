@@ -1,0 +1,964 @@
+/* =========================================================
+   Snakes-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+
+  --board-cell: 128px;
+
+  --tile-gap-x: 7px;
+  --tile-gap-y: -4px;
+
+  --tile-base-height: 14px;
+  --tile-base-color: #1a2f3a;
+  --tile-base-snake-walking: #8294A2;
+  --tile-base-snake-landed: #8a0a24;
+
+  --tile-face: var(--color-bg-tile);
+
+  --snake-hover-base: #BA0E30;
+  --snake-hover-bg: #E9113C;
+
+  --diff-hover-base: #105EB4;
+  --diff-hover-bg: #047BFF;
+  --start-arrow: #225689;
+}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: "proxima-nova";
+  font-feature-settings: "salt" on;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Snakes-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+/* Snakes-specific inline prefix inside the bet input */
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+  /* $ suffix like every other game */
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+/* Chevron — the shared selector caret (global.css) */
+.hasCaret {
+  composes: ui-select-caret from global;
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+.rollButton {
+  composes: sidebar-secondary-button from global;
+}
+
+.cashoutButton {
+  composes: sidebar-secondary-button from global;
+}
+
+/* position:relative — the win/loss popups overlay the board dead-centre */
+.gameStage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  /* board centered */
+  align-items: center;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  position: relative;
+}
+
+/* Desktop: the board scales up to fill the game panel (aspect kept). */
+@media (min-width: 901px) {
+  .gameStage {
+    container-type: size;
+  }
+
+  .boardWrap {
+    --board-cell: max(112px, min(20cqw, 21cqh));
+  }
+}
+
+.boardWrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+
+.board {
+  position: relative;
+  width: calc(var(--board-cell) * 4);
+  height: calc(var(--board-cell) * 4);
+}
+
+/* ===== tiles with 2-layer 3D effect ===== */
+/* Back layer (base) */
+.tile {
+  position: absolute;
+  border-radius: 14px;
+  background: var(--tile-base-color);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Start tile - not clickable */
+.tileStart {
+  cursor: default;
+}
+
+/* Front face */
+.tileFront {
+  flex: 1;
+  margin: -4px 5px;
+  margin-bottom: var(--tile-base-height);
+  background: var(--tile-face);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  transition: filter 100ms ease;
+}
+
+/* Hover - just brighten the front (not for start tile) */
+.tile:hover .tileFront {
+  filter: brightness(1.15);
+}
+
+.tileStart:hover .tileFront {
+  filter: brightness(1);
+}
+
+/* ===== Selected tile (clicked) ===== */
+.tileSelected {
+  z-index: 100 !important;
+  background: var(--diff-hover-base);
+}
+
+.tileSelected .tileFront {
+  background: var(--diff-hover-bg);
+}
+
+/* Selected snake tile - red base */
+.tileSelected.tileSnake {
+  background: var(--snake-hover-base);
+}
+
+.tileSelected.tileSnake .tileFront {
+  background: var(--snake-hover-bg);
+}
+
+.tileSelected .snakeIcon {
+  color: var(--color-text-primary);
+  opacity: 0.92;
+}
+
+/* ===== Walking through normal tile - scale up + fade color in ===== */
+.tileWalking {
+  z-index: 20 !important;
+  animation: walkTileEntry 100ms ease-out forwards;
+}
+
+.tileWalking .tileFront {
+  animation: walkFrontEntry 100ms ease-out forwards;
+}
+
+@keyframes walkTileEntry {
+  0% {
+    transform: scale(1);
+    background-color: var(--tile-base-color);
+  }
+
+  60% {
+    transform: scale(1.12);
+    background-color: var(--diff-hover-bg);
+  }
+
+  100% {
+    transform: scale(1.08);
+    background-color: var(--diff-hover-bg);
+  }
+}
+
+@keyframes walkFrontEntry {
+  0% {
+    margin: -4px 5px;
+    margin-bottom: var(--tile-base-height);
+  }
+
+  60% {
+    margin: 3px 5px;
+    margin-bottom: var(--tile-base-height);
+  }
+
+  100% {
+    margin: 3px 5px;
+    margin-bottom: var(--tile-base-height);
+  }
+}
+
+/* ===== Walking through snake tile ===== */
+.tileWalkingSnakeThrough {
+  z-index: 20 !important;
+  animation: walkTileEntrySnake 100ms ease-out forwards;
+}
+
+.tileWalkingSnakeThrough .tileFront {
+  animation: walkFrontEntry 100ms ease-out forwards;
+}
+
+@keyframes walkTileEntrySnake {
+  0% {
+    transform: scale(1);
+    background-color: var(--tile-base-color);
+  }
+
+  60% {
+    transform: scale(1.12);
+    background-color: var(--tile-base-snake-walking);
+  }
+
+  100% {
+    transform: scale(1.08);
+    background-color: var(--tile-base-snake-walking);
+  }
+}
+
+.tileWalkingSnakeThrough .snakeIcon {
+  color: var(--color-text-primary);
+  opacity: 0.92;
+}
+
+/* ===== Tile exiting - scale down + fade color out ===== */
+.tileExiting {
+  z-index: 19 !important;
+  animation: tileExit 100ms ease-out forwards;
+}
+
+.tileExiting .tileFront {
+  animation: tileFrontExit 100ms ease-out forwards;
+}
+
+@keyframes tileExit {
+  0% {
+    transform: scale(1.08);
+    background-color: var(--diff-hover-bg);
+  }
+
+  100% {
+    transform: scale(1);
+    background-color: var(--tile-base-color);
+  }
+}
+
+@keyframes tileFrontExit {
+  0% {
+    margin: 3px 5px;
+    margin-bottom: var(--tile-base-height);
+  }
+
+  100% {
+    margin: -4px 5px;
+    margin-bottom: var(--tile-base-height);
+  }
+}
+
+/* Snake tile exiting */
+.tileExiting.tileSnake {
+  animation: tileExitSnake 100ms ease-out forwards;
+}
+
+@keyframes tileExitSnake {
+  0% {
+    transform: scale(1.08);
+    background-color: var(--tile-base-snake-walking);
+  }
+
+  100% {
+    transform: scale(1);
+    background-color: var(--tile-base-color);
+  }
+}
+
+/* ===== Active tile entrance animation ===== */
+.tileActiveEntering {
+  z-index: 20 !important;
+  animation: activeTileEntry 100ms ease-out forwards;
+}
+
+.tileActiveEntering .tileFront {
+  animation: activeFrontEntry 100ms ease-out forwards;
+}
+
+@keyframes activeTileEntry {
+  0% {
+    transform: scale(1);
+    background-color: var(--tile-base-color);
+  }
+
+  60% {
+    transform: scale(1.10);
+    background-color: var(--diff-hover-base);
+  }
+
+  100% {
+    transform: scale(1);
+    background-color: var(--diff-hover-base);
+  }
+}
+
+@keyframes activeFrontEntry {
+  0% {
+    margin: -4px 5px;
+    margin-bottom: var(--tile-base-height);
+    background-color: var(--tile-face);
+  }
+
+  60% {
+    background-color: var(--diff-hover-bg);
+  }
+
+  100% {
+    margin: -4px 5px;
+    margin-bottom: var(--tile-base-height);
+    background-color: var(--diff-hover-bg);
+  }
+}
+
+/* ===== Active snake tile entrance animation ===== */
+.tileActiveSnakeEntering {
+  z-index: 20 !important;
+  animation: activeSnakeTileEntry 100ms ease-out forwards;
+}
+
+.tileActiveSnakeEntering .tileFront {
+  animation: activeFrontEntry 100ms ease-out forwards;
+}
+
+@keyframes activeSnakeTileEntry {
+  0% {
+    transform: scale(1);
+    background-color: var(--tile-base-color);
+  }
+
+  60% {
+    transform: scale(1.10);
+    background-color: var(--tile-base-snake-walking);
+  }
+
+  100% {
+    transform: scale(1);
+    background-color: var(--tile-base-snake-walking);
+  }
+}
+
+.tileActiveSnakeEntering .snakeIcon {
+  color: var(--color-text-primary);
+  opacity: 0.92;
+}
+
+/* ===== Landed on normal tile - BOTH base and front change ===== */
+.tileActive {
+  transform: scale(1);
+  z-index: 20 !important;
+  background: var(--diff-hover-base);
+}
+
+.tileActive .tileFront {
+  background: var(--diff-hover-bg);
+}
+
+/* ===== Active snake tile (not lost yet) - white base, blue front ===== */
+.tileActiveSnake {
+  transform: scale(1);
+  z-index: 20 !important;
+  background: var(--tile-base-snake-walking);
+}
+
+.tileActiveSnake .tileFront {
+  background: var(--diff-hover-bg);
+}
+
+.tileActiveSnake .snakeIcon {
+  color: var(--color-text-primary);
+  opacity: 0.92;
+}
+
+/* ===== Landed on snake tile (lost) ===== */
+.tileLandedSnake {
+  transform: scale(1);
+  z-index: 20 !important;
+  background: var(--tile-base-snake-landed);
+}
+
+.tileLandedSnake .tileFront {
+  background: var(--snake-hover-bg);
+}
+
+.tileLandedSnake .snakeIcon {
+  color: var(--color-text-primary);
+  opacity: 0.92;
+}
+
+/* ===== Tile landing bounce ===== */
+.tileLanding {
+  animation: tileLandingBounce 300ms ease-out;
+}
+
+@keyframes tileLandingBounce {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ===== Dim tiles after first roll ===== */
+.tileDimAfterRoll {
+  opacity: 1;
+}
+
+/* ===== Zoom pulse on layout change ===== */
+.tileZoomPulse {
+  animation: tileZoomPulse 400ms ease-out;
+}
+
+@keyframes tileZoomPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Center multiplier text */
+.centerMult {
+  font-weight: 1000;
+  font-size: 30px;
+  transition: color 300ms ease, transform 100ms ease;
+}
+
+.centerMultWin {
+  color: var(--accent-green);
+}
+
+.centerMultLose {
+  color: var(--snake-hover-bg);
+}
+
+.centerMultAnimating {
+  animation: multPulse 400ms ease-out;
+}
+
+@keyframes multPulse {
+  0% {
+    transform: scale(1);
+  }
+
+  30% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.multValue {
+  font-size: 22px;
+  font-weight: 900;
+  color: #eaf2f9;
+}
+
+.startIcon {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--start-arrow);
+}
+
+.startArrowSvg {
+  width: 42px;
+  height: 42px;
+}
+
+.snakeIcon {
+  color: var(--text-secondary);
+  opacity: 0.55;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.snakeIcon svg {
+  width: 54px;
+  height: 54px;
+}
+
+/* ===== center tile ===== */
+.centerTile {
+  position: absolute;
+  left: var(--board-cell);
+  top: var(--board-cell);
+  width: calc(var(--board-cell) * 2);
+  height: calc(var(--board-cell) * 2);
+  border-radius: 12px;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 10;
+  transform: scale(0.92);
+}
+
+.diceHolder {
+  display: flex;
+  gap: 14px;
+}
+
+/* ===== dice with dots ===== */
+.die {
+  width: 78px;
+  height: 78px;
+  border-radius: 16px;
+  background: #d0d6e6;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 12px;
+  gap: 4px;
+  box-shadow:
+    0 10px 0 0 #9ba3b5,
+    0 14px 8px rgba(0, 0, 0, 0.25);
+  transition: transform 0ms, box-shadow 0ms;
+}
+
+.dieDot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.dieDot.visible {
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+}
+
+/* Dice pressed */
+.diePressed {
+  transform: translateY(6px);
+  box-shadow:
+    0 4px 0 0 #9ba3b5,
+    0 6px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Dice rolling - only when pressed */
+.dieRolling.diePressed {
+  animation: dieRoll 120ms linear infinite;
+}
+
+/* Dice unpress */
+.dieUnpress {
+  animation: dieUnpressSpring 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes dieRoll {
+  0% {
+    transform: rotate(0deg) translateY(6px);
+  }
+
+  50% {
+    transform: translateY(6px);
+  }
+
+  100% {
+    transform: rotate(0deg) translateY(6px);
+  }
+}
+
+@keyframes dieUnpressSpring {
+  0% {
+    transform: translateY(6px);
+    box-shadow:
+      0 4px 0 0 #9ba3b5,
+      0 6px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      0 10px 0 0 #9ba3b5,
+      0 14px 8px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* Difficulty dropdown (inside the shared readonly input) */
+.select {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  padding-right: 24px;
+}
+
+/* Dice roll animation */
+.dieRolling {
+  animation: snakesDiceShake 0.4s linear infinite;
+}
+
+@keyframes snakesDiceShake {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+
+  25% {
+    transform: rotate(-10deg) translateY(-3px);
+  }
+
+  50% {
+    transform: rotate(8deg) translateY(0);
+  }
+
+  75% {
+    transform: rotate(-6deg) translateY(-2px);
+  }
+
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+}
+
+/* ===== dots with difficulty color ===== */
+.rollDots {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+
+.dotActive {
+  background: var(--diff-hover-bg);
+  transform: scale(1.1);
+}
+
+/* ===== Hover panel with float-in ===== */
+/* Shared hover-panel design (global.css) — read-only input fields.
+   The panelAbove/panelBelow placement transforms below intentionally
+   override the shared hidden/visible slide (higher specificity). */
+.wheelHoverPanel {
+  composes: ui-hover-panel from global;
+  position: absolute;
+  z-index: 200;
+  width: 340px;
+}
+
+.panelBelow.wheelHoverPanel {
+  transform: translate(-50%, calc(var(--board-cell) + 22px));
+}
+
+.panelBelow.wheelHoverPanelVisible {
+  transform: translate(-50%, calc(var(--board-cell) + 10px));
+}
+
+.panelAbove.wheelHoverPanel {
+  transform: translate(-50%, -102px);
+}
+
+.panelAbove.wheelHoverPanelVisible {
+  transform: translate(-50%, -90px);
+}
+
+.wheelHoverPanelVisible {
+  composes: ui-hover-panel-visible from global;
+  opacity: 1;
+  visibility: visible;
+}
+
+.wheelHoverBoxes {
+  composes: ui-hover-boxes from global;
+}
+
+.wheelHoverBox {
+  composes: ui-hover-box from global;
+}
+
+.wheelHoverLabel {
+  composes: ui-hover-label from global;
+}
+
+.wheelHoverField {
+  composes: ui-hover-field from global;
+}
+
+.wheelHoverInput {
+  composes: ui-hover-input from global;
+}
+
+.wheelHoverField .wheelHoverInput {
+  padding-right: 44px;
+}
+
+.wheelHoverSuffix {
+  composes: ui-hover-suffix from global;
+}
+
+.wheelHoverArrow {
+  position: relative;
+  height: 0;
+}
+
+.wheelHoverArrow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+}
+
+.panelAbove .wheelHoverArrow::after {
+  top: 12px;
+  border-top: 10px solid var(--color-bg-panel);
+}
+
+.panelBelow .wheelHoverArrow::after {
+  top: -10px;
+  border-bottom: 10px solid var(--color-bg-panel);
+}
+
+/* Win popup — shared, dead-centre overlay (global.css) */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Loss popup — same shared overlay, red accent (scoped border) */
+.lossPopup {
+  composes: ui-win-popup from global;
+}
+
+.container .lossPopup {
+  border-color: var(--snake-hover-base);
+}
+
+.lossPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+/* scoped — must beat the shared green title (global loads last) */
+.lossPopup .lossPopupTitle {
+  color: var(--snake-hover-bg);
+}
+
+.lossPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Mobile modal — shared overlay styles (global.css) */
+.modalOverlay {
+  composes: ui-modal-overlay from global;
+}
+
+.modalCard {
+  composes: ui-modal-card from global;
+  width: 100%;
+}
+
+.modalTitle {
+  composes: ui-modal-title from global;
+}
+
+.modalGrid {
+  composes: ui-modal-grid from global;
+}
+
+.modalItem {
+  composes: ui-modal-item from global;
+}
+
+.modalItemLabel {
+  composes: ui-modal-item-label from global;
+}
+
+.modalItemValue {
+  composes: ui-modal-item-value from global;
+}
+
+.modalBtnPrimary {
+  composes: ui-modal-btn from global;
+}
+
+/* responsive */
+@media (max-width: 900px) {
+  .container {
+    --board-cell: 108px;
+    --tile-gap-x: 6px;
+    --tile-gap-y: 6px;
+    --tile-base-height: 10px;
+  }
+
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    /* Fluid: the 4x4 board keeps ~16px breathing room inside the stage
+       on any phone width (a fixed 94px cell made it overflow/touch). */
+    --board-cell: min(94px, calc((100vw - 64px) / 4));
+    --tile-gap-x: 6px;
+    --tile-gap-y: 6px;
+    /* the tiles' 3D "base" (fake shadow) scales down with the tile */
+    --tile-base-height: 7px;
+  }
+
+  .tileFront {
+    margin: -3px 4px;
+    margin-bottom: var(--tile-base-height);
+    border-radius: 10px;
+  }
+
+  .tile {
+    border-radius: 10px;
+  }
+
+  .snakeIcon svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  .wheelHoverPanel {
+    display: none;
+  }
+
+  .sidebar {
+  }
+
+  /* Popups stay true dead-centre overlays on mobile too */
+  .winPopup,
+  .lossPopup {
+    max-width: calc(100% - 24px);
+  }
+
+  /* The die's 3D shadow is too heavy at phone size — tighten it */
+  .die {
+    box-shadow:
+      0 5px 0 0 #9ba3b5,
+      0 7px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  .diePressed {
+    box-shadow:
+      0 3px 0 0 #9ba3b5,
+      0 4px 3px rgba(0, 0, 0, 0.18);
+  }
+}

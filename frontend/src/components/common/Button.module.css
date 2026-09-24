@@ -1,0 +1,151 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  font-family: var(--font-primary);
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--ui-press-duration) ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease, filter 140ms ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):active {
+  transform: scale(var(--ui-press-scale)); /* site-wide press token — same as every other button */
+}
+
+/* Variants */
+.primary {
+  background: var(--color-bet-btn-bg); /* #2377ff — same primary blue as the Bet button */
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
+.primary:disabled {
+  opacity: 1;
+  color: var(--color-text-muted-on-blue);
+  filter: saturate(0.6) brightness(0.85);
+}
+
+.primary:not(:disabled):hover {
+  filter: brightness(1.1); /* brightness lift only, never a scale change */
+}
+
+/* Secondary (navbar "Login"): #24333f, white text, 8px radius, NO border —
+   identical box (height + padding) to .primary, only the fill differs. */
+.secondary {
+  background: var(--color-btn-secondary-bg); /* #24333f */
+  color: var(--color-text-primary);
+  border: none;
+}
+
+.secondary:not(:disabled):hover {
+  background: var(--color-btn-secondary-hover); /* #2c3d4a */
+}
+
+.success {
+  background: var(--accent-success);
+  color: var(--bg-body);
+}
+
+.success:not(:disabled):hover {
+  background: var(--accent-success-hover);
+}
+
+.danger {
+  background: var(--accent-danger);
+  color: var(--color-text-primary);
+}
+
+.danger:not(:disabled):hover {
+  background: var(--accent-danger-hover);
+}
+
+.warning {
+  background: var(--accent-warning);
+  color: var(--bg-body);
+}
+
+.warning:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--color-border-input); /* #212e3b */
+}
+
+.ghost:not(:disabled):hover {
+  background: var(--color-btn-secondary-bg);
+  border-color: var(--color-border-input-focus);
+}
+
+/* Sizes */
+.xs {
+  padding: 6px 12px;
+  font-size: var(--font-size-control);
+  height: 28px;
+}
+
+.sm {
+  padding: 8px 16px;
+  font-size: var(--font-size-control);
+  height: 36px;
+}
+
+.md {
+  padding: 12px 24px;
+  font-size: var(--font-size-control);
+  height: 44px;
+}
+
+.lg {
+  padding: 14px 32px;
+  font-size: var(--font-size-control);
+  height: 52px;
+}
+
+.xl {
+  padding: 16px 40px;
+  font-size: var(--font-size-control);
+  height: 60px;
+}
+
+/* Full Width */
+.fullWidth {
+  width: 100%;
+}
+
+/* Loading State */
+.loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+
+.spinner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  color: inherit;
+  filter: brightness(2);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

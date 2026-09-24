@@ -1,0 +1,33 @@
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: var(--transition-base);
+}
+
+.card.elevated {
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.content {
+  padding: var(--space-lg);
+}
+
+.content.noPadding {
+  padding: 0;
+}

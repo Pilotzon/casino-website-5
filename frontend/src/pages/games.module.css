@@ -1,0 +1,1625 @@
+.games {
+  min-height: calc(100vh - var(--nav-height));
+  padding: var(--space-2xl) 0;
+}
+
+.container {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* Laptop/PC: the list keeps its exact size while the rail collapses — it only
+   re-centres (same frozen-width basis as the game box) */
+@media (min-width: 1025px) {
+  .container {
+    width: min(1380px, calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px)));
+  }
+}
+
+.header {
+  /* left-aligned with the list below it */
+  text-align: left;
+  margin-bottom: var(--space-lg);
+}
+
+.title {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  margin-bottom: 2px; /* description hugs the title */
+}
+
+.subtitle {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+/* Search (readonly input look, like Home) */
+.searchFilterRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+.searchFilterRow .searchWrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.searchFilterRow .filterBar {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  min-width: 0;
+}
+.searchWrap {
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--sidebar-input-height);
+  padding: 0 12px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  cursor: text;
+  transition: border-color 140ms ease;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
+.searchBar:hover {
+  border-color: var(--color-border-input-focus);
+}
+
+.searchBar:focus-within {
+  border-color: var(--color-border-input-focus);
+}
+
+.searchIcon {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  flex: 0 0 auto;
+}
+
+.searchIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.searchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  font-family: var(--font-primary);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.shortcutPill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-panel);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Filter bar — Sort only (All Publishers removed) */
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: var(--space-lg);
+}
+
+.filterRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sortLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+/* Sort control EXACTLY like Admin Panel Users sorting selects */
+.sortSelect {
+  height: var(--sidebar-input-height);
+  min-width: 160px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  padding: var(--sidebar-input-padding);
+  padding-right: 36px;
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  box-shadow: var(--shadow-md);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+
+.sortSelect:focus {
+  border-color: var(--color-border-input-focus);
+}
+
+.sortSelect:hover {
+  border-color: var(--color-border-input-focus);
+}
+
+/* Legacy pill kept for fallback but not used */
+.sortPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-input);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: border-color 140ms ease, filter 140ms ease;
+}
+
+.sortPill:hover {
+  border-color: var(--color-border-input-focus);
+  filter: brightness(1.04);
+}
+
+/* Grid: consistent spacing/alignment across posters */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+/* Poster-only button (no card background, no text) */
+.poster {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin-bottom: 20px;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+/* Minimal focus ring */
+.poster:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 8px;
+  border-radius: 10px;
+}
+
+/* Crop wrapper: uniform ratio + centered + moves on hover */
+.posterMedia {
+  display: block;
+  width: 100%;
+  max-width: 180px;
+  margin: 0 auto;
+
+  aspect-ratio: 3 / 4;
+
+  overflow: hidden;
+  border-radius: 10px;
+  position: relative;
+
+  transform: translateY(0);
+  transition: transform 280ms ease;
+  will-change: transform;
+}
+
+.poster:active {
+  transform: none !important;
+}
+
+.poster.available:active .posterMedia,
+.poster.unavailable:active .posterMedia {
+  transform: translateY(-14px) !important;
+}
+
+.posterImage {
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  object-fit: cover;
+  object-position: center;
+
+  transition: filter 280ms ease;
+  will-change: filter;
+}
+
+.available:hover .posterMedia {
+  transform: translateY(-14px);
+}
+
+.unavailable {
+  cursor: default;
+}
+
+.unavailable:hover .posterMedia {
+  transform: translateY(-14px);
+}
+
+.unavailable:hover .posterImage {
+  filter: brightness(0.72);
+}
+
+.unavailableOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+
+  color: rgba(255, 255, 255, 0.95);
+
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.unavailable:hover .unavailableOverlay {
+  opacity: 1;
+}
+
+.posterMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  max-width: 180px;
+  margin: 0 auto;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.liveDotSmall {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(0, 231, 1, 0.45);
+  flex: 0 0 auto;
+}
+
+.posterMetaText {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.posterMetaNumber {
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+.posterMetaLabel {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* ===== Game info block (above You might also like) =====
+   EXACTLY like image-3.png: provider header + title stats + pill menu + poster/tags/content
+   No font-size changing — everything uses var(--font-size-control) (normal).
+   Pill menu EXACTLY like sidebar-mode-toggle (Manual/Auto) in games. */
+
+.gameInfo {
+  width: calc(100% - 2 * var(--layout-frame-space));
+  max-width: calc(var(--layout-max-width) - 2 * var(--layout-frame-space));
+  margin: 0 auto var(--space-lg);
+  padding: var(--layout-frame-space);
+  background: #213545;
+  border-radius: 12px;
+  overflow-x: hidden;
+  box-shadow: none;
+  font-size: var(--font-size-control);
+}
+
+@media (min-width: 1025px) {
+  .gameInfo {
+    width: calc(min(var(--layout-max-width), calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px))) - 2 * var(--layout-frame-space));
+  }
+}
+
+@media (max-width: 900px) {
+  .gameInfo {
+    width: calc(100% - 2 * var(--space-lg));
+    padding: var(--space-lg);
+  }
+}
+
+/* Provider header row: Casino logo + Casino Originals + Surprise me */
+.gameInfoProviderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.providerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.providerLogoBox {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  flex: 0 0 64px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-md);
+}
+
+.providerLogoText {
+  font-weight: 900;
+  font-size: var(--font-size-control);
+  letter-spacing: 0.3px;
+  color: var(--color-text-primary);
+}
+
+.providerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.providerName {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+
+.providerFollowers {
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text-secondary);
+}
+
+.surpriseBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: filter 140ms ease, transform 100ms ease;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.surpriseBtn:hover {
+  filter: brightness(1.08);
+}
+
+.surpriseBtn:active {
+  transform: scale(0.97);
+}
+
+/* Game title row + live stats — clickable header to collapse */
+.gameInfoHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  transition: background 140ms ease;
+}
+.gameInfoHeaderRow:hover {
+  background: rgba(255,255,255,0.03);
+}
+.gameInfoCollapsed .gameInfoTabs,
+.gameInfoCollapsed .gameInfoContent {
+  display: none;
+}
+.gameInfoCollapsed .gameInfoHeaderRow {
+  margin-bottom: 0;
+}
+
+
+.gameInfoName {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+.gameInfoStatsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.statDivider {
+  color: var(--color-border-input);
+  font-weight: 400;
+}
+.statValueNumber {
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+.statValueLabel {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-left: 3px;
+}
+
+.insightsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-primary);
+  transition: color 140ms ease;
+}
+.insightsBtn svg {
+  transition: transform 180ms ease;
+}
+.gameInfoCollapsed .insightsBtn svg {
+  transform: rotate(180deg);
+}
+.insightsBtn:hover {
+  color: var(--color-text-primary);
+}
+
+/* Pill menu — EXACTLY like .sidebar-mode-toggle / .sidebar-mode-btn */
+.gameInfoTabs {
+  margin-bottom: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.pillToggle {
+  background: var(--color-switcher-bg);
+  border: 1px solid var(--color-switcher-border);
+  border-radius: var(--radius-pill);
+  padding: 4px;
+  display: inline-flex;
+  gap: 4px;
+  width: auto;
+  max-width: 100%;
+  position: relative;
+}
+
+.pillBtn {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  color: var(--color-text-primary);
+  padding: 8px 14px;
+  min-width: 0;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  transition: transform 100ms ease, background-color 140ms ease, color 140ms ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pillBtn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pillBtn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.pillBtn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.pillActive,
+.pillActive:hover {
+  background: var(--color-switcher-active);
+  color: var(--color-text-primary);
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.pillActive:hover {
+  background: #33414e;
+}
+
+/* Content: poster left, tags/description right (PC); mobile hides poster */
+.gameInfoContent {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.gameInfoPoster {
+  display: block;
+  width: 180px;
+  max-width: 200px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 10px;
+  box-shadow: none;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.gameInfoDetails {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gameInfoTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metaTag {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+.gameInfoDesc {
+  margin: 0;
+  font-size: var(--font-size-control);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  max-width: 80ch;
+}
+
+.descContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.descHeading {
+  margin: 10px 0 0;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--color-text-primary);
+}
+
+.descList {
+  margin: 6px 0 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-control);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.descList li::marker {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.statsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* New image-4 style: sub-tabs + table */
+.statsSubTabs {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--color-switcher-bg);
+  border: 1px solid var(--color-switcher-border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.statsSubBtn {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-primary);
+  transition: background 140ms ease, color 140ms ease;
+  white-space: nowrap;
+}
+
+.statsSubBtn:hover {
+  color: var(--color-text-primary);
+  background: rgba(255,255,255,0.06);
+}
+
+.statsSubBtnActive,
+.statsSubBtnActive:hover {
+  background: var(--color-switcher-active);
+  color: var(--color-text-primary);
+}
+
+.statsTableWrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  box-shadow: var(--shadow-md);
+}
+
+.statsTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+  font-size: var(--font-size-control);
+}
+
+.statsTable th {
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 10px 14px;
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid var(--color-border-input);
+  white-space: nowrap;
+}
+
+.statsTable td {
+  padding: 10px 14px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  white-space: nowrap;
+}
+
+.statsTable tr:last-child td {
+  border-bottom: none;
+}
+
+.statsTable td:first-child {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.statsTable td:nth-child(2),
+.statsTable td:nth-child(3),
+.statsTable td:nth-child(4) {
+  font-variant-numeric: tabular-nums;
+}
+
+.statsEmpty {
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.statBox {
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statLabelSmall {
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.statValueLarge {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.mutedNote {
+  font-size: var(--font-size-control);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.challengesContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.challengesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.challengeItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.challengeBullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  flex: 0 0 auto;
+  box-shadow: 0 0 6px rgba(0, 231, 1, 0.45);
+}
+
+@media (max-width: 768px) {
+  .gameInfoContent {
+    grid-template-columns: 1fr;
+  }
+
+  .gameInfoPoster {
+    display: none !important;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pillToggle {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pillToggle::-webkit-scrollbar { display: none; }
+
+  .providerLogoBox {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    flex: 0 0 56px;
+  }
+
+  .gameInfoName {
+    font-size: 20px;
+  }
+
+  .gameInfoHeaderRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gameInfoProviderRow {
+    flex-wrap: wrap;
+  }
+
+  .gameInfoTags {
+    gap: 6px;
+  }
+
+  .metaTag {
+    font-size: 14px;
+    height: 28px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gameInfo {
+    padding: 16px;
+  }
+  .gameInfoName {
+    font-size: 19px;
+  }
+  .providerLogoBox {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
+    flex: 0 0 52px;
+  }
+}
+
+/* ===== You might also like (below every game box) ===== */
+
+.alsoLike {
+  /* NEVER wider than the game box: same basis, same cap (PC formula
+     below; mobile just fills the page) */
+  width: calc(100% - 2 * var(--layout-frame-space));
+  max-width: calc(var(--layout-max-width) - 2 * var(--layout-frame-space));
+  margin: 0 auto var(--space-lg);
+  padding: 22px 0 var(--space-lg);
+  overflow-x: hidden; /* a section must never scroll horizontally */
+}
+
+@media (min-width: 1025px) {
+  .alsoLike {
+    width: calc(min(var(--layout-max-width), calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px))) - 2 * var(--layout-frame-space));
+  }
+}
+
+.alsoLikeTitle {
+  margin: 0 0 16px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--color-text-primary);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-primary);
+  display: inline-block;
+}
+
+.alsoLikeRow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px; /* tighter gaps -> room for bigger posters */
+}
+
+.alsoLikeCard {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--font-primary);
+  /* press feedback: the whole card scales down to 0.98 */
+  transition: transform 90ms ease;
+}
+
+.alsoLikeCard:active {
+  transform: scale(0.98);
+}
+
+.alsoLikeCard:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.alsoLikePoster {
+  display: block;
+  width: 100%; /* fills its (equal, overflow-proof) column -> bigger */
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 10px;
+  transform: translateY(0);
+  transition: transform 280ms ease;
+  will-change: transform;
+}
+
+/* lift EXACTLY like the Games page posters */
+.alsoLikeCard:hover .alsoLikePoster {
+  transform: translateY(-14px);
+}
+
+.alsoLikeName {
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1100px) {
+  .alsoLikeRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* floor: two posters per row, like the Games page — never fewer, and
+   the equal minmax(0,1fr) columns can never force a horizontal bar */
+@media (max-width: 640px) {
+  .alsoLikeRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+/* ===== Existing game view styles ===== */
+
+.gameContainer {
+  /* contained card: centered, width-capped (game panel side gives), 24px
+     gutters all around, extra page-background breathing room below */
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  /* slightly bigger now that the in-box header is gone (+44px) */
+  height: calc(100vh - var(--nav-height) - var(--layout-bottom-space) + 44px);
+  display: flex;
+  flex-direction: column;
+  padding: var(--layout-frame-space);
+}
+
+/* Laptop/PC: the box KEEPS ITS SIZE while the side rail collapses — it only
+   slides. The frozen width (based on the expanded rail) plus auto
+   margins re-centre it, so nothing inside ever re-layouts. */
+@media (min-width: 1025px) {
+  /* 100% = viewport - rail; adding rail-w and subtracting the expanded
+     rail size yields the EXPANDED width in both states -> the box keeps
+     its exact size and only re-centres (auto margins) when collapsing. */
+  .gameContainer {
+    width: min(var(--layout-max-width), calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px)));
+  }
+}
+
+@media (max-width: 900px) {
+  .gameContainer {
+    height: auto;
+    /* small screens fall back to normal page scroll */
+    padding: var(--space-lg);
+  }
+}
+
+/* Per-game container height hook: games may opt into a slightly taller
+   box via data-game (width stays constant across all games), e.g.
+   .gameContainer[data-game="wheel"] { height: ... } — currently not
+   needed since each game's content self-sizes to the panel.
+
+/* The boxed shell, declared directly on the game's root element so the
+   framed container exists even if the module-level composes ever failed.
+   Values intentionally identical to .game-shell in global.css. */
+.gameContainer> :nth-child(2) {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  /* 12px on all four corners */
+  background: var(--color-bg-shell);
+  box-shadow: var(--shadow-shell);
+  overflow: hidden;
+}
+
+.gameHeader {
+  flex: 0 0 auto;
+  padding: var(--space-sm) 0;
+  background: transparent;
+  /* header sits directly on the navbar/page background */
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.headerRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* ---- Sound control -------------------------------------------------
+   One compact, input-styled pill: [ speaker toggle | slider | value ].
+   Same fill/border as every other field (#0f171e / #212e3b), flat, no glow.
+   Height/padding come from the SAME tokens the Login/Sign Up buttons use,
+   so it always matches them by construction (never hand-copied pixels).
+   Muting never collapses the pill — the slider just dims — so the header
+   never shifts. */
+.soundSetting {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--auth-btn-height);
+  padding: 0 10px 0px 3px;
+  background: var(--color-btn-secondary-bg);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  user-select: none;
+}
+
+.soundToggle {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  /* #b1bad2 icon */
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 120ms ease, color 120ms ease, transform 100ms ease;
+}
+
+.soundToggle svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.soundToggle:hover {
+  background: var(--color-bg-shell);
+  color: var(--color-text-primary);
+}
+
+.soundToggle:active {
+  transform: scale(0.9);
+}
+
+.soundToggle:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+/* Slider: 4px track, blue fill up to the thumb, plain white 12px thumb */
+.volumeSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 112px;
+  height: 4px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-shell);
+  cursor: pointer;
+  outline: none;
+  transition: opacity 140ms ease;
+}
+
+.volumeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  box-shadow: none;
+  transition: transform 100ms ease;
+}
+
+.volumeSlider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  box-shadow: none;
+}
+
+.volumeSlider:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.volumeSlider:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 4px;
+}
+
+/* Muted: everything goes to the muted greys, nothing moves */
+.volumeSlider:disabled {
+  cursor: default;
+  opacity: 1;
+  background: var(--color-bg-shell);
+  filter: brightness(1.75);
+}
+
+.volumeSlider:disabled::-webkit-slider-thumb {
+  background: var(--color-text-muted);
+  /* #8092a5 */
+  transform: none;
+}
+
+.volumeSlider:disabled::-moz-range-thumb {
+  background: var(--color-text-muted);
+}
+
+.volumeValue {
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+  color: var(--color-text-secondary);
+  min-width: 30px;
+  text-align: right;
+}
+
+.soundSettingMuted .soundToggle {
+  color: var(--color-text-muted);
+}
+
+.soundSettingMuted .volumeValue {
+  color: var(--color-text-muted);
+}
+
+.backButton {
+  padding: 8px var(--space-md);
+  background: var(--color-btn-secondary-bg);
+  /* #24333f secondary */
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 100ms ease, background-color 140ms ease;
+}
+
+.backButton:hover {
+  background: var(--color-btn-secondary-hover);
+  /* color swap only, no scale */
+}
+
+.backButton:active {
+  transform: scale(0.98);
+}
+
+.gameTitle {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+}
+
+.loading {
+  min-height: calc(100vh - var(--nav-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-bg-input);
+  border-top-color: var(--color-accent-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== MOBILE =====
+   Header becomes two rows: [ back button ........ sound pill ] over the
+   page title. The sound pill keeps its compact desktop form (it never
+   stretches into a giant slider). */
+@media (max-width: 768px) {
+  .title {
+    font-size: 32px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .posterMedia {
+    max-width: 180px;
+    border-radius: 10px;
+  }
+
+  .gameHeader {
+    flex-wrap: wrap;
+    row-gap: var(--space-sm);
+    padding: var(--space-xs) 0 var(--space-sm);
+  }
+
+  .backButton {
+    order: 1;
+  }
+
+  .headerRight {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .gameTitle {
+    order: 3;
+    flex: 1 1 100%;
+    font-size: 22px;
+    margin-top: var(--space-xs);
+  }
+
+  /* .soundSetting keeps its shared auth-button size on mobile too */
+
+  .volumeSlider {
+    width: 88px;
+  }
+
+  .volumeValue {
+    min-width: 28px;
+  }
+}
+
+@media (max-width: 360px) {
+  .volumeSlider {
+    width: 64px;
+  }
+}
+
+/* ===== Compact toolbar under the game box =====
+   EXACT same width as the game box (same max-width + frozen-width
+   formula + the box's own horizontal frame padding), taller than the
+   Fairness button. */
+.gameToolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  /* EXACT visible width of the game box: the outer container width
+     minus its own 24px frame on each side (the box's padding) */
+  width: calc(100% - 2 * var(--layout-frame-space));
+  max-width: calc(var(--layout-max-width) - 2 * var(--layout-frame-space));
+  /* 5px under the box: pull up through the container's 24px bottom frame */
+  margin: calc(5px - var(--layout-frame-space)) auto var(--space-lg);
+  height: 64px;
+  padding: 0 10px;
+  background: #213546;
+  border-radius: 10px;
+}
+
+@media (min-width: 1025px) {
+  .gameToolbar {
+    width: calc(min(var(--layout-max-width), calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px))) - 2 * var(--layout-frame-space));
+  }
+}
+
+@media (max-width: 900px) {
+  .gameToolbar {
+    width: calc(100% - 2 * var(--space-lg));
+    margin-top: calc(5px - var(--space-lg));
+  }
+}
+
+.gameToolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settingsWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* small square icon buttons with white hover tooltips */
+.toolBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.toolBtn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.toolBtn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--color-text-primary);
+}
+
+/* small white tooltip */
+.toolBtn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  background: #fff;
+  color: #0f212e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 60;
+}
+
+.toolBtn:hover::after {
+  opacity: 1;
+}
+
+/* settings popover: little menu with the volume slider */
+.settingsMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-divider-panel);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  z-index: 70;
+  animation: toolbar-pop 140ms ease both;
+}
+
+@keyframes toolbar-pop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settingsMenu .volumeSlider {
+  width: 130px;
+}
+
+.volumeIcon {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+  flex: 0 0 auto;
+}
+
+.volumeIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.gameToolbarLogo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 28px; /* slightly larger */
+  width: auto;
+  color: #ffffff; /* white in the toolbar */
+  fill: #ffffff;
+}
+
+.gameToolbarLogo path {
+  fill: #ffffff;
+}
+
+/* phones: the logo already sits in the top bar — drop it from the toolbar */
+@media (max-width: 900px) {
+  .gameToolbarLogo {
+    display: none;
+  }
+}
+
+/* Fairness — shared side-button look, toolbar-sized */
+.fairnessBtn {
+  composes: ui-action-button from global;
+  height: 34px;
+  padding: 0 14px;
+  gap: 6px;
+  font-size: var(--font-size-control);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+
+/* Fairness modal body (rendered through the shared <Modal>) */
+.fairnessBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: var(--font-size-control);
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 600px) {
+  /* Hide the Cmd+K pill on mobile — there's no physical Cmd key. */
+  .shortcutPill {
+    display: none !important;
+  }
+
+  .searchFilterRow {
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--color-bg-page);
+    padding: 8px 0;
+    margin: 0 -var(--space-lg);
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
+    /* floating effect */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    width: calc(100% + 2 * var(--space-lg));
+    box-sizing: border-box;
+  }
+  .searchWrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+  }
+  .searchBar {
+    width: 100%;
+    min-width: 0;
+    height: var(--sidebar-input-height);
+    box-sizing: border-box;
+  }
+  .filterBar {
+    flex: 0 0 auto;
+    min-width: 0;
+    margin-bottom: 0 !important;
+    align-self: stretch;
+    display: flex;
+    align-items: stretch;
+  }
+  .sortSelect {
+    min-width: 96px;
+    max-width: 110px;
+    padding-right: 28px;
+    flex: 0 0 auto;
+    height: var(--sidebar-input-height);
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+  .posterMedia {
+    aspect-ratio: 3 / 4;
+    height: auto;
+    max-width: 180px;
+    border-radius: 10px;
+  }
+  .posterImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}

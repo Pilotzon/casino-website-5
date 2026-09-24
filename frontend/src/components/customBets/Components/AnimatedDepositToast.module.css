@@ -1,0 +1,109 @@
+.host {
+  position: fixed;
+  bottom: 100px;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+/* ✅ NEW: inline host so DepositToastStack can position each toast */
+.inlineHost {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+.toastCard {
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.outerWrapper {
+  position: relative;
+  min-width: 56px;
+  min-height: 72px;
+  display: grid;
+  place-items: center;
+}
+
+/* background circle wrapper */
+.bgWrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.bgInner {
+  width: 56px;
+  height: 56px;
+  border-radius: 32px;
+  background-color: #0071e3;
+  transform: scale(1.5);
+}
+
+/* button */
+.btnContainer {
+  height: 56px;
+  border-radius: 32px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(114, 114, 119, 1);
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+}
+
+.btnText {
+  font-size: 17px;
+  color: rgb(245, 245, 247);
+  font-weight: 600;
+  padding: 16px 62px 16px 24px;
+  white-space: nowrap;
+}
+
+.plusIcon {
+  position: absolute;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #0071e3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 10px;
+}
+
+.plusIcon span {
+  font-size: 28px;
+  color: var(--color-text-primary);
+  line-height: 28px;
+  position: relative;
+  top: -3px;
+}
+
+/* hidden measurement */
+.measureText {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  font-size: 17px;
+  font-weight: 600;
+  padding: 16px 62px 16px 24px;
+  white-space: nowrap;
+}

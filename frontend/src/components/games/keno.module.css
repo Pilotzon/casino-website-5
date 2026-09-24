@@ -1,0 +1,713 @@
+/* =========================================================
+   Keno-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+
+  --tile-face: #2F4553;
+  /* tile fill — exact Casino value */
+  --tile-shadow: #213643;
+  /* bottom-edge bevel — exact Casino value */
+  --tile-hover: #557086;
+  --tile-radius: 8px;
+  /* exact Casino value */
+  --tile-gap: 12px;
+
+  /* bevel scales with the board (0.72cqi of the grid wrapper ~= 8px on a
+     full-size desktop) — same PROPORTION on every screen */
+  --tile-base-height: 0.72cqi;
+  --tile-base-height-hover: 1cqi;
+
+  --picked: #8a2bff;
+  --picked-hover: #9b49ff;
+  --picked-shadow: #5f1fc0;
+  --picked-shadow-hover: #6b26d8;
+
+  --win-face: #00c441;
+  --win-shadow: #008a2c;
+
+  --pill-hover: #3a5566;
+
+  /* ✅ pressed solid top bar color */
+  --pressed-top: #071822;
+}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: "proxima-nova";
+  font-feature-settings: "salt" on;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+}
+
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Keno-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+/* Keno coin chip inside the bet input */
+.coinChip {
+  padding: 0 12px 0 4px;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  background: transparent;
+  /* icon slot inside the field — no separator */
+}
+
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+  /* $ like every other game */
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+/* Mines-like dropdown */
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+/* Chevron — the shared selector caret (global.css) */
+.hasCaret {
+  composes: ui-select-caret from global;
+}
+
+.bigButton {
+  composes: sidebar-bet-button from global;
+}
+
+.secondaryButton {
+  composes: sidebar-secondary-button from global;
+}
+
+/* Stage — positioned so the win popup overlays the board centred */
+.gameStage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  /* board stretches: grid from the 16px top inset down to the payout
+     rows, which end 16px above the stage floor (global rule) */
+  align-items: stretch;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  position: relative;
+}
+
+/* Board fills the stage — no max-width cap, the grid's own height
+   budget (see the container-query rule below) keeps it proportional.
+   The stage's equal --stage-pad padding puts the bottom panel exactly
+   16px from the stage's bottom/left/right edges (global rule). */
+.boardWrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 26px; /* Tile Grid ↔ rows spacing — the grid gives these 26px back,
+                so it sits slightly smaller, anchored at the top inset */
+  position: relative;
+}
+
+/* The grid's grow area: every pixel between the 16px top inset and the
+   payout rows. The grid fills it completely (desktop rule below). */
+.gridWrap {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  /* proportional — scales with the panel */
+  gap: var(--tile-gap);
+  width: 100%;
+}
+
+/* Tiles */
+.tile {
+  position: relative;
+  border: none;
+  outline: none;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--tile-radius);
+  background: var(--tile-face);
+  box-shadow: 0 var(--tile-base-height) 0 var(--tile-shadow);
+  margin-bottom: 5.5px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.tile:hover {
+  background: var(--tile-hover);
+  transform: translateY(-3.5px);
+  box-shadow: 0 var(--tile-base-height-hover) 0 var(--tile-shadow);
+}
+
+.tile:active {
+  transform: translateY(0);
+  transition: none;
+}
+
+.tilePicked {
+  background: var(--picked);
+  box-shadow: 0 var(--tile-base-height) 0 var(--picked-shadow);
+}
+
+.tilePicked:hover {
+  background: var(--picked-hover);
+  transform: translateY(-3.5px);
+  box-shadow: 0 var(--tile-base-height-hover) 0 var(--picked-shadow-hover);
+}
+
+/* picked + hit */
+.tilePickedHit {
+  background: var(--picked);
+  box-shadow: 0 var(--tile-base-height) 0 var(--picked-shadow);
+
+  outline-offset: -4px;
+}
+
+/* ✅ solid top-only inner shadow */
+.tilePressedRed {
+  background: #0B1C29;
+  box-shadow:
+    inset 0 7px 0 var(--pressed-top),
+    0 var(--tile-base-height) 0 #0F212E;
+}
+
+.tilePressedRed .tileNumber {
+  color: #f12c4c;
+  opacity: 0.95;
+}
+
+.tileDimmed {
+  filter: saturate(0.85) brightness(0.85);
+  cursor: default;
+}
+
+.tileDimmed:hover {
+  transform: none;
+  box-shadow: 0 var(--tile-base-height) 0 var(--tile-shadow);
+  background: var(--tile-face);
+}
+
+.tileNumber {
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--color-text-primary);
+  transition: transform 220ms ease, opacity 220ms ease, color 120ms ease;
+}
+
+.numOut {
+  transform: scale(0.55);
+  opacity: 0;
+}
+
+/* square gem badge */
+.gemBadge {
+  position: absolute;
+  width: 82%;
+  height: 82%;
+  border-radius: 10px;
+  background: #071824;
+  display: grid;
+  place-items: center;
+  transform: scale(0.85);
+  opacity: 0;
+  animation: gemBadgeIn 220ms ease-out forwards;
+}
+
+@keyframes gemBadgeIn {
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.gemBadge img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+
+/* Rows */
+.rowsWrap {
+  position: relative;
+}
+
+/* Multiplier Row hidden state — INVISIBLE but its fixed height keeps the
+   space reserved, so picking the first number never shifts the layout. */
+.rowsHidden {
+  visibility: hidden;
+}
+
+/* Hint message shown INSIDE the Chosen-Tiles Row when nothing is picked */
+.hitsEmpty {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-primary); /* white */
+  font-weight: 800;
+  font-size: 15px;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* hover panel — reuses the shared panel surface (global.css), same
+   look as Limbo's bottom stats panel */
+.hoverPanel {
+  composes: ui-panel-surface from global;
+  position: absolute;
+  right: 0;
+  top: -104px;
+  width: 100%;
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms linear;
+  box-shadow: var(--shadow-md);
+}
+
+.hoverPanelVisible {
+  composes: ui-hover-panel-visible from global;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.hoverBoxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Same read-only "input field" pattern as Limbo's stats panel:
+   label on top, bordered input-style box with the value + suffix. */
+.hoverBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hoverLabel {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: #b1bad3;
+}
+
+.hoverField {
+  composes: sidebar-input-group from global;
+  position: relative;
+}
+
+.hoverField .hoverInput {
+  padding-right: 44px;
+}
+
+.hoverInput {
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  font-size: var(--font-size-control);
+}
+
+.hoverSuffix {
+  position: absolute;
+  right: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 900;
+}
+
+.hoverSuffixGem {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+}
+
+.hoverSuffixGem img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.95;
+}
+
+.hoverArrow {
+  position: relative;
+  height: 0;
+}
+
+.hoverArrow::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid var(--color-bg-panel);
+}
+
+/* scroll rows */
+/* ONE scroll container for BOTH bottom rows (Multiplier + Chosen-Tiles):
+   a single scrollbar drives them together and the rows — pinned to the
+   same inline width — can never drift apart. No scrollbar-gutter (it was
+   the cause of the phantom tail after the big cell's last segment). */
+.rowsScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.20) rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Multiplier Row ↔ Chosen-Tiles Row vertical spacing */
+}
+
+.rowsScroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.rowsScroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+}
+
+.rowsScroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.rowsScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.payoutRow {
+  display: grid;
+  gap: 16px; /* same as the Multiplier↔Chosen-Tiles gap */
+  width: 100%;
+  height: 44px; /* fixed — reserved space stays exact while hidden */
+}
+
+/* Chosen-Tiles Row — LOOKS like one big cell: a single visible bar and
+   the hit-count segments inside it with invisible backgrounds (they are
+   real buttons, just transparent on the shared surface). */
+.hitsRow {
+  display: grid;
+  gap: 0;
+  height: 44px;
+  background: var(--color-bg-tile);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.payoutPillBtn,
+.hitCellBtn {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  font-family: "proxima-nova";
+  font-feature-settings: "salt" on;
+  cursor: help;
+}
+
+.payoutPillBtn {
+  height: 44px;
+  background: var(--color-bg-tile);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.hitCellBtn {
+  height: 100%; /* fills the big cell */
+  background: transparent; /* invisible segment inside the shared surface */
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  transition: background-color 120ms ease;
+}
+
+.hitCellActive {
+  background: #3a5566;
+}
+
+.hitLabel {
+  font-size: 16px;
+}
+
+.hitDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #bdbdbd;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Win popup — shared, dead-centre overlay (global.css) */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Modal — shared overlay styles (global.css) */
+.modalOverlay {
+  composes: ui-modal-overlay from global;
+}
+
+.modalCard {
+  composes: ui-modal-card from global;
+  width: 100%;
+}
+
+.modalTitle {
+  composes: ui-modal-title from global;
+}
+
+.modalNumber {
+  composes: ui-modal-number from global;
+}
+
+.modalGrid {
+  composes: ui-modal-grid from global;
+}
+
+.modalItem {
+  composes: ui-modal-item from global;
+}
+
+.modalItemLabel {
+  composes: ui-modal-item-label from global;
+}
+
+.modalItemValue {
+  composes: ui-modal-item-value from global;
+}
+
+.modalGem img {
+  width: 16px;
+  height: 16px;
+  opacity: 0.95;
+}
+
+.modalBtnPrimary {
+  composes: ui-modal-btn from global;
+}
+
+/* Desktop: the board is as large as it can possibly be — it fills the
+   full stage width and the entire height between the 16px top inset and
+   the payout rows (which sit 16px above the floor). Tiles stretch to
+   their cell (no fixed aspect ratio), so no space is ever wasted. */
+@media (min-width: 901px) {
+  .gridWrap {
+    container-type: size; /* cq units resolve against the grid area */
+  }
+
+  .grid {
+    /* cells slightly TALLER than wide: the width term pins the cell
+       aspect (grid width = 1.8x the area height => cell w ~ 0.9 cell h);
+       min() with 95% keeps it inside the column. Height stays full and
+       pinned to the top inset (top-centre anchor). */
+    width: min(95%, calc((100cqh - 24px) * 1.8));
+    height: 100%;
+    grid-template-rows: repeat(5, 1fr);
+  }
+
+  .tile {
+    aspect-ratio: auto;
+    height: 100%;
+  }
+}
+
+/* responsive */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    /* mobile inherits the same spacing tokens as desktop */
+    border-bottom-right-radius: 0;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+  }
+
+  .grid {
+    width: 100%;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    --tile-base-height: 6px;
+    --tile-base-height-hover: 8px;
+    --tile-gap: 8px;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+  }
+
+  .boardWrap {
+    gap: 10px;
+  }
+
+  .grid {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .tile {
+    margin-bottom: 4px;
+  }
+
+  .tileNumber {
+    font-size: 14px;
+  }
+
+  /* Rows shrink together on mobile: reserved multiplier space (30px)
+     + gap + chosen-tiles bar (30px) — still no layout jump. */
+  .rowsScroll {
+    gap: 10px; /* mobile: slightly smaller between the two rows */
+  }
+
+  .payoutRow {
+    gap: 10px;
+    width: 100%;
+    height: 30px;
+  }
+
+  .hitsRow {
+    height: 30px;
+  }
+
+  .hitsEmpty {
+    font-size: 13px;
+  }
+
+  .payoutPillBtn {
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .hitCellBtn {
+    height: 100%;
+  }
+
+  .hitLabel {
+    font-size: 12px;
+  }
+
+  .hitDot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .hoverPanel {
+    display: none;
+  }
+
+  /* Win popup stays a true dead-centre overlay on mobile too */
+  .winPopup {
+    max-width: calc(100% - 24px);
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    --tile-gap: 7px;
+  }
+
+  .tileNumber {
+    font-size: 13px;
+  }
+}

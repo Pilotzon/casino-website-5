@@ -1,0 +1,999 @@
+/* Admin panel — built ONLY from the global tokens (styles/global.css):
+   page/panel/input fills, the secondary button fill, the input border,
+   the bluish secondary text, the one control font size, the two neutral
+   shadows. Width follows the top navigation bar's visible width. */
+
+.page {
+  min-height: calc(100vh - var(--nav-height) - var(--layout-bottom-space));
+  padding: var(--layout-frame-space) 0;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+}
+
+/* same VISIBLE width as the navbar / game box */
+.shell {
+  width: calc(100% - 2 * var(--layout-frame-space));
+  max-width: calc(var(--layout-max-width) - 2 * var(--layout-frame-space));
+  margin: 0 auto;
+}
+
+@media (min-width: 1025px) {
+  .shell {
+    width: calc(min(var(--layout-max-width), calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px))) - 2 * var(--layout-frame-space));
+  }
+}
+
+/* ---- header ---- */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.title {
+  font-size: 26px;
+  /* same as every other section title */
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  font-size: var(--font-size-control);
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rolePill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---- panels ---- */
+.grid {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: 1fr;
+}
+
+.section,
+.sectionWide {
+  /* lifted panel: a soft top-down gradient from the panel tone into the
+     page tone, with the shared border + shadow */
+  background: var(--color-bg-game);
+  /* flat, darker than the page panel */
+  border: 0;
+  border-radius: var(--radius-lg);
+  padding: var(--layout-frame-space);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+}
+
+.sectionHint {
+  font-size: var(--font-size-control);
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+/* ---- setting rows ---- */
+.row,
+.rowMini {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: 14px 0;
+  border-top: 1px solid var(--color-border-input);
+  flex-wrap: wrap;
+}
+
+.row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.rowMini {
+  padding: 10px 0;
+  border: 0;
+}
+
+.rowMini:last-child {
+  padding-bottom: 0;
+}
+
+.rowTitle {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.rowDesc {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  margin-top: 2px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* On/Off toggle — a side button; "on" is the accent blue */
+.toggle {
+  composes: ui-action-button from global;
+  min-width: 84px;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+}
+
+.on {
+  background: var(--color-accent-blue);
+}
+
+.off {
+  background: var(--color-btn-secondary-bg);
+}
+
+/* ---- tables ---- */
+.table {
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  /* Allow horizontal scroll on narrow screens instead of overflowing */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: hidden;
+}
+
+.tableHead,
+.tableRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) minmax(74px, 0.7fr) minmax(84px, 0.8fr) minmax(150px, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  align-items: center;
+  /* ensure the row grid is at least as wide as its columns so the scroll
+     container activates instead of compressing below readable widths */
+  min-width: 520px;
+}
+
+.tableHead {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  background: var(--color-bg-panel);
+}
+
+.tableRow {
+  border-top: 1px solid var(--color-border-input);
+}
+
+.gameName {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mutedSmall {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.enabled {
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.disabled {
+  color: var(--accent-red);
+  font-weight: 700;
+}
+
+.tableActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smallBtn {
+  composes: ui-action-button from global;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+}
+
+/* ---- fields — the game-sidebar input, exactly ---- */
+.split {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-control-gap);
+  min-width: 0;
+}
+
+.field label {
+  color: var(--color-text-label);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  height: var(--sidebar-input-height);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  padding: var(--sidebar-input-padding);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  box-shadow: var(--shadow-md);
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+/* EVERY select in the panel gets the shared right-side chevron */
+.roleSelect {
+  composes: ui-caret-select from global;
+}
+
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--color-border-input-focus);
+}
+
+.field input:disabled,
+.field select:disabled {
+  opacity: 1;
+  color: var(--color-text-muted);
+  background: var(--color-bg-panel);
+  cursor: not-allowed;
+}
+
+/* ---- users ---- */
+.userGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--space-lg);
+  margin-top: 14px;
+}
+
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 560px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.userRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-input);
+  /* same as a readonly input */
+  background: var(--color-bg-input);
+  box-shadow: none;
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-control);
+  transition: background-color 140ms ease, border-color 140ms ease, transform var(--ui-press-duration) ease;
+}
+
+.userRow:hover {
+  background: var(--color-bg-input-hover);
+}
+
+.userRow:active {
+  transform: scale(var(--ui-press-scale));
+}
+
+.userRowActive,
+.userRowActive:hover {
+  border-color: var(--color-border-input-focus);
+}
+
+.ownerRow {
+  opacity: 1;
+}
+
+.userMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.userTop {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.userName {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userRole {
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: none;
+}
+
+.inlineTag {
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  background: var(--color-btn-secondary-bg);
+  color: var(--accent-green);
+  box-shadow: var(--shadow-md);
+  flex: 0 0 auto;
+}
+
+.userBal {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.userDetail {
+  background: var(--color-bg-panel);
+  border: 0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-lg);
+  min-height: 280px;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detailName {
+  font-weight: 800;
+  font-size: 21px;
+  /* modal-title size: the card's own heading */
+  line-height: 1.2;
+}
+
+.detailRole {
+  text-transform: none;
+  font-weight: 600;
+  font-size: var(--font-size-control);
+  color: var(--color-text-secondary);
+}
+
+.detailBalance {
+  margin: 14px 0 18px 0;
+  font-weight: 700;
+}
+
+/* ---- buttons — the shared side button geometry ---- */
+.primaryBtn {
+  composes: ui-action-button from global;
+  composes: ui-action-primary from global;
+  width: 100%;
+  border: 0;
+}
+
+.secondaryBtn {
+  composes: ui-action-button from global;
+  border: 0;
+}
+
+.dangerBtn {
+  composes: ui-action-button from global;
+  border: 0;
+  background: var(--accent-danger);
+}
+
+.dangerBtn:hover:not(:disabled) {
+  background: var(--accent-danger-hover);
+  filter: none;
+}
+
+.warn {
+  margin-top: 10px;
+  color: var(--accent-red);
+  font-weight: 600;
+  font-size: var(--font-size-control);
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.btc {
+  color: var(--bitcoin);
+}
+
+.heroCard {
+  max-width: 700px;
+  margin: 0 auto;
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  padding: var(--layout-frame-space);
+}
+
+/* ---- badges — pills like the game-info genre pills ---- */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 6px 0;
+}
+
+.badge,
+.badgeYou {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  background: var(--color-btn-secondary-bg);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.badgeOk {
+  color: var(--accent-green);
+}
+
+.badgeWarn,
+.badgeYou {
+  color: var(--accent-warning);
+}
+
+.badgeDanger {
+  color: var(--accent-red);
+}
+
+.inlineNote {
+  margin-top: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* ---- sub-blocks inside the detail card ---- */
+.block {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-input);
+}
+
+.blockHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* ---- collapsible sub-sections (accordion: one open at a time) ---- */
+.sub {
+  margin-top: 10px;
+  /* readonly-input recipe: fill + border + shadow */
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* animated open/close (height via grid rows) */
+.subCollapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+
+.subOpen>.subCollapse,
+.subsubOpen>.subCollapse {
+  grid-template-rows: 1fr;
+}
+
+.subCollapseInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* sub-sub-sections (Access): chevron on the left, permissions on the right */
+.subsub {
+  border-radius: var(--radius-md);
+}
+
+.subsub+.subsub {
+  margin-top: 4px;
+}
+
+.subsubHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: 16px;
+  /* a touch bigger than the controls */
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.subsubChevron {
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-secondary);
+  transition: transform 160ms ease;
+}
+
+.subsubOpen .subsubChevron {
+  transform: rotate(90deg);
+}
+
+.subsubTitle {
+  color: var(--color-text-primary);
+}
+
+.subsubBody {
+  padding: 0 4px 12px 32px;
+  /* indented under the chevron */
+  display: flex;
+  flex-direction: column;
+}
+
+.subHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-primary);
+  font-size: 16px;
+  /* accordion headers read a touch bigger */
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 120ms ease;
+}
+
+.subHead:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.subTitle {
+  font-weight: 800;
+}
+
+.subHint {
+  flex: 1;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subChevron {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-secondary);
+  transition: transform 160ms ease;
+}
+
+.subOpen .subChevron {
+  transform: rotate(180deg);
+}
+
+.subBody {
+  padding: 4px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.subBody>.rowMini:first-child,
+.subBody>.field:first-child,
+.subBody>.twoCol:first-child,
+.subBody>.inlineNote:first-child {
+  margin-top: 10px;
+}
+
+/* a field column: input on top, its own button(s) right under it */
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.col>button {
+  width: 100%;
+}
+
+.blockHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-control);
+  font-weight: 800;
+}
+
+.blockHint {
+  font-size: var(--font-size-control);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.btnRow {
+  margin-top: 4px;
+}
+
+.btnRow>button {
+  width: 100%;
+}
+
+.actionBtns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.dangerZone {
+  border-color: rgba(255, 119, 119, 0.638);
+}
+
+/* Delete-user modal body (rendered through the shared <Modal>) */
+.modalActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ---- responsive ---- */
+@media (max-width: 980px) {
+  .userGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .userList {
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: var(--space-lg) 0;
+  }
+
+  .shell {
+    width: calc(100% - 2 * var(--space-lg));
+  }
+
+  .section,
+  .sectionWide,
+  .heroCard {
+    padding: var(--space-lg);
+  }
+
+  .title,
+  .sectionHeader h2 {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Force the whole admin shell to respect viewport width */
+  .shell {
+    width: calc(100% - 2 * var(--space-lg));
+    max-width: none;
+    overflow-x: hidden;
+  }
+  .section,
+  .sectionWide {
+    padding: var(--space-md);
+    overflow-x: hidden;
+  }
+  .table {
+    /* Scroll container on small screens: rounded corners preserved */
+    border-radius: var(--radius-md);
+    -webkit-overflow-scrolling: touch;
+  }
+  .tableHead,
+  .tableRow {
+    padding: 10px 12px;
+    gap: 8px;
+    /* give the grid a reasonable minimum so columns don't overlap */
+    min-width: 480px;
+  }
+  .smallBtn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .tableActions {
+    gap: 6px;
+  }
+
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .topBar>div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .topRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .topRight button {
+    width: 100%;
+  }
+
+  .split {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+
+  .actionBtns {
+    flex-direction: column;
+  }
+
+  .secondaryBtn,
+  .dangerBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Collapse user detail badges to wrap nicely */
+  .badges {
+    gap: 6px;
+  }
+  .badge,
+  .badgeYou {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+}
+
+/* small group heading inside a sub-section (e.g. "Custom Bets admin permissions") */
+.groupLabel {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+}
+
+/* label with a trailing hazard badge (badge comes AFTER the text) */
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resultCount {
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+}
+
+/* Users toolbar mirrors the two columns below it: [search] spans the
+   user-list column, [role | state | sort | refresh] the detail column */
+.userTools {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  /* same as .userGrid */
+  gap: var(--space-lg);
+  align-items: end;
+}
+
+.userToolsRight {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 980px) {
+
+  .userTools,
+  .userToolsRight {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* one hairline above the bet-limit fields in System */
+.settingsDivider {
+  height: 1px;
+  margin: 14px 0;
+  background: var(--color-border-input);
+}
+
+/* the whole Users section grows/shrinks smoothly when a user is picked */
+.userDetail {
+  transition: min-height 220ms ease;
+}
+
+.detailGrow {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 260ms ease;
+}
+
+.detailGrowOpen {
+  grid-template-rows: 1fr;
+}
+
+/* ---- stepper wrapper for numeric inputs ---- */
+.inputWithStepper {
+  display: flex;
+  align-items: stretch;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  height: var(--sidebar-input-height);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: border-color 140ms ease;
+}
+
+.inputWithStepper:focus-within {
+  border-color: var(--color-border-input-focus);
+}
+
+.inputWithStepper input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  padding: var(--sidebar-input-padding);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  font-family: var(--font-primary);
+  font-feature-settings: "salt" on;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+  height: 100%;
+}
+
+.inputWithStepper input:disabled {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+/* hide native spinners when stepper is present */
+.inputWithStepper input[type="number"]::-webkit-outer-spin-button,
+.inputWithStepper input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.inputWithStepper input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+/* Pages table (3 columns) - override when only 3 children */
+.tableHead:has(> div:nth-child(3):last-child),
+.tableRow:has(> div:nth-child(3):last-child) {
+  grid-template-columns: minmax(0, 1.6fr) minmax(84px, 0.8fr) minmax(150px, 1fr);
+}

@@ -1,0 +1,499 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap");
+
+/* =========================================================
+   Theme — Tower-specific tokens (scoped to this game only).
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  --board-inner: #182433;
+  --board-frame: #6f8090;
+
+  --tile-bg: #2c3d4e; /* tower tile fill — exact Casino value */
+  --tile-gap: 12px;
+  --tile-radius: 8px; /* exact Casino value */
+  --active-green: #21f000;
+
+  --tile-bg-path: rgba(255, 255, 255, 0.08);
+  --tile-bg-path-active: rgba(0, 0, 0, 0.35);
+
+  /* Fire */
+  --fire-bg: #820024;
+  --fire-ring: #9d0639;
+  --fire-path: rgba(255, 120, 120, 1);
+
+  /* ✅ chosen tile outline settings */
+  --chosen-outline-width: 2px;
+  --chosen-outline-color: #586574;
+  --chosen-outline-outer: rgba(0, 0, 0, 0.35);
+}
+
+/* =========================================================
+   Layout
+   ========================================================= */
+.container {
+  composes: game-shell from global;
+  display: flex;
+  overflow: hidden;
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: 'proxima-nova';
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  background: var(--color-bg-panel); /* sidebar panel */
+  border-right: 1px solid var(--color-divider-panel); /* sidebar/game divider #253241 */
+}
+
+/* position:relative — the win popup overlays the stage dead-centre */
+.gameStage {
+  flex: 1;
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  display: flex;
+  align-items: center; /* dragon + tower centered in the panel */
+  justify-content: center;
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  overflow: hidden;
+  position: relative;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Tower-specific
+   tweaks only below.
+   ========================================================= */
+.controlsHeader {
+  margin-bottom: 4px;
+}
+
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+.inputWrapper .btcIcon {
+  margin-left: 0;
+  margin-right: 12px;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+.divider {
+  composes: sidebar-divider from global;
+}
+
+/* Raw <select> — the shared caret class adds appearance:none, the
+   right-side chevron and its padding (global.css) */
+.select {
+  composes: ui-caret-select from global;
+  height: var(--sidebar-input-height);
+  outline: none;
+  background: var(--color-bg-input);
+  border: var(--ui-input-border) solid var(--ui-outline);
+  border-radius: var(--sidebar-input-radius);
+  box-shadow: var(--ui-input-shadow);
+  color: var(--sidebar-input-text);
+  font-weight: 700;
+}
+
+.profitInput {
+  background: var(--color-bg-input-profit); /* #141f28 — Total Profit field */
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+/* =========================================================
+   Stage / Art layers
+   ========================================================= */
+.boardWrap {
+  position: relative;
+  width: min(1060px, 100%);
+  height: 100%;
+  max-height: 900px;
+  border-radius: 10px;
+  overflow: hidden;
+  isolation: isolate;
+  display: block;
+}
+
+/* Board background — a plain cover fill on desktop: one sizing model, no
+   double-constrained crop, so it never distorts when the stage aspect
+   ratio changes. */
+.boardBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  filter: contrast(1.06) brightness(0.86);
+}
+
+/* Castle + board unit — fixed 560px design width, dead-centre in the
+   stage, and uniformly fit-scaled to the available space by
+   --tower-scale (computed in Tower.jsx, same pattern as the
+   Russian Roulette scene). The scale fits the unit AND the dragon
+   art that hangs above it, so nothing is ever clipped. */
+.castleAndBoard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--tower-scale, 1));
+  width: 560px;
+  z-index: 2;
+}
+
+/* ✅ Win popup — shared, dead-centre overlay (global.css);
+   scoped rule keeps Tower's signature border colour. */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.container .winPopup {
+  border-color: rgba(0, 231, 1, 0.9);
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Dragon */
+.dragonHeadInFrontOfCastle,
+.dragonWingsBehindEverything {
+  position: absolute;
+  left: 50%;
+  top: -170px; /* matches the fit calc (TOWER_DRAGON_TOP_OFFSET) */
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.dragonHeadInFrontOfCastle {
+  z-index: 7;
+}
+
+.dragonWingsBehindEverything {
+  z-index: 1;
+}
+
+.dragonWingsCanvas,
+.dragonHeadCanvasOnly {
+  display: block;
+  transform: none !important;
+}
+
+/* Castle */
+.castleTopLayer {
+  position: relative;
+  width: 100%;
+  z-index: 6;
+}
+
+/* PC-only size boost: the castle+board render ~4% larger with the
+   anchor at the TOP CENTRE of the tower board — the castle grows
+   upward from the board's top edge, the board grows downward/sideways
+   from that same edge, so the seam stays perfectly aligned. */
+@media (min-width: 901px) {
+  .castleTopLayer {
+    transform: scale(1.04);
+    transform-origin: 50% 100%;
+  }
+
+  .board {
+    transform: scale(1.04);
+    transform-origin: 50% 0;
+  }
+}
+
+.castleTop {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
+}
+
+/* Board */
+.board {
+  position: relative;
+  width: 100%;
+  display: grid;
+  gap: var(--tile-gap);
+  padding: 18px;
+  background: var(--board-inner);
+  border: 10px solid var(--board-frame);
+  border-radius: 0 0 10px 10px;
+  z-index: 2;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.board::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  padding: 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 25%,
+    rgba(255, 255, 255, 0) 25% 50%,
+    rgba(255, 255, 255, 0.06) 50% 75%,
+    rgba(255, 255, 255, 0) 75%
+  );
+  background-size: 28px 28px;
+  opacity: 0.1;
+
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Tiles */
+.tile {
+  position: relative;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  background: var(--tile-bg);
+  border-radius: 8px; /* exact Casino value */
+  cursor: pointer;
+
+  overflow: visible;
+  isolation: isolate;
+}
+
+.tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.97;
+}
+
+.tile:active {
+  transform: none !important;
+}
+
+/* bg clip wrapper */
+.tileClip {
+  position: absolute;
+  inset: 0;
+  border-radius: 0px;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Active row */
+.tileActiveRow {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02)),
+    linear-gradient(0deg, var(--active-green), var(--active-green));
+}
+
+.tileActiveRow:hover {
+  transform: translateY(-4px);
+}
+
+.tileActiveRow:active {
+  transform: translateY(0) !important;
+}
+
+.tile,
+.tileActiveRow:hover {
+  transition: none !important;
+}
+
+/* last pick */
+.tilePicked {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.65),
+    0 0 0 3px rgba(0, 0, 0, 0.35);
+}
+
+/* outline all safe chosen tiles */
+.tileChosen {
+  box-shadow:
+    0 0 0 var(--chosen-outline-width) var(--chosen-outline-color),
+    0 0 0 calc(var(--chosen-outline-width) + 1px) var(--chosen-outline-outer);
+}
+
+/* Fire tile */
+.tileFire {
+  background: var(--fire-bg);
+  box-shadow: 0 0 0 3px var(--fire-ring);
+}
+
+/* Tile BG SVG */
+.tileBgSvg {
+  position: absolute;
+  left: -20px;
+  top: 0px;
+  height: 130%;
+  width: auto;
+  transform: translateY(-20%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+  color: var(--tile-bg-path);
+}
+
+.tileBgSvgActive {
+  color: var(--tile-bg-path-active);
+}
+
+/* engrave layer */
+.tileEngrave {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Symbols */
+.symbolCanvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.eggCanvas {
+  transform: translate(-50%, calc(-50% - 4px)) scale(1.25);
+}
+
+.skullCanvas {
+  transform: translate(-50%, calc(-50% - 15px)) scale(1.38);
+}
+
+/* Fire overlay above skull */
+.fireCanvas {
+  z-index: 6;
+  transform: translate(-50%, calc(-50% - 10px));
+  mix-blend-mode: screen;
+  opacity: 0.95;
+}
+
+/* Responsive
+   The castle+board unit stays absolute-centred + fit-scaled at every
+   size (same as desktop) — one layout, no per-breakpoint repositioning.
+   Mobile only changes the stage padding and the board height. */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+
+  /* Definite height — the stage sits first on mobile, the board gets
+     "a screen minus the stacked sidebar", never a runaway height. */
+  .boardWrap {
+    width: 100%;
+    height: calc(100svh - 235px);
+    min-height: 340px;
+    max-height: none;
+  }
+
+  /* Proportional background: on stacked layouts the background is sized
+     in DESIGN space (760px wide, --tower-bg-h tall -- the fit calculation
+     in Tower.jsx derives it from the unit + dragon) and scaled by the
+     SAME --tower-scale as the castle+board unit, so background and
+     foreground can never drift out of proportion. */
+  .boardBg {
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: 760px;
+    height: var(--tower-bg-h, 900px);
+    transform: translate(-50%, -50%) scale(var(--tower-scale, 1));
+  }
+
+  .dragonHeadInFrontOfCastle,
+  .dragonWingsBehindEverything {
+    top: -190px;
+  }
+
+  /* Win popup stays a true dead-centre overlay on mobile too
+     (scoped — the module class alone loses to the global one) */
+  .gameStage .winPopup {
+    max-width: calc(100% - 24px);
+  }
+}
+
+@media (max-width: 600px) {
+  .gameStage {
+    /* lighter than the 16px global pad — the proportional background
+       already fills the board area; 10px keeps it from feeling walled */
+    padding: 10px;
+  }
+
+  .eggCanvas {
+    transform: translate(-50%, calc(-50% - 3px)) scale(0.9);
+  }
+  .skullCanvas {
+    transform: translate(-50%, calc(-50% - 10px)) scale(1);
+  }
+
+  .dragonHeadInFrontOfCastle {
+    transform: translateX(-50%) translateY(-28px) !important;
+  }
+  .dragonWingsBehindEverything {
+    transform: translateX(-50%) translateY(-28px) !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .dragonHeadInFrontOfCastle,
+  .dragonWingsBehindEverything {
+    top: -190px;
+  }
+}

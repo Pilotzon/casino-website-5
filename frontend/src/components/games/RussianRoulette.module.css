@@ -1,0 +1,408 @@
+/* RussianRoulette.module.css */
+
+.smallMuted {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* Win popup — shared, dead-centre overlay (global.css). It sits directly
+   on the stage (not inside the scaled scene), so it never shrinks. */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* ===== Stage ===== */
+.stage {
+  flex: 1;
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  display: grid;
+  place-items: center; /* scene centered */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  overflow: hidden;
+  position: relative;
+}
+
+.sceneWrap {
+  width: 100%;
+  height: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.scene {
+  width: 900px;
+  height: 500px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.table {
+  position: absolute;
+  left: 50%;
+  top: 85%;
+  transform: translate(-50%, -50%);
+  width: 550px;
+  opacity: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ===== Players ===== */
+.players {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.player {
+  position: absolute;
+  width: 85px;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.35));
+  will-change: transform, filter, opacity;
+  transition:
+    transform 520ms cubic-bezier(0.2, 0.92, 0.22, 1),
+    filter 520ms ease,
+    opacity 520ms ease;
+}
+.player img {
+  width: 100%;
+  height: auto;
+}
+
+.p0 { left: 130px; top: 160px; transform: rotate(-50deg); }
+.p1 { left: 240px; top: 65px;  transform: rotate(-30deg); }
+.p2 { left: 407px; top: 20px;  transform: rotate(0deg); }
+.p3 { left: 575px; top: 65px;  transform: rotate(30deg); }
+.p4 { left: 685px; top: 160px; transform: rotate(50deg); }
+
+.lift {
+  filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.42));
+}
+.p0.lift { transform: translate(-12px, -18px) scale(1.02) rotate(-50deg); }
+.p1.lift { transform: translate(-8px, -20px)  scale(1.02) rotate(-30deg); }
+.p2.lift { transform: translate(0px, -20px)   scale(1.02) rotate(0deg); }
+.p3.lift { transform: translate(8px, -20px)   scale(1.02) rotate(30deg); }
+.p4.lift { transform: translate(12px, -18px)  scale(1.02) rotate(50deg); }
+
+.shot {
+  animation: impact 320ms ease-in both;
+  filter: drop-shadow(0 26px 38px rgba(0, 0, 0, 0.45));
+}
+@keyframes impact {
+  0%   { transform: translateY(-22px) scale(1.03) rotate(0deg); }
+  30%  { transform: translateY(-34px) scale(1.04) rotate(0deg); }
+  100% { transform: translateY(-24px) scale(1.02) rotate(0deg); }
+}
+.p0.shot { animation-name: impactP0; }
+.p1.shot { animation-name: impactP1; }
+.p2.shot { animation-name: impactP2; }
+.p3.shot { animation-name: impactP3; }
+.p4.shot { animation-name: impactP4; }
+
+@keyframes impactP0 {
+  0%   { transform: translate(-12px, -22px) scale(1.03) rotate(-50deg); }
+  35%  { transform: translate(-16px, -36px) scale(1.05) rotate(-60deg); }
+  100% { transform: translate(-12px, -24px) scale(1.02) rotate(-52deg); }
+}
+@keyframes impactP1 {
+  0%   { transform: translate(-8px, -22px) scale(1.03) rotate(-30deg); }
+  35%  { transform: translate(-12px, -36px) scale(1.05) rotate(-38deg); }
+  100% { transform: translate(-8px, -24px) scale(1.02) rotate(-30deg); }
+}
+@keyframes impactP2 {
+  0%   { transform: translate(0px, -22px) scale(1.03) rotate(0deg); }
+  35%  { transform: translate(0px, -38px) scale(1.05) rotate(0deg); }
+  100% { transform: translate(0px, -24px) scale(1.02) rotate(0deg); }
+}
+@keyframes impactP3 {
+  0%   { transform: translate(8px, -22px) scale(1.03) rotate(30deg); }
+  35%  { transform: translate(12px, -36px) scale(1.05) rotate(38deg); }
+  100% { transform: translate(8px, -24px) scale(1.02) rotate(30deg); }
+}
+@keyframes impactP4 {
+  0%   { transform: translate(12px, -22px) scale(1.03) rotate(50deg); }
+  35%  { transform: translate(16px, -36px) scale(1.05) rotate(60deg); }
+  100% { transform: translate(12px, -24px) scale(1.02) rotate(52deg); }
+}
+
+.dead {
+  filter: grayscale(1) brightness(0.5) contrast(1.05)
+    drop-shadow(0 18px 28px rgba(0, 0, 0, 0.35));
+  opacity: 0.92;
+}
+
+/* ===== Gun ===== */
+.gunPivot {
+  position: absolute;
+  pointer-events: none;
+}
+
+.gunRot {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+  position: relative;
+}
+
+.gunImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.35));
+  display: block;
+}
+
+.pivotMarker {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+}
+
+.bulletPoint {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.bulletFlash {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  background: radial-gradient(circle,
+    rgba(255,255,255,0.95) 0%,
+    rgba(255,230,150,0.85) 25%,
+    rgba(255,170,0,0.35) 55%,
+    rgba(255,170,0,0) 70%);
+  transition: opacity 90ms ease;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.flashOn { opacity: 1; }
+
+.youTag {
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 231, 1, 0.18);
+  border: 1px solid rgba(0, 231, 1, 0.55);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 1000;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+.slotTop {
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* ===== Cylinder ===== */
+.cylinder {
+  position: absolute;
+  left: -60px;
+  bottom: 24px;
+  width: 225px;
+  height: 225px;
+  opacity: 1;
+  pointer-events: none;
+}
+.cylTopMarker {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 16px solid rgba(255, 255, 255, 0.88);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 3px;
+}
+
+.cylRot {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+  position: relative;
+}
+
+.cylBase {
+  width: 100%;
+  height: 100%;
+}
+
+.slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.slot img {
+  width: 100%;
+  height: 100%;
+}
+
+.slotHidden {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.72);
+}
+
+.slotPop {
+  animation: popFade 240ms ease-out both;
+}
+@keyframes popFade {
+  from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  to   { transform: translate(-50%, -50%) scale(1.55); opacity: 0; }
+}
+
+/* ===== Flying bullet ===== */
+.fly {
+  position: absolute;
+  z-index: 50;
+  will-change: left, top, transform;
+  animation: fly 100ms ease-out forwards;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--ang));
+}
+
+.fly img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@keyframes fly {
+  to {
+    left: var(--toX);
+    top: var(--toY);
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--ang));
+  }
+}
+
+/* ===== Sidebar side-buttons (one row: Continue + Shoot) =====
+   Coin Flip pattern — shared side action button (global.css), two up.
+   Shoot carries the shared blue primary variant. */
+.actionRow {
+  display: flex;
+  gap: 10px;
+}
+
+.actionRow button {
+  flex: 1;
+}
+
+/* Continue — the shared side action button (global.css) */
+.btnGhost {
+  composes: ui-action-button from global;
+}
+
+/* Shoot — shared side action button + shared blue primary variant */
+.btnGo {
+  composes: ui-action-button from global;
+  composes: ui-action-primary from global;
+}
+
+/* ============================================
+   MOBILE — scale the whole scene uniformly
+   ============================================ */
+
+@media (max-width: 768px) {
+  .stage {
+    min-height: 280px;
+    align-items: start;
+    padding-top: 8px;
+  }
+
+  .sceneWrap {
+    width: 100%;
+    height: 280px;
+    overflow: hidden;
+    position: relative;
+
+  }
+
+  .scene {
+    /* keep 900x500 layout, scale to fit */
+    transform: scale(var(--scene-scale, 0.42));
+    transform-origin: top center;
+        top: 140px;
+  }
+
+  /* Pull cylinder down so it doesn't overlap players */
+  .cylinder {
+    bottom: -10px;
+  }
+
+  /* Compact popup on small screens (scoped so it beats the shared class) */
+  .stage .winPopup {
+    min-width: 170px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    max-width: calc(100% - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  .stage {
+    min-height: 240px;
+    padding-top: 4px;
+  }
+
+  .sceneWrap {
+    height: 240px;
+  }
+
+  .scene {
+    top: 140px;
+  }
+
+  .cylinder {
+    bottom: -10px;
+    left: -20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .stage {
+    min-height: 210px;
+  }
+
+  .sceneWrap {
+    height: 210px;
+  }
+}

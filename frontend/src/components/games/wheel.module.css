@@ -1,0 +1,674 @@
+/* =========================================================
+   Wheel-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  /* layout knobs */
+  --wheel-to-strip-gap: 20px;
+  /* space between the wheel and the multiplier row */
+  --result-line-space: 32px;
+  /* room reserved under the strip for the result line */
+  --mult-card-height: 54px;
+  --pointer-room: 14px;
+  /* how far the pointer overhangs the wheel's top edge */
+  --wheel-max: 560px;
+  /* hard cap so the wheel never gets comically large */
+}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel */
+  color: var(--color-text-primary);
+  font-family: "proxima-nova";
+  font-feature-settings: "salt" on;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Wheel-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+  gap: 6px;
+}
+
+/* Wheel-specific currency symbol inside the bet input */
+.currency {
+  font-weight: 900;
+  color: var(--color-text-primary);
+  opacity: 0.9;
+  font-size: 14px;
+}
+
+/* BTC chip inside the bet input — a plain icon slot, no separator */
+.btcChip {
+  padding: 0 12px 0 4px;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  background: transparent;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--bitcoin);
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+/* Chevron — the shared selector caret (global.css) */
+.hasCaret {
+  composes: ui-select-caret from global;
+}
+
+.bigButton {
+  composes: sidebar-bet-button from global;
+}
+
+/* Always in the DOM with its space reserved — an error must never push
+   the Bet button (or anything below it) around. */
+.error {
+  min-height: 2.6rem;
+  /* one line of 0.85rem text + padding, kept constant */
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  color: #e74c3c;
+  font-size: 0.85rem;
+}
+
+.errorEmpty {
+  visibility: hidden;
+  /* invisible — colour removed via visibility (space stays reserved) */
+}
+
+/* =========================================================
+   GAME PANEL
+   gameStage  – the panel itself (padding, bg)
+   boardWrap  – column: [wheelStage (flex 1)] [multStrip] (+ result line)
+   wheelStage – the area left over above the multiplier row; it is the
+                size container the wheel measures itself against
+   wheelBox   – strict 1:1 square = min(stage width, stage height)
+   wheelOuter – the spinning wheel, fills wheelBox (width & height 100%)
+   ========================================================= */
+/* position:relative — the win popup overlays the whole stage centred */
+.gameStage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  background: var(--color-bg-game);
+  /* game grid panel */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.boardWrap {
+  width: 100%;
+  max-width: 1100px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.wheelStage {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  /* centered horizontally */
+  align-items: center;
+  /* centered vertically in the space above the strip */
+  padding-top: var(--pointer-room);
+  /* keeps the overhanging pointer inside the panel */
+}
+
+/* Desktop: the stage is a size container, so 100cqw/100cqh below are its
+   real content-box width/height — the wheel is sized from whichever is
+   smaller and can therefore never be stretched in either direction. */
+@media (min-width: 901px) {
+  .wheelStage {
+    container-type: size;
+  }
+}
+
+.wheelBox {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(100%, 60vh);
+  /* fallback (no cq units) */
+  width: min(100cqw, 100cqh, var(--wheel-max));
+  /* smaller of available w/h */
+  aspect-ratio: 1 / 1;
+  /* strict 1:1 — a true circle */
+}
+
+/* Pointer — anchored to the wheel box (not the viewport), so it always sits
+   centred on the wheel's top edge at any wheel size. */
+.pointerWrap {
+  position: absolute;
+  top: calc(-1 * var(--pointer-room));
+  left: 50%;
+  width: 26px;
+  height: 44px;
+  transform: translateX(-50%);
+  transform-origin: 50% 10px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.pointerBounce {
+  animation: pointerFlick var(--bounce-duration, 350ms) cubic-bezier(0.22, 0.7, 0.36, 1) forwards;
+}
+
+@keyframes pointerFlick {
+  0% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  10% {
+    transform: translateX(-50%) rotate(-34deg);
+  }
+
+  25% {
+    transform: translateX(-50%) rotate(-26deg);
+  }
+
+  40% {
+    transform: translateX(-50%) rotate(-19deg);
+  }
+
+  55% {
+    transform: translateX(-50%) rotate(-10deg);
+  }
+
+  70% {
+    transform: translateX(-50%) rotate(-6deg);
+  }
+
+  85% {
+    transform: translateX(-50%) rotate(-1deg);
+  }
+
+  100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+}
+
+.pointerPin {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #ff5b76;
+  z-index: 2;
+}
+
+.pointerDrop {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 28px solid #ff5b76;
+  z-index: 1;
+}
+
+/* The wheel fills the square box exactly; everything inside uses
+   percentage insets so the rings stay concentric circles at any size. */
+.wheelOuter {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #263742;
+  will-change: transform;
+}
+
+.rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ring {
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 10px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.segment {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  top: 0;
+  right: 0;
+  transform-origin: 0% 100%;
+}
+
+.innerPlate {
+  position: absolute;
+  inset: 9.6%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #162a37 0%, #0f212e 75%, #0b1a24 100%);
+}
+
+.innerCircle {
+  position: absolute;
+  inset: 22%;
+  /* of the inner plate (was 92px of 420px) */
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  background: rgba(15, 33, 46, 0.55);
+}
+
+/* Win popup — shared, dead-centre overlay (global.css) */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* HOVER PANEL — the shared read-only-input design (global.css), same
+   as Keno/Limbo/Flip/Plinko. Only the placement (directly above the
+   multiplier row, full width) is local. */
+.hoverPanel {
+  composes: ui-hover-panel from global;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--mult-card-height) + var(--result-line-space) + 12px);
+  z-index: 50;
+}
+
+.hoverPanelVisible {
+  composes: ui-hover-panel-visible from global;
+}
+
+.hoverBoxes {
+  composes: ui-hover-boxes from global;
+}
+
+.hoverBox {
+  composes: ui-hover-box from global;
+}
+
+.hoverLabel {
+  composes: ui-hover-label from global;
+}
+
+.hoverField {
+  composes: ui-hover-field from global;
+}
+
+.hoverInput {
+  composes: ui-hover-input from global;
+}
+
+.hoverField .hoverInput {
+  padding-right: 44px;
+}
+
+.hoverSuffix {
+  composes: ui-hover-suffix from global;
+}
+
+.hoverArrow {
+  position: relative;
+  height: 0;
+}
+
+.hoverArrow::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 0;
+  /* Preserved Wheel arrow alignment */
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid var(--color-bg-panel);
+  /* Updated border color to match the new background */
+}
+
+
+/* MULTIPLIER ROW — sits under the wheel; result line is reserved below it */
+.multStrip {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  margin-top: var(--wheel-to-strip-gap);
+  margin-bottom: var(--result-line-space);
+  flex-shrink: 0;
+}
+
+.multCardBtn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: inherit;
+  font-family: inherit;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  cursor: help;
+}
+
+.multCardBtn:active {
+  transform: none !important;
+}
+
+.multCardBtn:hover {
+  transform: none !important;
+}
+
+.multCardBtn:focus {
+  outline: none;
+}
+
+.multCardBtn:active .multCard {
+  transform: none !important;
+}
+
+.multCardBtn:hover .multCard {
+  transform: none !important;
+  filter: none !important;
+}
+
+.multCardBtn:focus .multCard {
+  transform: none !important;
+  filter: none !important;
+}
+
+/* result box: #17232e, 8px radius, white bold value, 4px colour bar below */
+.multCard {
+  background: var(--color-bg-panel);
+  border: none;
+  border-radius: 8px;
+  height: var(--mult-card-height);
+  position: relative;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.multFill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  opacity: 0.95;
+  transition: height 180ms ease;
+  z-index: 1;
+}
+
+.multBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  /* the segment's own colour, 3–4px tall */
+  z-index: 2;
+}
+
+.multCardActive .multFill {
+  height: 100%;
+}
+
+.multValue {
+  position: relative;
+  z-index: 3;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 0.2px;
+}
+
+.resultLine {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 24px;
+}
+
+.resultKey {
+  color: var(--color-text-label);
+  font-weight: 900;
+}
+
+.resultVal {
+  color: var(--color-text-primary);
+  font-weight: 900;
+}
+
+.resultSep {
+  color: rgba(255, 255, 255, 0.18);
+}
+
+/* Modal — shared overlay styles (global.css) */
+.modalOverlay {
+  composes: ui-modal-overlay from global;
+}
+
+.modalCard {
+  composes: ui-modal-card from global;
+  width: 100%;
+}
+
+.modalTitle {
+  composes: ui-modal-title from global;
+}
+
+.modalNumber {
+  composes: ui-modal-number from global;
+}
+
+.modalGrid {
+  composes: ui-modal-grid from global;
+}
+
+.modalItem {
+  composes: ui-modal-item from global;
+}
+
+.modalItemLabel {
+  composes: ui-modal-item-label from global;
+}
+
+.modalItemValue {
+  composes: ui-modal-item-value from global;
+}
+
+.modalBtnPrimary {
+  composes: ui-modal-btn from global;
+}
+
+/* Shorter desktop viewports: tighten the vertical rhythm only — the wheel
+   still measures itself against the stage, so it simply gets smaller. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .container {
+    --wheel-to-strip-gap: 16px;
+    --mult-card-height: 48px;
+  }
+
+  .hoverField {
+    height: 40px;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 700px) {
+  .container {
+    --wheel-to-strip-gap: 12px;
+    --mult-card-height: 44px;
+  }
+}
+
+/* Tablet / mobile: stacked layout, page scroll; the wheel is sized from
+   the stage width (inline container) capped by the viewport height. */
+@media (max-width: 900px) {
+  .container {
+    --wheel-to-strip-gap: 16px;
+    flex-direction: column;
+    height: auto;
+    overflow: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom-right-radius: 0;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+    min-height: 500px;
+  }
+
+  .boardWrap {
+    height: auto;
+    min-height: 450px;
+  }
+
+  .wheelStage {
+    container-type: inline-size;
+    flex: 0 0 auto;
+    padding: calc(var(--pointer-room) + 6px) 0 6px;
+  }
+
+  .wheelBox {
+    width: min(100%, 70vh);
+    width: min(100cqw, 70vh, 520px);
+  }
+
+  .resultLine {
+    position: relative;
+    margin-top: 10px;
+  }
+
+  .multStrip {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    --wheel-to-strip-gap: 14px;
+  }
+
+  .gameStage {
+    padding: 12px;
+  }
+
+  .wheelBox {
+    width: min(100%, 50vh);
+    width: min(100cqw, 50vh, 440px);
+  }
+
+  .multStrip {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .hoverPanel {
+    display: none;
+  }
+
+  /* Win popup stays a true dead-centre overlay on mobile (no in-flow
+     fallback — that's what caused the left-sticking bug). */
+  .winPopup {
+    max-width: calc(100% - 24px);
+  }
+}

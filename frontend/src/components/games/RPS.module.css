@@ -1,0 +1,648 @@
+/* =========================================================
+   RPS-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  --cardW: 146px;
+  --cardH: 164px;
+  --gap: 14px;
+  --shift: calc(var(--cardW) + var(--gap));
+}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: "proxima-nova", sans-serif;
+  overflow: hidden;
+}
+
+/* ═══════ Sidebar ═══════ */
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). RPS-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+.betRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cashoutBtn {
+  composes: sidebar-secondary-button from global;
+}
+
+.continueBtn {
+  composes: sidebar-bet-button from global;
+  margin-top: 0;
+}
+
+.secondaryButton {
+  composes: sidebar-secondary-button from global;
+}
+
+.choiceRow {
+  display: grid;
+  /* minmax(0,1fr): equal tracks that cannot be blown out by the wider
+     "Scissors" label — every choice button is the exact same size */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* RPS pick buttons (Rock/Paper/Scissors) — the shared side action
+   button (global.css); label left, icon right. */
+.choiceSmall {
+  composes: ui-action-button from global;
+  justify-content: space-between;
+  padding: 0 8px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.choiceSmall>span {
+  min-width: 0;
+  font-size: var(--font-size-control);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.choiceSmallActive {
+  composes: ui-action-active from global;
+}
+
+/* recolor only — zero layout shift */
+.choiceSmallIcon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+}
+
+
+.profitInput {
+  background: var(--color-bg-input-profit);
+  /* #141f28 — Total Profit field */
+}
+
+.readonlyMoney {
+  composes: sidebar-readonly-input from global;
+}
+
+.moneyValue {
+  font-weight: 900;
+  font-size: var(--font-size-control);
+}
+
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+  /* $ suffix like every other game */
+}
+
+/* ═══════ Stage ═══════ */
+.stage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  display: flex;
+  justify-content: center;
+  /* scene centered */
+}
+
+.stageInner {
+  width: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-top: 24px;
+}
+
+/* ═══════ Track Viewport ═══════ */
+.trackViewport {
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: visible;
+  position: relative;
+  padding: 10px 0 20px;
+}
+
+/* ═══════ Dealer Strip ═══════ */
+.dealerStrip {
+  display: flex;
+  flex-direction: row;
+  gap: var(--gap);
+  will-change: transform;
+}
+
+.dealerSlotCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ═══════ Player Strip — right to left ═══════ */
+.playerStrip {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: var(--gap);
+  will-change: transform;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.playerSlotCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+/* ═══════ Row Card ═══════ */
+.rowCard {
+  width: var(--cardW);
+  height: var(--cardH);
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  position: relative;
+  overflow: visible;
+}
+
+.rowCard img:not(.playerCardBase):not(.playerCardChoice):not(.playerHistoryChoice) {
+  width: var(--cardW);
+  height: var(--cardH);
+  object-fit: contain;
+  display: block;
+  border-radius: 10px;
+}
+
+/* ═══════ Player card in history ═══════ */
+.playerCardWrap {
+  width: var(--cardW);
+  height: var(--cardH);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.playerHistoryBase {
+  position: absolute;
+  width: 0%;
+  height: 0%;
+  left: 0;
+  top: 0;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.playerHistoryChoice {
+  position: relative;
+  width: 140px !important;
+  height: 140px !important;
+  object-fit: contain;
+  z-index: 1;
+}
+
+/* ═══════ Player active card ═══════ */
+.playerActiveCard {
+  width: var(--cardW);
+  height: var(--cardH);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playerCardBase {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 5px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.playerCardChoice {
+  position: relative;
+  width: 140px !important;
+  height: 140px !important;
+  object-fit: contain;
+  z-index: 1;
+  animation: choiceZoomIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes choiceZoomIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.emptySlot {
+  width: calc(var(--cardW) - 20px);
+  height: calc(var(--cardH) - 20px);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.emptySlotDealer {
+  width: calc(var(--cardW) - 20px);
+  height: calc(var(--cardH) - 20px);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.multPillSkeleton {
+  width: 48px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.activeOutline {
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.30),
+    0 0 0 6px rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+/* ═══════ Multiplier Pills ═══════ */
+.multPillWrap {
+  display: flex;
+  justify-content: center;
+  min-height: 22px;
+}
+
+.multPill {
+  font-weight: 800;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.multPillActive {
+  color: #0f212e;
+  background: #fff;
+  border-color: var(--color-accent-blue);
+  /* #2377ff — recolor only, border space always reserved */
+}
+
+.multPillSpacer {
+  width: 1px;
+  height: 22px;
+}
+
+/* ═══════ Flip ═══════ */
+.flipWrap {
+  position: relative;
+  width: var(--cardW);
+  height: var(--cardH);
+  transform-style: preserve-3d;
+  transition: transform 650ms cubic-bezier(0.2, 0.85, 0.2, 1);
+}
+
+.flipFaceUp {
+  transform: rotateY(180deg);
+}
+
+.flipFace {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flipBack {
+  transform: rotateY(0deg);
+}
+
+.flipFront {
+  transform: rotateY(180deg);
+}
+
+.flipFace img {
+  width: var(--cardW);
+  height: var(--cardH);
+  object-fit: contain;
+  display: block;
+  border-radius: 10px;
+}
+
+/* ═══════ Choice Pads ═══════ */
+.choicePadsWrap {
+  display: flex;
+  justify-content: center;
+  padding: 14px 0 24px;
+}
+
+.choicePads {
+  display: grid;
+  grid-template-columns: repeat(3, 148px);
+  gap: 26px;
+  justify-content: center;
+}
+
+.padBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+
+.padDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.padOuter {
+  width: 148px;
+  height: 128px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: none !important;
+}
+
+.padBase {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 148px;
+  height: 128px;
+  border-radius: 16px;
+  background: #557086;
+  transition: height 0.06s ease;
+}
+
+.padTop {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 108px;
+  border-radius: 14px;
+  background: #8EA3B2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  transform: translateY(0);
+}
+
+.padBtn:active,
+.padBtn:focus {
+  transform: none !important;
+  outline: none;
+}
+
+.padBtn:not(.padDisabled):hover .padTop {
+  transform: translateY(0);
+}
+
+.padBtn:not(.padDisabled):active .padTop {
+  transform: translateY(8px);
+  transition: transform 0.04s ease;
+}
+
+.padBtn:not(.padDisabled):active .padBase {
+  height: 120px;
+  transition: height 0.04s ease;
+}
+
+.padInnerDark {
+  width: 124px;
+  height: 90px;
+  border-radius: 12px;
+  background: #0E212E;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.padIcon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  opacity: 0.95;
+}
+
+/* ═══════ Result Overlay ═══════ */
+.resultOverlay {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  pointer-events: none;
+  animation: resultOverlayIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes resultOverlayIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.resultOverlayInner {
+  border-radius: 16px;
+  padding: 38px 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resultOverlayImg {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+}
+
+/* ═══════ Cashout Win Popup — shared overlay (global.css), slightly
+   more compact than the house style; scoped rules keep RPS' look. ═══════ */
+.cashoutPopup {
+  composes: ui-win-popup from global;
+}
+
+.container .cashoutPopup {
+  border-radius: 14px;
+  padding: 14px 20px;
+  min-width: 200px;
+}
+
+.cashoutPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.cashoutPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* win status — scoped so it beats the shared green border */
+.cashoutPopup.popupWin {
+  border-color: rgba(0, 231, 1, 0.85);
+}
+
+/* ═══════ Responsive ═══════ */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .container {
+    --cardW: 84px;
+    --cardH: 96px;
+    --gap: 10px;
+  }
+
+  .playerCardChoice {
+    width: 83px !important;
+    height: 83px !important;
+    top: 1px;
+  }
+
+  .playerHistoryChoice {
+    width: 83px !important;
+    height: 83px !important;
+  }
+
+  .playerSlotCol {
+    overflow: visible;
+  }
+
+  .rowCard {
+    overflow: visible;
+  }
+
+  .trackViewport {
+    overflow-y: visible;
+    overflow-x: hidden;
+  }
+
+  .choicePads {
+    grid-template-columns: repeat(3, 120px);
+    gap: 16px;
+  }
+
+  .padOuter {
+    width: 120px;
+    height: 104px;
+  }
+
+  .padBase {
+    width: 120px;
+    height: 104px;
+    border-radius: 14px;
+  }
+
+  .padTop {
+    width: 112px;
+    height: 88px;
+  }
+
+  .padInnerDark {
+    width: 98px;
+    height: 72px;
+  }
+
+  .padIcon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .resultOverlayImg {
+    width: 120px;
+    height: 120px;
+  }
+}

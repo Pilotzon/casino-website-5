@@ -1,0 +1,109 @@
+.bottomNav {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1050;
+  background: #1a242d;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.45), 0 -2px 8px rgba(0,0,0,0.35);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.inner {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 64px;
+  max-width: 100%;
+  padding: 0 4px;
+}
+
+.tab {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 6px 0 4px;
+  position: relative;
+  font-family: inherit;
+  transition: color 120ms ease;
+}
+
+.tab::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.tabActive {
+  color: var(--color-text-primary);
+}
+
+.tabActive::before {
+  background: #ffffff;
+}
+
+.iconWrap {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.icon {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: currentColor;
+}
+
+.icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tab:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 1024px) {
+  .bottomNav {
+    display: block;
+  }
+}
+
+@media (min-width: 1025px) {
+  .bottomNav {
+    display: none !important;
+  }
+}

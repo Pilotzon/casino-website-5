@@ -1,0 +1,22 @@
+.stackHost {
+    position: fixed;
+    left: 50%;
+    bottom: 100px;
+    /* ✅ Changed from top: 84px */
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none;
+    width: min(560px, calc(100vw - 24px));
+}
+
+/* Each item reserves its own "slot" so stack smoothly shifts */
+.stackItem {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* ✅ Changed from top positioning */
+    transition: bottom 220ms cubic-bezier(0.2, 0, 0, 1);
+    /* ✅ Changed from top */
+    will-change: bottom;
+}

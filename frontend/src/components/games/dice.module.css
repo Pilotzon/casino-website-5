@@ -1,0 +1,549 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+
+/* =========================================================
+   Dice-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  --bg-surface: #253641;
+
+  --handle-blue: #4d88ff;
+
+  --track-inset: 22px;
+  --tick-compress: 0.96;
+
+  --pill-bg: #2a3f4c;
+  --pill-inner-ring: #243844;
+}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  color: var(--text-primary);
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+  ;
+  overflow: hidden;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel);
+  /* sidebar/game divider #253241 */
+}
+
+.controlsHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Dice-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+
+.active {
+  composes: sidebar-mode-active from global;
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+}
+
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+
+.divider {
+  composes: sidebar-divider from global;
+}
+
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+/* --- Game Area --- */
+.gameStage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-game);
+  /* game grid panel — exact Casino value */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  justify-content: center;
+  /* track fills + centers in the panel */
+  align-items: center;
+  position: relative;
+}
+
+/* (rest of your Dice CSS unchanged below) */
+/* --------- UPDATED ROLLING BAR (matches screenshot) --------- */
+.sliderWrapper {
+  width: min(1000px, 94%);
+  /* fills the panel proportionally */
+  margin: 0;
+  position: relative;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.scaleLabels {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  margin-bottom: 12px;
+}
+
+.scaleLabels span,
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  left: calc(var(--track-inset) + ((100% - (2 * var(--track-inset))) * var(--tick-compress)) * (var(--p, 0) / 100) + ((100% - (2 * var(--track-inset))) * (1 - var(--tick-compress)) / 2));
+}
+
+.scaleLabels span {
+  top: 0;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+}
+
+.tick {
+  top: -8px;
+  width: 16px;
+  height: 8px;
+  background: var(--color-bg-tile);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  z-index: 5;
+}
+
+.trackContainer {
+  position: relative;
+  width: 100%;
+  height: 58px;
+  border-radius: 999px;
+  background: var(--color-bg-tile);
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+}
+
+.trackContainer::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  bottom: 10px;
+  border-radius: 999px;
+  background: var(--pill-inner-ring);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.trackPad {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 var(--track-inset);
+  box-sizing: border-box;
+}
+
+.trackInner {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.30);
+}
+
+.trackBar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: width 0.12s linear;
+  border-radius: 999px;
+}
+
+.barLeft {
+  left: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.barRight {
+  right: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.barRed {
+  background: #E9103C;
+}
+
+.barGreen {
+  background: var(--accent-green);
+}
+
+.handleWrapper {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+  transition: left 0.12s linear;
+}
+
+.handle {
+  width: 44px;
+  height: 44px;
+  background: var(--handle-blue);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.handleIcon {
+  display: flex;
+  gap: 4px;
+  height: 18px;
+}
+
+.handleIcon span {
+  width: 3px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 2px;
+  display: block;
+  height: 100%;
+}
+
+.rangeInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 44px;
+  opacity: 0;
+  margin: 0;
+  z-index: 30;
+  -webkit-appearance: none;
+}
+
+.rangeInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  cursor: grab;
+}
+
+.rangeInput:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.rangeInput::-moz-range-thumb {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  cursor: grab;
+}
+
+.rangeInput:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
+.resultGem {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  z-index: 20;
+  opacity: 0;
+  transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.resultGem.visible {
+  opacity: 1;
+}
+
+.gemWin {
+  background: var(--accent-green);
+}
+
+.gemLoss {
+  background: var(--accent-red);
+}
+
+.gemInner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.resultValueBubble {
+  position: absolute;
+  top: -55px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-bg-panel);
+  /* sidebar panel */
+  color: var(--color-text-primary);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 16px;
+  border: 2px solid var(--bg-surface);
+  white-space: nowrap;
+}
+
+/* ✅ Win popup — shared, dead-centre overlay (global.css) */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+
+.winPopupTitle {
+  composes: ui-win-popup-title from global;
+}
+
+.winPopupAmount {
+  composes: ui-win-popup-amount from global;
+}
+
+/* Stats panel — shared bottom-anchored panel + surface (global.css).
+   The global .ui-stage-bottom insets give it exactly 16px bottom/left/right
+   (always centred). No per-game width/left/transform overrides — those
+   used to fight the shared centreing and push the panel off-centre. */
+.statsPanel {
+  composes: ui-stage-bottom from global;
+  composes: ui-panel-surface from global;
+  display: flex;
+  gap: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.statBox {
+  flex: 1;
+}
+
+.statHeader {
+  color: var(--text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.statInput {
+  background: var(--color-bg-input);
+  border: var(--ui-input-border) solid var(--ui-outline);
+  border-radius: var(--sidebar-input-radius);
+  box-shadow: var(--shadow-md);
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 12px; /* the stepper sits flush on the right edge */
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.statInput.editable:focus-within {
+  border-color: var(--ui-outline-focus);
+}
+
+.statInput input {
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+  flex: 1;
+  outline: none;
+}
+
+.statInput input::-webkit-outer-spin-button,
+.statInput input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.statSuffix {
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: var(--font-size-control);
+}
+
+.swapBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+.swapBtn:hover {
+  color: var(--color-text-primary);
+}
+
+.swapBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+  }
+
+  .gameStage {
+    padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  }
+
+  /* Panel leaves the overlay and flows under the track, still 16px from
+     the stage edges via the stage's equal padding — centred, always. */
+  .container .statsPanel {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    margin-top: 14px;
+    /* stat inputs stay in one horizontal row on mobile (same as desktop) */
+    flex-direction: row;
+  }
+}
+
+.trackPad {
+  width: 100%;
+  padding: 0 var(--track-inset);
+  box-sizing: border-box;
+}
+
+/* ===== Mobile polish (Dice) ===== */
+@media (max-width: 600px) {
+  .container {
+    min-height: auto;
+  }
+
+  .sidebar {
+  }
+
+  .gameStage {
+    padding: var(--stage-pad); /* equal on all four sides (global rule) */
+    justify-content: flex-start;
+  }
+
+  .sliderWrapper {
+    max-width: 100%;
+    margin: 10px auto 16px auto;
+  }
+
+  .scaleLabels {
+    margin-bottom: 8px;
+    height: 22px;
+  }
+
+  .scaleLabels span {
+    font-size: 13px;
+  }
+
+  .trackContainer {
+    height: 54px;
+  }
+
+  /* Make stats panel part of layout instead of overlay —
+     scoped so it overrides the shared stage anchor. */
+  .container .statsPanel {
+    position: relative;
+    left: auto;
+    right: auto; /* released too — a stale right:16px shifts the panel left */
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 14px;
+    border-radius: 10px;
+    gap: 8px;
+  }
+
+  /* The 3 stat inputs share the row exactly: kill the number inputs'
+     intrinsic width (the blow-out culprit) so nothing overflows. */
+  .statBox {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .statInput {
+    height: 44px;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .statInput input {
+    min-width: 0;
+    width: 0;
+    flex: 1;
+    font-size: 13px;
+  }
+
+  .sidebar {
+    border-bottom-right-radius: 0px;
+  }
+}
+.statInput input[type="number"]::-webkit-outer-spin-button,
+.statInput input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.statInput input[type="number"] { -moz-appearance: textfield; appearance: textfield; }

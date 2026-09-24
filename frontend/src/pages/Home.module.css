@@ -1,0 +1,752 @@
+/* =========================================================
+   Home — Casino-style redesign
+   Matches image-1.png reference and existing design tokens
+   ========================================================= */
+
+.home {
+  min-height: calc(100vh - var(--nav-height));
+  background: var(--color-bg-page);
+}
+
+.pageInner {
+  width: calc(100% - 2 * var(--layout-frame-space));
+  max-width: calc(var(--layout-max-width) - 2 * var(--layout-frame-space));
+  margin: 0 auto;
+  padding: var(--space-lg) 0 var(--space-2xl);
+  box-sizing: border-box;
+}
+
+@media (min-width: 1025px) {
+  .pageInner {
+    width: calc(min(var(--layout-max-width), calc(100% + var(--rail-w, 0px) - var(--rail-expanded, 240px))) - 2 * var(--layout-frame-space));
+  }
+}
+
+@media (max-width: 900px) {
+  .pageInner {
+    width: calc(100% - 2 * var(--space-lg));
+    padding: var(--space-lg) 0 var(--space-2xl);
+  }
+}
+
+/* ---------- 1. Hero Banner ---------- */
+.heroBanner {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-shell);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* remove shadow per request */
+  box-shadow: none;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(700px 260px at 50% 45%, rgba(15, 33, 44, 0.12), transparent 72%),
+    linear-gradient(180deg, rgba(15, 33, 44, 0.18) 0%, rgba(15, 33, 44, 0.45) 100%);
+  pointer-events: none;
+}
+
+/* subtle dark scrim behind centered text */
+.heroBanner::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 560px;
+  max-width: 86%;
+  height: 72%;
+  background: radial-gradient(ellipse at center, rgba(12, 27, 38, 0.55) 0%, rgba(12, 27, 38, 0.28) 46%, transparent 72%);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  max-width: 640px;
+  padding: 0 var(--space-lg);
+  width: 100%;
+}
+
+.heroTitle {
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -1.2px;
+  color: var(--color-text-primary);
+  text-align: center;
+  margin: 0;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+
+.heroBalancePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-md);
+  margin-top: 2px;
+}
+
+.heroBalanceLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.heroBalanceValue {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-control);
+  font-weight: 900;
+  color: var(--color-text-primary);
+}
+
+.heroCurrency {
+  color: var(--accent-warning);
+  font-weight: 900;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.heroCta {
+  height: 46px;
+  padding: 0 26px;
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-blue);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.heroCta:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+
+.heroSecondary {
+  height: 46px;
+  padding: 0 18px;
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.heroOrText {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  opacity: 0.9;
+  letter-spacing: 0.2px;
+}
+
+.heroProviders {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.providerBtn {
+  width: 56px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-primary);
+  border: none;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-md);
+  transition: filter 140ms ease, transform 100ms ease;
+}
+
+.providerBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.providerBtn:hover {
+  filter: brightness(1.15);
+}
+
+.providerBtn:active {
+  transform: scale(var(--ui-press-scale));
+}
+
+.heroLoginHint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.heroLoginLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.heroLoginLink:hover {
+  color: var(--color-accent-blue);
+}
+
+/* ---------- 2. Stats Bar — readonly input look ---------- */
+.statsBar {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.statCard {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: var(--sidebar-input-height);
+  padding: 0 12px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: border-color 140ms ease, filter 140ms ease, transform 100ms ease;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.statCard:hover {
+  filter: brightness(1.04);
+  border-color: var(--color-border-input-focus);
+}
+
+.statCard:active {
+  transform: scale(0.99);
+}
+
+.statCard:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.statLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.statIcon {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-primary);
+  flex: 0 0 auto;
+}
+
+.statIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.statLabel {
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.statRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.liveDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 10px rgba(0, 231, 1, 0.5);
+  flex: 0 0 auto;
+}
+
+.statNumber {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.statSuffix {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ---------- 3. Search Bar — readonly input look ---------- */
+.searchWrap {
+  margin-top: 16px;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--sidebar-input-height);
+  padding: 0 12px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  cursor: text;
+  transition: border-color 140ms ease, filter 140ms ease;
+  box-sizing: border-box;
+}
+
+.searchBar:hover {
+  border-color: var(--color-border-input-focus);
+}
+
+.searchBar:focus-within {
+  border-color: var(--color-border-input-focus);
+}
+
+.searchIcon {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  flex: 0 0 auto;
+}
+
+.searchIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.searchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  font-family: var(--font-primary);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.shortcutPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-panel);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* ---------- 4. Trending Games — exactly like Games page ---------- */
+.trending {
+  margin-top: 24px;
+}
+
+.trendingHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0 0 14px;
+  text-align: left;
+  transition: opacity 140ms ease;
+}
+
+.trendingHeader:hover {
+  opacity: 0.9;
+}
+
+.trendingHeader:active {
+  transform: scale(0.98);
+}
+
+.trendingIcon {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-primary);
+  flex: 0 0 auto;
+}
+
+.trendingIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.trendingTitle {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1;
+}
+
+.trendingChevron {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  flex: 0 0 auto;
+  margin-left: 2px;
+}
+
+.trendingChevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Grid: one row by default — 8 cards in a single row, no wrapping */
+.trendingGrid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.noResults {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* Game card — exactly like .poster in Games page */
+.gameCard {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin-bottom: 20px;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+}
+
+.gameCard:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 8px;
+  border-radius: 10px;
+}
+
+/* thumbWrap — exactly like .posterMedia */
+.thumbWrap {
+  display: block;
+  width: 100%;
+  max-width: 180px;
+  margin: 0 auto;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 10px;
+  position: relative;
+  transform: translateY(0);
+  transition: transform 280ms ease;
+  will-change: transform;
+  background: var(--color-bg-shell);
+}
+
+.gameCard:active {
+  transform: none !important;
+}
+
+.gameCard:active .thumbWrap {
+  transform: translateY(-14px) !important;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  transition: filter 280ms ease;
+  will-change: filter;
+}
+
+.gameCard:hover .thumbWrap {
+  transform: translateY(-14px);
+}
+
+/* badge top-left white circle */
+.thumbBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--color-bg-panel);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.thumbBadge svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* title gradient at bottom of image */
+.thumbGradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 28px 10px 10px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.38) 52%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.thumbTitle {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: left;
+}
+
+.thumbSubtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1;
+  text-align: left;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 2px;
+  width: 100%;
+  max-width: 180px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.liveDotSmall {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(0, 231, 1, 0.45);
+  flex: 0 0 auto;
+}
+
+.cardMetaText {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.loadMoreWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.allLoadedText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+  .trendingGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .heroBanner {
+    height: 360px;
+  }
+
+  .heroTitle {
+    font-size: 34px;
+  }
+
+  .statsBar {
+    gap: 12px;
+  }
+
+  .trendingGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .statCard {
+    height: 52px;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroBanner {
+    height: 340px;
+  }
+
+  .heroTitle {
+    font-size: 28px;
+    letter-spacing: -0.6px;
+  }
+
+  .heroContent {
+    gap: 12px;
+    padding: 0 16px;
+  }
+
+  .heroCta,
+  .heroSecondary {
+    height: 42px;
+    padding: 0 18px;
+  }
+
+  .statsBar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 5px;
+  }
+
+  .searchBar {
+    height: var(--sidebar-input-height);
+  }
+
+  .shortcutPill {
+    display: none;
+  }
+
+  .trendingGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .trendingGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .loadMoreWrap {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .heroTitle {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .gameCard:hover .thumbWrap,
+  .statCard,
+  .searchBar,
+  .trendingHeader {
+    transition: none;
+    transform: none;
+  }
+}

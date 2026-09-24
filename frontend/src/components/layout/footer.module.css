@@ -1,0 +1,136 @@
+.footer {
+  position: relative;
+  /* lifted panel tone fading into the page — brighter than a flat strip */
+  background: linear-gradient(180deg, var(--color-bg-panel) 0%, var(--color-bg-page) 100%);
+  padding: var(--space-xl) 0 var(--space-lg);
+}
+
+/* Laptop/PC: keep the footer content clear of the side rail (and moving with it) */
+@media (min-width: 1025px) {
+  .footer {
+    padding-left: var(--rail-w, 0px);
+    transition: padding-left 160ms ease;
+  }
+}
+
+/* The footer's ONLY divider: one soft accent hairline that glows green
+   in the middle and fades away at both edges (no stacked grey lines). */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  /* centred on the CONTENT area (the rail's width is the footer's own
+     left padding), so it moves with the rail */
+  left: calc(var(--rail-w, 0px) + (100% - var(--rail-w, 0px)) / 2);
+  transform: translateX(-50%);
+  width: min(680px, 80%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ffffff 50%, transparent);
+  opacity: 0.55;
+  transition: left 160ms ease;
+}
+
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* Platform pages — bold white, evenly spaced, centred, capped narrower
+   than the game box */
+.pages {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto var(--space-lg);
+}
+
+.pageLink {
+  flex: 1 1 0;
+  text-align: center;
+  font-size: var(--font-size-control);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 120ms ease;
+}
+
+.pageLink:hover {
+  opacity: 0.8;
+  color: var(--color-text-primary);
+}
+
+.section {
+  text-align: center;
+  margin-bottom: var(--space-md);
+}
+
+/* Headline — bright white with a glowing accent dot */
+.warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.warning::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 10px var(--accent-green);
+}
+
+/* Supporting text — same white family, softened by opacity */
+.disclaimer {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  opacity: 0.82;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Bottom row — centred, no interior divider lines */
+.info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.info p {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* Version as a quiet pill — brighter than the old muted text */
+.version {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tile);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+@media (max-width: 768px) {
+  .info {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+}

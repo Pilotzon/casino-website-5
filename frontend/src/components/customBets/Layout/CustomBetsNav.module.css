@@ -1,0 +1,27 @@
+.wrap {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 8px 18px;
+  display: flex;
+  gap: 14px;
+  overflow: auto;
+}
+
+.tab {
+  border: 0;
+  background: transparent;
+  color: rgba(0,0,0,0.75);
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px 2px;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: #0b0f14;
+}

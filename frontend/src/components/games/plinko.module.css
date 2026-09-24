@@ -1,0 +1,489 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap');
+
+/* =========================================================
+   Plinko-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  --stage-card: var(--color-bg-panel);   /* board card — visible against the game panel */
+  --stage-card2: #121b23;  /* gradient end */
+  --hist-item-h: 46px;
+  --hist-gap: 0px;
+  --hist-radius: 14px;
+  --hist-border: rgba(0,0,0,0.25);
+}
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: 'proxima-nova';
+  font-feature-settings: "salt" on;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel); /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel); /* sidebar/game divider #253241 */
+}
+
+
+.controlsHeader { margin-bottom: 4px; }
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Plinko-specific tweaks
+   only below.
+   ========================================================= */
+.modeToggle {
+  composes: sidebar-mode-toggle from global;
+}
+.modeBtn {
+  composes: sidebar-mode-btn from global;
+}
+.modeBtn.active {
+  background: var(--sidebar-mode-active-bg);
+  color: var(--sidebar-mode-active-color);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.controlGroup {
+  composes: sidebar-control-group from global;
+}
+.labelRow {
+  composes: sidebar-label-row from global;
+}
+
+.inputGroup {
+  composes: sidebar-input-group from global;
+}
+.inputWrapper {
+  composes: sidebar-input-wrapper from global;
+}
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+}
+.splitButtons {
+  composes: sidebar-split-buttons from global;
+}
+.divider {
+  composes: sidebar-divider from global;
+}
+.readonlyInput {
+  composes: sidebar-readonly-input from global;
+}
+
+/* Chevron — the shared selector caret (global.css) */
+.hasCaret {
+  composes: ui-select-caret from global;
+}
+
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+/* Stage */
+.gameStage {
+  flex: 1;
+  display: flex;
+  justify-content: center; /* board fills + centers in the panel */
+  align-items: center;
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  padding: var(--stage-pad); /* equal on all four sides (global rule) */
+  position: relative;
+  overflow: visible;
+}
+
+.stageCard {
+  width: min(980px, 100%);
+  /* flat: the board sits directly on the #0d131a game panel like every other
+     game (no inner gradient card) */
+  background: transparent;
+  padding: 18px;
+}
+
+.boardWrap {
+  width: 100%;
+  height: 100%; /* fills the panel vertically */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  overflow: visible;
+}
+
+/* centers the board */
+.boardStage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.board {
+  position: relative;
+  background: transparent;
+  overflow: visible;
+}
+
+/* Pins / balls / ripples */
+.pin {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.98);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px rgba(255,255,255,0.16);
+}
+
+.ballInstance {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ff2b54;
+  box-shadow: 0 0 0 4px rgba(255,43,84,0.24);
+  transform: translate(-9999px, -9999px) translate(-50%, -50%);
+  will-change: transform;
+}
+
+.ripple {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255,255,255,0.18);
+  opacity: 1;
+  animation: ripplePop 240ms ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes ripplePop {
+  0% { transform: translate(-50%, -50%) scale(0.45); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+}
+
+/* ===== Buckets row ===== */
+.bucketBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  height: var(--bucket-h);
+  pointer-events: none;
+}
+
+.bucketWrap {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: var(--bucket-w);
+  transition: transform 120ms ease;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.bucketPressed {
+  transform: translateX(-50%) translateY(8px);
+}
+
+.bucket {
+  width: 100%;
+  height: var(--bucket-h);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(15, 20, 25, 0.95);
+  border: 1px solid rgba(0,0,0,0.25);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.22);
+  user-select: none;
+  cursor: help;
+}
+
+/* Bucket palette */
+.bucketRed { background: #ff2b54; }
+.bucketRed2 { background: #ff4a3a; }
+.bucketOrange { background: #ff7a00; }
+.bucketAmber { background: #ffb000; }
+.bucketYellow { background: #ffd34d; }
+
+/* ===== Bucket hover panel (desktop) ===== */
+/* Shared hover-panel design (global.css) — read-only input fields like
+   Keno/Limbo/Flip/Wheel. Only the positioning (above the bucket bar,
+   full board width) is local here. */
+.bucketHoverPanel {
+  composes: ui-hover-panel from global;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--bucket-h) + 28px);
+  z-index: 50;
+}
+
+.bucketHoverPanelVisible {
+  composes: ui-hover-panel-visible from global;
+}
+
+.bucketHoverBoxes {
+  composes: ui-hover-boxes from global;
+}
+
+.bucketHoverBox {
+  composes: ui-hover-box from global;
+}
+
+.bucketHoverLabel {
+  composes: ui-hover-label from global;
+}
+
+.bucketHoverField {
+  composes: ui-hover-field from global;
+}
+
+.bucketHoverInput {
+  composes: ui-hover-input from global;
+}
+
+.bucketHoverField .bucketHoverInput {
+  padding-right: 44px;
+}
+
+.bucketHoverSuffix {
+  composes: ui-hover-suffix from global;
+}
+
+.bucketHoverArrow {
+  position: relative;
+  height: 0;
+}
+.bucketHoverArrow::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid var(--color-bg-panel);
+}
+
+/* ===== Bucket mobile modal — shared overlay styles (global.css) ===== */
+.bucketModalOverlay {
+  composes: ui-modal-overlay from global;
+}
+
+.bucketModalCard {
+  composes: ui-modal-card from global;
+  width: 100%;
+}
+
+.bucketModalTitle {
+  composes: ui-modal-title from global;
+}
+
+.bucketModalNumber {
+  composes: ui-modal-number from global;
+}
+
+.bucketModalGrid {
+  composes: ui-modal-grid from global;
+}
+
+.bucketModalItem {
+  composes: ui-modal-item from global;
+}
+
+.bucketModalItemLabel {
+  composes: ui-modal-item-label from global;
+}
+
+.bucketModalItemValue {
+  composes: ui-modal-item-value from global;
+}
+
+.bucketModalBtc {
+  color: var(--bitcoin);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.bucketModalBtnPrimary {
+  composes: ui-modal-btn from global;
+}
+
+/* ===== History slot (reserved space so board doesn't shift) =====
+   Out of the flow (absolute overlay): as an in-flow flex sibling it used
+   to squeeze the 100%-wide board stage sideways and push the whole board
+   off-centre. Same on-screen spot as before (centre, ~80px up), but the
+   board now centres perfectly in the stage. */
+.historySlot {
+  position: absolute;
+  /* rail hugs the stage's RIGHT edge (inside the stage padding) */
+  left: auto;
+  right: var(--stage-pad);
+  top: calc(50% - 92px);
+  transform: none;
+  width: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+/* Fixed-size history rail: ALWAYS 4 tiles tall (no grow/shrink) */
+.historyRail {
+  display: grid;
+  grid-auto-flow: row;
+  grid-auto-rows: var(--hist-item-h);
+  gap: var(--hist-gap);
+
+  width: 60px;
+  height: calc(4 * var(--hist-item-h) + 3 * var(--hist-gap));
+  overflow: hidden;
+
+  border-radius: var(--hist-radius);
+}
+
+/* When empty: keep the slot but hide the rail visuals completely */
+.historyRailHidden {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Each row */
+.historyItem {
+  height: var(--hist-item-h);
+  width: 100%;
+  will-change: transform;
+}
+
+.historyPill {
+  height: 100%;
+  width: 100%;
+  display: grid;
+  place-items: center;
+
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+  color: rgba(15, 20, 25, 0.92);
+
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+
+  border-radius: 0;
+}
+
+.historyRail .historyItem:first-child .historyPill {
+  border-top: none;
+  border-top-left-radius: var(--hist-radius);
+  border-top-right-radius: var(--hist-radius);
+}
+
+.historyRail .historyItem:last-child .historyPill {
+  border-bottom: none;
+  border-bottom-left-radius: var(--hist-radius);
+  border-bottom-right-radius: var(--hist-radius);
+}
+
+/* Outgoing clone that slides below the rail */
+.historyOutgoing {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ===== Mobile blocker ===== */
+.mobileBlocker {
+  width: min(980px, 100%);
+  height: min(78vh, 760px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  border-radius: 18px;
+}
+
+.mobileBlockerCard {
+  background: var(--color-btn-secondary-bg); /* #3E586C, no border */
+  border: none;
+  color: var(--color-text-primary);
+  padding: 16px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-align: center;
+  max-width: 320px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .container { flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; }
+  .gameStage { padding: var(--stage-pad); }
+  .stageCard { padding: 14px; border-radius: 16px; }
+  .boardWrap { height: min(74vh, 680px); }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .container {
+    --bucket-h: 26px;
+  }
+
+  .sidebar {
+  }
+
+  .gameStage {
+    padding: var(--stage-pad);
+    align-items: center;
+  }
+
+  .stageCard {
+    padding: 0; /* the board uses the full stage width on phones */
+    border-radius: 0;
+  }
+
+  .boardWrap {
+    /* height is set inline from the board scale (Plinko.jsx) so the
+       scaled board is centred without dead space above/below */
+    height: auto;
+    padding: 0;
+    overflow: visible;
+    align-items: flex-start;
+  }
+
+  .pin { width: 6px; height: 6px; }
+  .bucket { font-size: 18px; } /* the scale shrinks it ~40% — keep it legible */
+  .ballInstance { width: 12px; height: 12px; box-shadow: 0 0 0 3px rgba(255,43,84,0.22); }
+  .ripple { width: 12px; height: 12px; }
+
+  .bucketBar { bottom: 10px; }
+
+  .historySlot { display: none; }
+
+  /* Hide hover panel on mobile */
+  .bucketHoverPanel { display: none; }
+}
+
+@media (max-width: 420px) {
+  .container {
+    --bucket-h: 25px;
+  }
+
+  .historySlot { display: none; }
+}

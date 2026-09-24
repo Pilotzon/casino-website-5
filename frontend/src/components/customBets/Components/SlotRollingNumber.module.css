@@ -1,0 +1,56 @@
+.wrap{
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* gradient overlays (white top/bottom fades) */
+.wrap::before,
+.wrap::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0.38em;
+  pointer-events: none;
+  z-index: 2;
+}
+.wrap::before{
+  top: -0.06em;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0));
+}
+.wrap::after{
+  bottom: -0.06em;
+  background: linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0));
+}
+
+.glyph{
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+}
+
+.digitCol{
+  position: relative;
+  display: inline-block;
+  width: 0.62em;
+  height: 1.05em;
+  overflow: hidden;
+  vertical-align: baseline;
+  z-index: 1;
+}
+
+.digitStack{
+  display: block;
+  transition: transform var(--dur) cubic-bezier(.18,.9,.18,1);
+  will-change: transform;
+}
+
+.digit{
+  height: 1.05em;
+  line-height: 1.05em;
+  display: block;
+  text-align: center;
+}

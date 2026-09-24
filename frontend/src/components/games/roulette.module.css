@@ -1,0 +1,548 @@
+/* ============================================================
+   Roulette.module.css — European Roulette (Casino-style)
+   ============================================================ */
+
+/* =========================================================
+   Roulette-specific theme (scoped to this game only)
+   Shared sidebar control tokens/classes live in
+   styles/global.css — do not redefine them here.
+   ========================================================= */
+.container {
+  --tile: var(--color-bg-tile);
+  --tile-dark: #243b48;
+  --red: #fe2247;
+  --green: #419e3f;
+}
+
+
+/* ============================================================
+   Layout
+   ============================================================ */
+
+.container {
+  composes: game-shell from global;
+  display: flex;
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  color: var(--color-text-primary);
+  font-family: "proxima-nova", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
+.sidebar {
+  width: var(--layout-sidebar-width);
+  background: var(--color-bg-panel); /* sidebar panel */
+  padding: var(--sidebar-padding);
+  /* 15px top/left/right, 16px bottom — shared token */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sidebar-group-gap); /* group rhythm (global) */
+  border-right: 1px solid var(--color-divider-panel); /* sidebar/game divider #253241 */
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   Sidebar controls — shared styling lives in styles/global.css
+   (composed here so every game matches). Roulette-specific
+   tweaks only below.
+   ========================================================= */
+.modeToggle { composes: sidebar-mode-toggle from global; }
+.modeBtn { composes: sidebar-mode-btn from global; }
+.active { composes: sidebar-mode-active from global; }
+
+.controlGroup { composes: sidebar-control-group from global; }
+.labelRow { composes: sidebar-label-row from global; }
+
+/* Chip selector — ONE continuous flush control styled exactly like a
+   standard input (#0f171e fill, 1px #212e3b border, 8px radius, 44px tall):
+   [ ‹ | chip chip chip chip | › ]. The arrows are flush against the inner
+   left/right edges — no separate rounded buttons, no borders. */
+.chipSelector {
+  display: flex; align-items: stretch;
+  background: var(--color-bg-input);            /* #0f171e */
+  border: 1px solid var(--color-border-input);  /* #212e3b */
+  border-radius: var(--radius-md);              /* 8px */
+  box-shadow: none;
+  height: 56px;                                 /* taller: bigger chips + arrows */
+  padding: 0; gap: 0;
+  overflow: hidden;
+  transition: border-color 140ms ease;
+}
+.chipSelector:focus-within { border-color: var(--color-border-input-focus); }
+.chipNav {
+  width: 44px; height: 100%; flex-shrink: 0;
+  border: none;
+  background: var(--color-btn-secondary-bg);    /* solid, grounded — same skin as every secondary button */
+  color: var(--color-text-primary);
+  font-size: 27px; line-height: 1; font-weight: 700; /* chevron scaled to the bigger button */
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: filter 140ms ease, transform var(--bet-btn-press-duration) ease;
+}
+/* Rounded ONLY on the outward-facing side so the pair reads as one
+   connected pill around the chip row (left arrow: left corners,
+   right arrow: right corners; inner edges stay square/flush). */
+.chipNavLeft { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.chipNavRight { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.chipNav:hover:not(:disabled) { filter: brightness(1.1); }
+.chipNav:active:not(:disabled) { transform: scale(var(--bet-btn-press-scale)); }
+.chipNav:disabled { opacity: 1; background: var(--color-btn-random-bg-disabled); color: var(--color-text-muted); cursor: not-allowed; }
+.chipRow {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; flex: 1; min-width: 0; padding: 0 2px;
+}
+.chipBtn {
+  width: 46px; height: 46px; border-radius: 999px;
+  border: none; background: transparent;        /* unselected: just the chip art */
+  padding: 0;
+  display: grid; place-items: center; cursor: grab; flex-shrink: 0;
+  transition: background-color 150ms ease; outline: none;
+}
+.chipBtn:active { cursor: grabbing; transform: none; }
+.chipBtn:disabled { opacity: 1; }
+.chipBtn img { width: 40px; height: 40px; filter: brightness(1.35) saturate(1.25); pointer-events: none; }
+
+/* Slide-in animation: the chip row replays on every arrow navigation
+   (keyed remount in Roulette.jsx), sliding from the direction of travel. */
+.chipSlideNext { animation: chipSlideNext 220ms cubic-bezier(0.25, 0.8, 0.35, 1); }
+.chipSlidePrev { animation: chipSlidePrev 220ms cubic-bezier(0.25, 0.8, 0.35, 1); }
+@keyframes chipSlideNext { from { transform: translateX(50px); opacity: 0.35; } to { transform: translateX(0); opacity: 1; } }
+@keyframes chipSlidePrev { from { transform: translateX(-50px); opacity: 0.35; } to { transform: translateX(0); opacity: 1; } }
+.chipBtnActive {
+  background: #ffffff;                            /* white ring behind the selected chip */
+}
+
+/* Bet input */
+.betInputRow {
+  composes: sidebar-input-group from global;
+}
+.betInputLike {
+  composes: sidebar-input-wrapper from global;
+  padding: 0 12px;
+  font-weight: 600;
+  font-size: 16px;
+}
+.btcIcon {
+  composes: sidebar-currency-icon from global;
+  margin-right: 0;
+  margin-left: 10px;
+  font-weight: 800;
+}
+.splitButtons { composes: sidebar-split-buttons from global; }
+/* Roulette split buttons are display-only (disabled): solid #2f3d4c with
+   #8092a5 text via the shared disabled rule — never faded/translucent */
+.splitButtons button { cursor: not-allowed; }
+.divider { composes: sidebar-divider from global; }
+
+/* Bet button */
+.betButton {
+  composes: sidebar-bet-button from global;
+}
+
+
+/* ============================================================
+   Game Stage
+   ============================================================ */
+
+.gameStage {
+  flex: 1; background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: var(--stage-pad); /* equal on all four sides (global rule) — was 24px + 28px top */
+  overflow-y: auto; position: relative;
+  /* the scrollbar's gutter nudged the centred table sideways — hide it
+     (scrolling still works via wheel/touch) so the table is truly centred */
+  scrollbar-width: none;
+}
+.gameStage::-webkit-scrollbar { display: none; }
+.stageCard { width: 100%; max-width: 900px; margin: 0 auto; }
+/* One 900px column (the board's own max width): the table is exactly
+   centred in the stage AND the history column's right edge lines up
+   with the board's right edge by construction. */
+
+
+/* ============================================================
+   Top Row (desktop wheel area)
+   ============================================================ */
+
+.topRow {
+  display: grid; grid-template-columns: 100px 1fr 70px;
+  align-items: center; gap: 16px; margin-bottom: 18px;
+}
+.resultBox { width: 80px; height: 80px; border-radius: 10px; background: var(--color-bg-tile); display: grid; place-items: center; }
+.resultNum { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; font-size: 26px; font-weight: 900; }
+.resultColor_red   { background: var(--red); color: #fff; }
+.resultColor_black  { background: var(--color-bg-tile); color: #fff; border: 2px solid rgba(255,255,255,0.15); }
+.resultColor_green  { background: var(--green); color: #fff; }
+
+
+/* ============================================================
+   Wheel & Ball
+   ============================================================ */
+
+.wheelWrap { position: relative; width: 340px; height: 340px; margin: 0; justify-self: center; }
+.wheel { position: absolute; inset: 0; display: grid; place-items: center; will-change: transform; }
+.wheel img { width: 340px; height: 340px; display: block; }
+.ballOrbit {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  transform-origin: 50% 50%; --ball-r: 165px; will-change: transform;
+}
+.ballHidden { opacity: 0; pointer-events: none; }
+.ball { width: 16px; height: 16px; transform: translateY(calc(var(--ball-r) * -1)); }
+.wheelIdleAnim { animation: idleWheel 14s linear infinite; }
+@keyframes idleWheel { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+
+/* ============================================================
+   History
+   ============================================================ */
+
+.historyCol {
+  composes: ui-panel-surface from global;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+/* Label matches the Flip/Dice history bars (shared control type) */
+.historyLabel {
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.historyStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.historyRow { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; }
+
+.histBall {
+  width: 38px; height: 38px; border-radius: 999px;
+  display: grid; place-items: center; font-weight: 900; font-size: 14px;
+  color: #fff;
+  background: #0f212e; /* neutral slot (red/black/green classes override) */
+  /* shared drop shadow + a soft bevel so the ball reads as a chip */
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+}
+
+/* the newest result carries a quiet ring */
+.historyStack .histBall:first-child,
+.historyRow .histBall:first-child {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.histColor_red   { background: var(--red); }
+.histColor_black  { background: var(--tile); border: 1px solid rgba(255, 255, 255, 0.16); }
+.histColor_green  { background: var(--green); }
+
+
+/* ============================================================
+   Win Popup
+   ============================================================ */
+
+/* Win popup — shared, dead-centre overlay (global.css) */
+.winPopup {
+  composes: ui-win-popup from global;
+}
+.winPopupTitle { composes: ui-win-popup-title from global; }
+.winPopupAmount { composes: ui-win-popup-amount from global; }
+
+
+/* ============================================================
+   Board — Desktop (horizontal)
+
+   14 columns: zero | 12 number cols | 2:1 col
+   The 2:1 column is 1fr same as number columns so squares match.
+   ============================================================ */
+
+.tableWrap { width: 100%; display: grid; place-items: center; position: relative; }
+.boardOuter { position: relative; width: 100%; max-width: 900px; }
+
+/* ============================================================
+   Board — Desktop (horizontal)
+   ============================================================ */
+
+.board {
+  display: grid; width: 100%;
+  /* zero column wider, then 12 number cols + 1 col for 2:1, all equal 1fr */
+  grid-template-columns: minmax(56px, 0.9fr) repeat(13, 1fr);
+  grid-template-rows: repeat(3, auto) minmax(48px, auto) minmax(48px, auto);
+  grid-template-areas:
+    "number0 number3  number6  number9  number12 number15 number18 number21 number24 number27 number30 number33 number36 row1"
+    "number0 number2  number5  number8  number11 number14 number17 number20 number23 number26 number29 number32 number35 row2"
+    "number0 number1  number4  number7  number10 number13 number16 number19 number22 number25 number28 number31 number34 row3"
+    ".       range0112 range0112 range0112 range0112 range1324 range1324 range1324 range1324 range2536 range2536 range2536 range2536 ."
+    ".       range0118 range0118 parityEven parityEven colorRed colorRed colorBlack colorBlack parityOdd parityOdd range1936 range1936 .";
+  gap: 4px;
+}
+
+
+/* ============================================================
+   Board — Mobile (vertical / stacked)
+   ============================================================ */
+
+.boardMobile {
+  display: grid; width: max-content; margin: 0 auto;
+  grid-template-columns: repeat(2, 42px) repeat(3, 58px);
+  grid-template-rows: 40px repeat(12, 1fr) auto;
+  grid-template-areas:
+    ".          .          number0  number0  number0"
+    "range0118  range0112  number1  number2  number3"
+    "range0118  range0112  number4  number5  number6"
+    "parityEven range0112  number7  number8  number9"
+    "parityEven range0112  number10 number11 number12"
+    "colorRed   range1324  number13 number14 number15"
+    "colorRed   range1324  number16 number17 number18"
+    "colorBlack range1324  number19 number20 number21"
+    "colorBlack range1324  number22 number23 number24"
+    "parityOdd  range2536  number25 number26 number27"
+    "parityOdd  range2536  number28 number29 number30"
+    "range1936  range2536  number31 number32 number33"
+    "range1936  range2536  number34 number35 number36"
+    ".          .          row3     row2     row1";
+  gap: 3px;
+}
+
+
+/* ============================================================
+   Pocket (board cell)
+   ============================================================ */
+
+.pocket {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; border: 2px solid transparent; cursor: pointer;
+  user-select: none; min-height: 0; padding: 6px 2px; font-weight: 900;
+  font-size: 15px; color: #fff; background: var(--tile); overflow: visible;
+  outline: none;
+  /* Smooth fade transition for background and border on hover */
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+/* Prevent any push/zoom on click */
+.pocket:active {
+  transform: none !important;
+}
+
+/* Number cells: square */
+.pocketRed, .pocketBlack { aspect-ratio: 1; }
+.pocketRed   { background: var(--red); }
+.pocketBlack { background: var(--tile); }
+
+/* Zero: NOT square, stretches across 3 rows */
+.pocketGreen { background: var(--green); }
+
+/* 2:1 column cells: square, outlined */
+.pocketCol {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  aspect-ratio: 1;
+}
+.pocketCol.pocketHover { border-color: rgba(255, 255, 255, 0.4); }
+
+/* Dozens & even-money (1to12, 13to24, 25to36, 1to18, Even, Odd, 19to36): outlined */
+.pocketDark {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  min-height: 48px;
+}
+.pocketDark.pocketHover { border-color: rgba(255, 255, 255, 0.4); }
+
+/* Red even-money: outlined with red border + red fill inside */
+.pocketRedSolid {
+  background: var(--red);
+  min-height: 48px;
+}
+
+/* Black even-money: outlined with dark fill inside */
+.pocketBlackSolid {
+  background: var(--tile);
+  min-height: 48px;
+}
+
+/* ============================================================
+   Pocket Hover Colors (explicit colors, no filters)
+   ============================================================ */
+
+.pocketRed.pocketHover        { background: #ff5a7a; }
+.pocketBlack.pocketHover      { background: #3d5a6b; }
+.pocketGreen.pocketHover      { background: #52b856; }
+.pocketCol.pocketHover        { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.4); }
+.pocketDark.pocketHover       { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.4); }
+.pocketRedSolid.pocketHover   { background: #ff5a7a; }
+.pocketBlackSolid.pocketHover { background: #3d5a6b; }
+
+/* Winner: green border, no glow */
+.pocketWinner { border: 3px solid #2DF10E !important; z-index: 20;}
+
+.pocketName { position: relative; z-index: 2; pointer-events: none; line-height: 1; }
+
+
+/* ============================================================
+   Inside Bet Overlays
+   ============================================================ */
+
+.insideHitOverlay, .insideChipOverlay {
+  position: absolute; left: 0; top: 0; pointer-events: none; z-index: 50;
+}
+.insideHitOverlay { z-index: 60; }
+.zone {
+  position: absolute; pointer-events: auto; background: transparent;
+  border-radius: 8px; border: none; padding: 0; cursor: pointer; outline: none;
+}
+.zoneHover { background: rgba(255, 255, 255, 0); }
+
+
+/* ============================================================
+   Chip Stacks
+   ============================================================ */
+
+.stack {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; flex-direction: column; pointer-events: none; z-index: 10;
+}
+.anchorStack {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; pointer-events: none; z-index: 10;
+}
+.stackImgs { position: relative; width: 28px; height: 28px; flex-shrink: 0; }
+.stackChip { position: absolute; left: 0; top: 0; width: 28px; height: 28px; filter: brightness(1.2) saturate(1.2); }
+.stackAmt {
+  position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 1px 5px; font-size: 9px; font-weight: 900;
+  white-space: nowrap; pointer-events: none; z-index: 12; line-height: 1.3;
+}
+
+
+/* ============================================================
+   Table Footer
+   ============================================================ */
+
+.tableFooter {
+  width: 100%; max-width: 900px; display: flex;
+  justify-content: space-between; margin-top: 14px; padding: 0 4px;
+}
+.undoBtn, .clearBtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: transparent; border: none; color: #ffffff;
+  font-weight: 800; cursor: pointer; font-size: 16px;
+}
+.undoBtn:hover:not(:disabled), .clearBtn:hover:not(:disabled) { opacity: 0.85; }
+.undoBtn:disabled, .clearBtn:disabled { opacity: 0.6; cursor: default; }
+
+
+/* ============================================================
+   Floating Drag Chip
+   ============================================================ */
+
+.floatingChip { position: fixed; z-index: 9999; transform: translate(-50%, -50%); pointer-events: none; }
+.floatingChip img { width: 46px; height: 46px; filter: brightness(1.35) saturate(1.25); }
+
+
+/* ============================================================
+   Responsive — Tablet
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .container { flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; }
+  .gameStage { padding: var(--stage-pad); }
+  .topRow { display: none; }
+  /* Win popup stays the shared dead-centre overlay on every size */
+}
+
+
+/* ============================================================
+   Responsive — Mobile
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .sidebar { /* mobile inherits desktop spacing tokens */ }
+  .pocket { font-size: 13px; padding: 4px 2px; }
+  .winPopup { max-width: calc(100% - 24px); }
+}
+
+
+/* ============================================================
+   Mobile Wheel Overlay
+   ============================================================ */
+
+.mobileWheelOverlay {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+
+.mobileWheelCard {
+  width: 100%;
+  max-width: 360px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  background: var(--color-bg-game); /* game grid panel — exact Casino value */
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-modal);
+}
+
+.mobileWheelInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobileResultBox {
+  width: 64px; height: 64px; border-radius: 10px;
+  background: var(--color-bg-tile); display: grid; place-items: center;
+}
+
+.mobileWheelWrap {
+  position: relative;
+  width: min(280px, calc(100vw - 96px));
+  height: min(280px, calc(100vw - 96px));
+}
+
+.mobileWheelWrap .wheel {
+  position: absolute; inset: 0;
+  display: grid; place-items: center; will-change: transform;
+}
+
+.mobileWheelWrap .wheel img {
+  width: 100%; height: 100%; display: block;
+}
+
+.mobileWheelWrap .ballOrbit {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  transform-origin: 50% 50%; will-change: transform;
+  /* Scale down the ball radius for the smaller wheel */
+  --ball-r: 136px;
+}
+
+.mobileWheelWrap .ball {
+  width: 14px; height: 14px;
+  transform: translateY(calc(var(--ball-r) * -1));
+}
+
+.mobileCloseBtn {
+  width: 100%; height: 44px; border: none; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08); color: #fff; font-weight: 900; cursor: pointer;
+  flex-shrink: 0;
+}
