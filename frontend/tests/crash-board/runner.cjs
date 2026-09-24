@@ -1,0 +1,41 @@
+/**
+ * Runs `dist/uitest.cjs` inside a jsdom document that looks like the Crash page.
+ *
+ * There is no real browser in this environment, so jsdom is the closest thing:
+ * it gives React a DOM, timers, requestAnimationFrame and the same event model,
+ * and the suite then measures what the board ACTUALLY renders (SVG path data,
+ * inline positions, class names, text) instead of what it is supposed to render.
+ */
+const { JSDOM } = require('jsdom');
+const path = require('node:path');
+
+const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+  url: 'http://localhost:3000/games/crash',
+  pretendToBeVisual: true,
+});
+
+const { window } = dom;
+global.window = window;
+global.document = window.document;
+global.navigator = window.navigator;
+global.localStorage = window.localStorage;
+global.sessionStorage = window.sessionStorage;
+global.location = window.location;
+global.HTMLElement = window.HTMLElement;
+global.Element = window.Element;
+global.Node = window.Node;
+global.Event = window.Event;
+global.MouseEvent = window.MouseEvent;
+global.KeyboardEvent = window.KeyboardEvent;
+global.getComputedStyle = window.getComputedStyle;
+global.requestAnimationFrame = window.requestAnimationFrame.bind(window);
+global.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
+global.IS_REACT_ACT_ENVIRONMENT = false;
+
+window.scrollTo = () => {};
+window.__DBG = true;
+if (!window.matchMedia) {
+  window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+}
+
+require(path.join(__dirname, 'dist', 'uitest.cjs'));

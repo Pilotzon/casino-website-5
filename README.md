@@ -39,21 +39,48 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   (`retryInMs` is returned with a 429).
 * `npm run test:crash` (in `backend/`) runs the 51-check engine smoke test
   against a throw-away database.
+* `npm run test:board` (in `frontend/`) runs the 64-check DOM test of the Crash
+  board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
+  component (polling, cash-out, render pump) against a scripted server and
+  measures what the board actually renders.
 
 ### Board rules (frontend)
 
 * The multiplier, the curve and the visible "camera" span are **pure functions
   of the current time**, so the number can never freeze while the graph keeps
   moving. The camera grows 10% ahead of the tip, so the tip never touches the
-  right wall (no jump when it would).
+  right wall (no jump when it would). Once the crash point is known, the curve,
+  the camera and the tip are clipped to that moment — nothing keeps travelling
+  to the right after the crash.
+* The board's clock is estimated from a **window of server samples** (best of
+  the last few) and only ever corrected forward, so a slow response can never
+  pull the multiplier, the curve or the tip backwards.
+* Stale responses cannot rewind the view: a payload older than what is on
+  screen is dropped — except when it carries terminal news about the round on
+  screen ("your cash-out was too late, it crashed"), which is always applied.
+  That pair of rules is what removes the "shows Crashed, then goes back to
+  running seconds later" glitch.
 * History pills show the **crash point** of every finished round — green when
   the player won that round, gray when they lost.
 * The rectangular status box only appears when it has something to say:
   `Cashed Out 2.00×` (multiplier in green) after a cash-out, `Crashed` (white)
   once the round crashes; it disappears when the next bet is placed.
-* `Total Ns` next to the X axis is **not** part of the chart — it counts
-  seconds since the board was loaded (0 on every refresh) and restarts with
-  every bet.
+* A cash-out is applied **immediately** (before the response comes back), and a
+  late response can never take it away again.
+* `Total Ns` next to the X axis is **not** part of the chart: it is the elapsed
+  time of the ROUND, taken from the round's own start time on the server — so it
+  is identical on every device, survives a page refresh mid-round (it does not
+  restart at 0), is unaffected by a cash-out, and stops at the crash. A round
+  restored from the database (no timestamps) falls back to
+  `floor(ln(crashPoint) / k)`, which is exactly how long it ran.
+* The Y tick labels sit in rounded `#253844` boxes with the (thicker) spine
+  running through their centre; the curve carries ONE soft blurred shadow, and
+  the tip dot is a plain circle with no outline ring that turns muted `#2E4552`
+  with the line when the round crashes.
+* Phones (≤900 px): the betting panel drops below the board, the chart gets an
+  explicit height so it never collapses, labels/pills get a bigger font, and
+  the history pills scroll horizontally with the newest round pinned at the
+  right edge.
 * While a bet is live, `RefreshGuard` intercepts F5 / Ctrl+R / Cmd+R with a
   "Refreshing the page will not save" prompt (plus a `beforeunload` fallback for
   the browser's own reload button). Every game reports its own live bet through

@@ -97,19 +97,27 @@
   margin-bottom: 10px;
   min-width: 0;
 }
+/* Scroller around the pills. Desktop keeps the old behaviour (the row simply
+   runs past the left edge); on phones it becomes a real horizontal scroller —
+   see the media query below. */
+.historyScroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
 .historyPills {
   display: flex;
   flex-direction: row-reverse;   /* start at the right, continue left */
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
-  overflow: hidden;
   /* fade the OLD end (left) instead of the new end (right) */
   mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
 }
+.histPill { direction: ltr; }
 .histPill {
   flex: 0 0 auto;
   display: inline-flex;
@@ -182,7 +190,7 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 4px;
+  width: 8px;
   transform: translateX(-2px);
   background: var(--crash-axis);
   border-radius: 2px;
@@ -205,7 +213,7 @@
   background: var(--crash-tick-bg);
   color: var(--crash-tick-y);
   border-radius: 6px;
-  padding: 3px 8px;
+  padding: 10px 8px;
   font-size: 17px;
   font-weight: 700;
   white-space: nowrap;
@@ -239,14 +247,12 @@
   /* bottom:% + translateY(50%) => the circle's CENTRE is exactly on the tip */
   transform: translate(-50%, 50%);
   /* no outline ring — just a soft shadow so it reads as a dot on the line */
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
   z-index: 3;
   pointer-events: none;
   transition: background 180ms ease;
 }
 .tipMarkerCrashed {
   background: var(--crash-dead);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
 }
 
 /* Center overlay text — multiplier on top, status box UNDER it */
@@ -354,22 +360,82 @@
   text-align: center;
 }
 
-/* Mobile: stack sidebar under chart */
+/* =========================================================
+   Mobile / tablet (<=900px): the betting panel moves below the
+   board (global .game-shell does that), so the stage has to stand
+   on its own here:
+     • the shell is only as tall as its content, so the chart gets an
+       EXPLICIT height instead of collapsing to nothing;
+     • the labels and pills get a slightly BIGGER font so they are
+       readable on a phone;
+     • the history pills scroll horizontally (newest stays at the
+       right edge, older rounds are one swipe away).
+   ========================================================= */
 @media (max-width: 900px) {
   .container { flex-direction: column; }
+
   .sidebar {
     width: 100%;
     border-right: none;
     border-top: 1px solid var(--color-divider-panel);
   }
-  .chartWrap {
-    grid-template-columns: 58px 1fr;
-    grid-template-rows: 1fr 28px;
+
+  /* --- stage --- */
+  .gameStage {
+    /* equal, compact padding so the board is centred horizontally */
+    padding: 12px;
   }
-  .yTick { font-size: 15px; right: 6px; }
-  .xTick, .xTotal { font-size: 15px; top: 8px; }
-  .centerMult { font-size: clamp(44px, 13vw, 78px); }
-  .statusBox { font-size: 20px; padding: 9px 16px; margin-top: 12px; }
-  .histPill { min-width: 48px; height: 28px; padding: 0 10px; font-size: 14px; }
-  .historyIcon { width: 32px; height: 28px; }
+
+  /* --- history pills: horizontal scroller, newest at the right --- */
+  .historyRow { margin-bottom: 8px; gap: 6px; }
+  .historyScroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+    padding-bottom: 4px;
+  }
+  .historyScroll::-webkit-scrollbar { height: 5px; }
+  .historyScroll::-webkit-scrollbar-track { background: transparent; }
+  .historyScroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 3px;
+  }
+  /* RTL row = items still start at the RIGHT (newest first) but overflow
+     grows to the left in the normal inline direction, which is what makes
+     the scroller behave the same in every browser. */
+  .historyPills {
+    flex-direction: row;
+    direction: rtl;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .histPill { min-width: 58px; height: 34px; padding: 0 13px; font-size: 16px; }
+  .historyIcon { width: 36px; height: 34px; }
+  .historyYou { font-size: 16px; }
+
+  /* --- chart: fixed height + roomier, larger labels --- */
+  .chartWrap {
+    width: 100%;
+    flex: 0 0 auto;
+    grid-template-columns: 68px 1fr;
+    grid-template-rows: minmax(clamp(220px, 38vh, 330px), 1fr) 30px;
+  }
+  .yAxisSpine { width: 7px; }
+  .yTickBox { font-size: 18px; padding: 8px 7px; }
+  .xTick, .xTotal { font-size: 17px; top: 9px; }
+  .xTotal { padding-left: 10px; }
+  .centerMult { font-size: clamp(52px, 15vw, 92px); }
+  .statusBox { font-size: 23px; padding: 10px 18px; margin-top: 12px; }
+  .tipMarker { width: 21px; height: 21px; }
+  .cooldownHint { font-size: 14px; }
+}
+
+/* Very narrow phones: keep the label column from eating the plot. */
+@media (max-width: 420px) {
+  .chartWrap { grid-template-columns: 62px 1fr; }
+  .yTickBox { font-size: 17px; padding: 7px 6px; }
+  .centerMult { font-size: clamp(48px, 16vw, 76px); }
+  .statusBox { font-size: 21px; padding: 9px 15px; }
 }

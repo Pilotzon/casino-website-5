@@ -48,9 +48,9 @@ const POLL_IDLE_MS = 4000;      // slow poll while nothing is happening
 const POLL_HIDDEN_MS = 2000;    // tab in background
 const CRASH_RED = '#EF005E';    // crashed multiplier (red text)
 const CRASH_DEAD = '#2E4552';   // line + fill colour once the round crashed
-const LINE_WIDTH = 3;           // white curve stroke (screen px)
+const LINE_WIDTH = 8;           // white curve stroke (screen px)
 const SHADOW_DY = 1.2;          // shadow offset, board units (plot is 100 tall)
-const SHADOW_ALPHA = 0.5;       // 50% transparent, as specified
+const SHADOW_ALPHA = 0.3;       // soft shadow under the line (not a hard copy)
 
 /* ------------------------------------------------------------------ utils */
 const SAMPLES = 140; // path resolution (per frame, per layer)
@@ -189,8 +189,6 @@ function Crash({ gameRow }) {
   const [cashout, setCashout] = useState(null);        // { multiplier, payout }
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
   const [busy, setBusy] = useState(false);             // request in flight
-  const [totalStartAt, setTotalStartAt] = useState(() => Date.now()); // "Total Ns"
-  const [totalFrozenAt, setTotalFrozenAt] = useState(null);          // frozen at the crash
   const [, setFrame] = useState(0);                    // rAF render pump
 
   /* ----------------------------------------------------------------- refs */
@@ -212,10 +210,8 @@ function Crash({ gameRow }) {
   const cashoutPendingRef = useRef(false);         // optimistic cash-out in flight
   const roundIdRef = useRef(null);                 // round currently on the board
   const cooldownActiveRef = useRef(false);
-  const lastSecondRef = useRef(0);                 // "Total Ns" tick detection
   const lastFrameAtRef = useRef(0);                // render-pump watchdog
-  const totalFrozenRef = useRef(null);             // frozen "Total Ns" value
-  const totalStartAtRef = useRef(Date.now());      // "Total Ns" origin (page load / last bet)
+  const historyScrollRef = useRef(null);           // horizontal pill scroller (mobile)
 
   const serverNow = () => Date.now() + serverOffsetRef.current;
 
@@ -515,13 +511,6 @@ function Crash({ gameRow }) {
           tickle = true;
         }
 
-        // the "Total Ns" counter ticks once per second (and stops on crash)
-        const second = totalFrozenRef.current ?? Math.floor((Date.now() - totalStartAtRef.current) / 1000);
-        if (second !== lastSecondRef.current) {
-          lastSecondRef.current = second;
-          tickle = true;
-        }
-
         if (running || tickle) repaint();
       } catch (err) {
         console.error('[crash] render pump error:', err);
@@ -584,10 +573,6 @@ function Crash({ gameRow }) {
       const res = await gamesAPI.crashStart({ betAmount: amt, autoCashout: autoCashoutNum });
       if (!mountedRef.current) return;
       setBetError(null);
-      setTotalStartAt(Date.now());          // "Total Ns" restarts with the bet
-      totalStartAtRef.current = Date.now();
-      totalFrozenRef.current = null;
-      setTotalFrozenAt(null);
       applyState(res.data?.data);
     } catch (e) {
       if (!mountedRef.current) return;
@@ -734,25 +719,41 @@ function Crash({ gameRow }) {
   );
   const xTicks = useMemo(() => xTickValues(dispX), [Math.floor(dispX)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Freeze "Total Ns" the moment the graph crashes; release it for the next bet.
+  // When the pill row is scrollable (phones), a newly added round must stay in
+  // view: scroll the freshest pill back into the right-hand edge.
   useEffect(() => {
-    if (crashReached && totalFrozenRef.current == null) {
-      const frozen = Math.max(0, Math.floor((Date.now() - totalStartAtRef.current) / 1000));
-      totalFrozenRef.current = frozen;
-      setTotalFrozenAt(frozen);
-    } else if (!crashReached && totalFrozenRef.current != null) {
-      totalFrozenRef.current = null;
-      setTotalFrozenAt(null);
+    const el = historyScrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth + 1) return;
+    const newest = el.firstElementChild?.firstElementChild;
+    if (newest && typeof newest.scrollIntoView === 'function') {
+      newest.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     }
-  }, [crashReached]);
-
+  }, [history]);
 
   const cooldownLeft = Math.max(0, cooldownEndsAt - nowServer);
   const inCooldown = cooldownLeft > 0;
-  // "Total Ns" — NOT part of the chart: it counts seconds since the board was
-  // loaded (so it starts at 0 on every refresh), restarts with every new bet
-  // and STOPS counting when the graph crashes.
-  const totalSeconds = Math.max(0, totalFrozenAt ?? Math.floor((Date.now() - totalStartAt) / 1000));
+  // "Total Ns" — NOT part of the chart axis: it is the elapsed time OF THE
+  // ROUND, taken from the round's own start time on the server. That makes it
+  // identical on every device and after a page refresh (the old version counted
+  // since *this tab* loaded, so a refresh mid-round reset it to 0), it keeps
+  // running through a cash-out, and it stops by itself at the crash, because
+  // the elapsed time is clipped to the crash moment.
+  const totalSeconds = (() => {
+    if (isLive) {
+      const secs = (nowServer - startedAtRef.current) / 1000;
+      const capped = crashElapsedS != null ? Math.min(secs, crashElapsedS) : secs;
+      return Math.max(0, Math.floor(capped));
+    }
+    // A finished round keeps showing the length it had — also while the board
+    // is still 'idle' (a refreshed page that restored the last round from the
+    // server), so the number never contradicts the board.
+    if (phase !== 'boot' && lastRound) {
+      const { startedAt, endedAt, crashPoint } = lastRound;
+      if (startedAt != null && endedAt != null) return Math.max(0, Math.floor((endedAt - startedAt) / 1000));
+      if (crashPoint > 1) return Math.max(0, Math.floor(Math.log(crashPoint) / k)); // rounds restored from the DB
+    }
+    return 0;
+  })();
 
   const showBoard = phase !== 'boot';
   const showCurve = phase !== 'idle' && phase !== 'boot';
@@ -913,17 +914,20 @@ function Crash({ gameRow }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-            {/* History pills — newest at the right, older continue to the left */}
+            {/* History pills — newest at the right, older continue to the left.
+                On phones the wrapper scrolls sideways instead of clipping. */}
             <div className={styles.historyRow}>
-              <div className={styles.historyPills}>
-                {history.map((h) => (
-                  <span
-                    key={`${h.roundId}-${h.at}`}
-                    className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
-                  >
-                    {fmt(h.value)}×
-                  </span>
-                ))}
+              <div className={styles.historyScroll} ref={historyScrollRef}>
+                <div className={styles.historyPills}>
+                  {history.map((h) => (
+                    <span
+                      key={`${h.roundId}-${h.at}`}
+                      className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
+                    >
+                      {fmt(h.value)}×
+                    </span>
+                  ))}
+                </div>
               </div>
               <button className={styles.historyIcon} type="button" aria-label="My bets">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
