@@ -266,7 +266,9 @@
   align-items: center;
   text-align: center;
   pointer-events: none;
-  z-index: 2;
+  /* ABOVE the curve AND above the tip dot (tip is 3) — the multiplier and the
+     status box must never be hidden behind the graph. */
+  z-index: 4;
   width: 88%;
 }
 .centerMult {
@@ -338,6 +340,18 @@
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
+/* Phone-only copy of the round clock (see .stageTotal in the media query):
+   hidden on desktop, where the clock sits at the end of the X axis row. */
+.stageTotal { display: none; }
+.xTotalTop {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--crash-tick-x);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
 .xTotal {
   position: absolute;
   top: 9px;
@@ -415,6 +429,15 @@
   .historyIcon { width: 36px; height: 34px; }
   .historyYou { font-size: 16px; }
 
+  /* --- round clock: top right, under the pills (the axis row loses it, so the
+         X ticks get the whole row width on a phone) --- */
+  .stageTotal {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 0 8px;
+  }
+  .xTotalAxis { display: none; }
+
   /* --- chart: fixed height + roomier, larger labels --- */
   .chartWrap {
     width: 100%;
@@ -424,8 +447,8 @@
   }
   .yAxisSpine { width: 7px; }
   .yTickBox { font-size: 18px; padding: 8px 7px; }
-  .xTick, .xTotal { font-size: 17px; top: 9px; }
-  .xTotal { padding-left: 10px; }
+  .xTick { font-size: 17px; top: 9px; }
+  .xTotalTop { font-size: 18px; }
   .centerMult { font-size: clamp(52px, 15vw, 92px); }
   .statusBox { font-size: 23px; padding: 10px 18px; margin-top: 12px; }
   .tipMarker { width: 21px; height: 21px; }

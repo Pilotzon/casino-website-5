@@ -288,7 +288,7 @@ async function main() {
       lastRound: { roundId: 'rOld', betAmount: 10, crashPoint: 1.25, cashedOut: true, cashoutMultiplier: 1.2, payout: 12, win: true, own: true },
       history: [{ roundId: 'rOld', value: 1.25, won: true, at: 'old' }],
     };
-    const want = Math.floor(Math.log(1.25) / K);
+    const want = Math.round(Math.log(1.25) / K);
     const c2c = mountBoard();
     ok(await waitFor(() => num(c2c, 'xTotal') === want, 2500),
       `a DB-restored round shows its own length (${want}s)`, String(num(c2c, 'xTotal')));
@@ -389,7 +389,99 @@ async function main() {
     unmountAll();
   }
 
-  /* ------------------------------------------------------------------ §8 */
+  /* ------------------------------------------------------------------ §9 */
+  console.log('\n=== 9. X axis: seconds are real (perpendicular from the tip) ===');
+  {
+    const startedAt = Date.now() - 7000;          // a round that is 7s old
+    api.state = liveState({ roundId: 'rAxis', startedAt, currentMultiplier: 1.58 });
+    api.last = api.state;
+    const c7 = mountBoard();
+    ok(await waitFor(() => !!c7.querySelector('.css-cashoutBtn'), 3000), 'round running');
+    await sleep(120);
+
+    const tipX = lastPoint(linePath(c7).getAttribute('d')).x;
+    const drawnAt = Date.now();
+    const expectedSeconds = (drawnAt - startedAt) / 1000;
+    const ticks = [...c7.querySelectorAll('.css-xTick')].map((el) => ({
+      sec: parseFloat(el.textContent),
+      pct: styleNum(el, 'left'),
+    }));
+    ok(ticks.length >= 3, 'the axis has ticks', String(ticks.length));
+    // 1) every label sits at its own second, on ONE shared scale
+    const rates = ticks.map((t) => t.sec / t.pct);        // seconds per percent
+    const spread = Math.max(...rates) - Math.min(...rates);
+    ok(spread < 1e-6, 'all labels share exactly one time scale', `spread=${spread}`);
+    // 2) …and that scale is the curve's scale: a perpendicular dropped from the
+    //    tip of the graph lands on the seconds that have really passed
+    const rate = rates.reduce((a, b) => a + b, 0) / rates.length;
+    const secondsAtTip = tipX * rate;
+    console.log(`    [axis] tip sits at ${secondsAtTip.toFixed(2)}s on the axis, ${expectedSeconds.toFixed(2)}s elapsed;`
+      + ` ticks: ${ticks.map((t) => t.sec).join(',')}`);
+    ok(Math.abs(secondsAtTip - expectedSeconds) < 0.25,
+      'perpendicular from the graph tip hits the true elapsed second',
+      `${secondsAtTip.toFixed(2)}s at tip vs ${expectedSeconds.toFixed(2)}s elapsed`);
+    // 3) fine enough to read: 1-second ticks while the span is short
+    const gaps = ticks.slice(1).map((t, i) => t.sec - ticks[i].sec);
+    ok(gaps.every((g) => g === 1), 'short rounds get one tick per second', JSON.stringify(gaps));
+    ok(ticks[ticks.length - 1].sec >= Math.floor(secondsAtTip) - 1,
+      'ticks reach the tip, so the position can be read off',
+      `last tick ${ticks[ticks.length - 1].sec}s vs tip ${secondsAtTip.toFixed(1)}s`);
+    // 4) the clock reads the same second the axis shows at the tip
+    const clock = num(c7, 'xTotalAxis') ?? num(c7, 'xTotal');
+    ok(Math.abs(clock - Math.round(secondsAtTip)) <= 1,
+      'the "Total Ns" clock matches the axis reading at the tip',
+      `clock=${clock}s, axis at tip=${secondsAtTip.toFixed(2)}s`);
+    unmountAll();
+  }
+
+  /* ----------------------------------------------------------------- §10 */
+  console.log('\n=== 10. multiplier + status box are the top layer ===');
+  {
+    const css = readFileSync(resolve(here, '../../src/components/games/crash.module.css'), 'utf8');
+    const z = (sel) => {
+      const m = new RegExp(`\\${sel}\\s*\\{[^}]*z-index:\\s*(\\d+)`).exec(css);
+      return m ? Number(m[1]) : NaN;
+    };
+    const overlay = z('.centerOverlay');
+    const tip = z('.tipMarker');
+    ok(Number.isFinite(overlay) && Number.isFinite(tip) && overlay > tip,
+      'the multiplier/status layer is above the tip dot', `overlay=${overlay} tip=${tip}`);
+
+    const c8 = mountBoard();
+    await waitFor(() => !!c8.querySelector('.css-betButton'), 2500);
+    ok(await startRound(c8, liveState({ roundId: 'rLayer', startedAt: Date.now(), currentMultiplier: 1 })), 'round running');
+    await sleep(150);
+    ok(!!c8.querySelector('.css-centerOverlay') && !!c8.querySelector('.css-tipMarker'),
+      'both the overlay and the dot are rendered');
+    unmountAll();
+  }
+
+  /* ----------------------------------------------------------------- §11 */
+  console.log('\n=== 11. mobile: the round clock sits top right, under the pills ===');
+  {
+    const css = readFileSync(resolve(here, '../../src/components/games/crash.module.css'), 'utf8');
+    const mobile = css.slice(css.indexOf('@media (max-width: 900px)'), css.indexOf('@media (max-width: 420px)'));
+    ok(/\.stageTotal\s*\{[^}]*display:\s*flex/.test(mobile), 'the top clock row is shown on phones');
+    ok(/\.stageTotal\s*\{[^}]*justify-content:\s*flex-end/.test(mobile), 'and it is right-aligned');
+    ok(/\.xTotalAxis\s*\{[^}]*display:\s*none/.test(mobile), 'the axis copy is hidden on phones');
+    ok(/\.stageTotal\s*\{\s*display:\s*none/.test(css), 'the top clock is hidden on desktop');
+
+    const c9 = mountBoard();
+    await waitFor(() => !!c9.querySelector('.css-betButton'), 2500);
+    ok(await startRound(c9, liveState({ roundId: 'rTop', startedAt: Date.now(), currentMultiplier: 1 })), 'round running');
+    await sleep(150);
+    const topClock = c9.querySelector('.css-xTotalTop');
+    ok(!!topClock, 'the top-right clock is in the DOM');
+    ok(topClock?.textContent?.trim() === txt(c9, 'xTotal'), 'both clocks show the same seconds',
+      `${topClock?.textContent} / ${txt(c9, 'xTotal')}`);
+    const stageHtml = c9.querySelector('.css-gameStage')?.innerHTML ?? '';
+    ok(stageHtml.indexOf('css-historyRow') < stageHtml.indexOf('css-stageTotal')
+      && stageHtml.indexOf('css-stageTotal') < stageHtml.indexOf('css-chartWrap'),
+      'it sits between the pills row and the chart');
+    unmountAll();
+  }
+
+  /* ------------------------------------------------------------------ §8 */  /* ------------------------------------------------------------------ §8 */
   console.log('\n=== 8. mobile contract (stage, chart height, pill scroller) ===');
   {
     const css = readFileSync(resolve(here, '../../src/components/games/crash.module.css'), 'utf8');
@@ -403,7 +495,8 @@ async function main() {
     ok(/\.historyPills\s*\{[^}]*direction:\s*rtl/.test(mobile),
       'pills keep the newest round at the right while scrolling');
     ok(/\.yTickBox\s*\{[^}]*font-size:\s*18px/.test(mobile), 'Y tick labels are bigger on phones');
-    ok(/\.xTick,\s*\.xTotal\s*\{[^}]*font-size:\s*17px/.test(mobile), 'X tick labels are bigger on phones');
+    ok(/\.xTick\s*\{[^}]*font-size:\s*17px/.test(mobile), 'X tick labels are bigger on phones');
+    ok(/\.xTotalTop\s*\{[^}]*font-size:\s*18px/.test(mobile), 'the top clock is bigger on phones');
     ok(/\.centerMult\s*\{[^}]*15vw/.test(mobile), 'multiplier scales up on phones');
     ok(/\.statusBox\s*\{[^}]*font-size:\s*23px/.test(mobile), 'status box text is bigger on phones');
     ok(/\.yAxisSpine\s*\{[^}]*width:\s*7px/.test(mobile), 'spine stays thicker than the labels');

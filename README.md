@@ -39,7 +39,7 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   (`retryInMs` is returned with a 429).
 * `npm run test:crash` (in `backend/`) runs the 51-check engine smoke test
   against a throw-away database.
-* `npm run test:board` (in `frontend/`) runs the 64-check DOM test of the Crash
+* `npm run test:board` (in `frontend/`) runs the 83-check DOM test of the Crash
   board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
   component (polling, cash-out, render pump) against a scripted server and
   measures what the board actually renders.
@@ -67,16 +67,28 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   once the round crashes; it disappears when the next bet is placed.
 * A cash-out is applied **immediately** (before the response comes back), and a
   late response can never take it away again.
-* `Total Ns` next to the X axis is **not** part of the chart: it is the elapsed
-  time of the ROUND, taken from the round's own start time on the server — so it
-  is identical on every device, survives a page refresh mid-round (it does not
-  restart at 0), is unaffected by a cash-out, and stops at the crash. A round
-  restored from the database (no timestamps) falls back to
-  `floor(ln(crashPoint) / k)`, which is exactly how long it ran.
+* `Total Ns` is **not** part of the chart: it is the elapsed time of the ROUND,
+  taken from the round's own start time on the server — so it is identical on
+  every device, survives a page refresh mid-round (it does not restart at 0), is
+  unaffected by a cash-out, and stops at the crash. A round restored from the
+  database (no timestamps) falls back to `ln(crashPoint) / k`, which is exactly
+  how long it ran. It is rounded to the **nearest** second — the second the curve
+  is currently on — so the clock and the X axis can never disagree (flooring made
+  6.9s read as "6s" while the tip already sat next to the 7s tick). On phones the
+  clock moves to the top right, under the history pills, which frees the whole
+  axis row for the ticks.
+* The X axis is labelled in **real seconds of the round**, positioned by the
+  same `dispX` the curve is drawn with, so dropping a perpendicular from the tip
+  of the graph onto the axis lands on the second that has really passed (the DOM
+  suite asserts exactly that). Short rounds get **one tick per second**; the step
+  coarsens (2s, 3s, 5s, 10s …) as the visible span grows, phones keep at most ~6
+  labels, and the right-hand room is measured so the last label never collides
+  with the clock.
 * The Y tick labels sit in rounded `#253844` boxes with the (thicker) spine
   running through their centre; the curve carries ONE soft blurred shadow, and
   the tip dot is a plain circle with no outline ring that turns muted `#2E4552`
-  with the line when the round crashes.
+  with the line when the round crashes. The multiplier and the status box are the
+  top layer of the board — above the curve and above the tip dot.
 * Phones (≤900 px): the betting panel drops below the board, the chart gets an
   explicit height so it never collapses, labels/pills get a bigger font, and
   the history pills scroll horizontally with the newest round pinned at the

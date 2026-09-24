@@ -89,17 +89,55 @@ function snapCeilY(v) {
   return 1000000;
 }
 
-function xTickValues(span) {
+/**
+ * X ticks are SECONDS of the round, on exactly the same scale the curve is
+ * drawn with (both divide by `dispX`), so dropping a perpendicular from the tip
+ * of the graph onto the axis lands on the second that has really passed.
+ *
+ * The step is picked to keep the row readable: one tick per second while the
+ * visible span is short (that is when the player checks the position), and
+ * coarser steps for long rounds. Phones get fewer labels (the plot is narrow).
+ *
+ * The rightmost part of the row belongs to the "Total Ns" label on desktop, so
+ * desktop ticks stop earlier; on phones the clock lives at the top of the stage
+ * (see .stageTotal), which frees the whole axis row.
+ */
+function xTickValues(span, compact, limit = 0.85) {
   const spanSafe = Math.max(1, span);
-  const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
+  const maxTicks = compact ? 6 : 12;
+  const steps = [1, 2, 3, 5, 10, 15, 30, 60, 120, 300, 600];
   let step = steps[steps.length - 1];
-  for (const s of steps) {
-    if (spanSafe / s <= 10) { step = s; break; }
+  for (const st of steps) {
+    if (spanSafe / st <= maxTicks) { step = st; break; }
   }
   const out = [];
-  // keep the label row clear of the "Total Ns" label on the right
-  for (let t = step; t <= spanSafe * 0.86; t += step) out.push(Math.round(t));
+  for (let t = step; t <= spanSafe * limit; t += step) out.push(Math.round(t * 1000) / 1000);
   return out;
+}
+
+/** Phone/tablet breakpoint that matches the CSS (max-width: 900px). */
+function useCompactAxis() {
+  const query = '(max-width: 900px)';
+  const read = () => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    try { return window.matchMedia(query).matches; } catch { return false; }
+  };
+  const [compact, setCompact] = useState(read);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia(query);
+    const onChange = () => setCompact(mq.matches);
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    }
+    if (typeof mq.addListener === 'function') {
+      mq.addListener(onChange);
+      return () => mq.removeListener(onChange);
+    }
+    return undefined;
+  }, []);
+  return compact;
 }
 
 /**
@@ -189,7 +227,8 @@ function Crash({ gameRow }) {
   const [cashout, setCashout] = useState(null);        // { multiplier, payout }
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
   const [busy, setBusy] = useState(false);             // request in flight
-  const [, setFrame] = useState(0);                    // rAF render pump
+  const [tickLimit, setTickLimit] = useState(0.85);     // right-hand room for ticks
+  const [, setFrame] = useState(0);                   // rAF render pump
 
   /* ----------------------------------------------------------------- refs */
   const phaseRef = useRef('boot');
@@ -212,6 +251,8 @@ function Crash({ gameRow }) {
   const cooldownActiveRef = useRef(false);
   const lastFrameAtRef = useRef(0);                // render-pump watchdog
   const historyScrollRef = useRef(null);           // horizontal pill scroller (mobile)
+  const axisRowRef = useRef(null);                 // X axis row (tick clearance)
+  const axisClockRef = useRef(null);               // "Total Ns" label in that row
 
   const serverNow = () => Date.now() + serverOffsetRef.current;
 
@@ -676,6 +717,7 @@ function Crash({ gameRow }) {
   const isLive = phase === 'running' || phase === 'cashedOut';
   const k = growthKRef.current || GROWTH_K_DEFAULT;
   const nowServer = serverNow();
+  const compactAxis = useCompactAxis();
 
   // Everything below is a PURE function of the current time — no ref-based
   // smoothing — so the number, the curve, the tip marker and the camera can
@@ -717,7 +759,13 @@ function Crash({ gameRow }) {
     () => yTickValues(snapCeilY(dispY)).filter((v) => v <= 1 + (dispY - 1) * 0.96 + 1e-9),
     [dispY]
   );
-  const xTicks = useMemo(() => xTickValues(dispX), [Math.floor(dispX)]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The tick list follows the visible span exactly (no rounding of the
+  // dependency): every label then sits on its true second of the same scale
+  // the curve uses — see xTickValues().
+  const xTicks = useMemo(
+    () => xTickValues(dispX, compactAxis, tickLimit),
+    [dispX, compactAxis, tickLimit]
+  );
 
   // When the pill row is scrollable (phones), a newly added round must stay in
   // view: scroll the freshest pill back into the right-hand edge.
@@ -738,22 +786,54 @@ function Crash({ gameRow }) {
   // since *this tab* loaded, so a refresh mid-round reset it to 0), it keeps
   // running through a cash-out, and it stops by itself at the crash, because
   // the elapsed time is clipped to the crash moment.
+  //
+  // It is rounded to the NEAREST second (= the second the curve is currently
+  // on), not floored: flooring made the clock lag the graph by up to a second
+  // (6.9s read as "6s" while the tip was already right next to the 7s tick),
+  // which is exactly the mismatch between the clock and the X axis.
   const totalSeconds = (() => {
     if (isLive) {
       const secs = (nowServer - startedAtRef.current) / 1000;
       const capped = crashElapsedS != null ? Math.min(secs, crashElapsedS) : secs;
-      return Math.max(0, Math.floor(capped));
+      return Math.max(0, Math.round(capped));
     }
     // A finished round keeps showing the length it had — also while the board
     // is still 'idle' (a refreshed page that restored the last round from the
     // server), so the number never contradicts the board.
     if (phase !== 'boot' && lastRound) {
       const { startedAt, endedAt, crashPoint } = lastRound;
-      if (startedAt != null && endedAt != null) return Math.max(0, Math.floor((endedAt - startedAt) / 1000));
-      if (crashPoint > 1) return Math.max(0, Math.floor(Math.log(crashPoint) / k)); // rounds restored from the DB
+      if (startedAt != null && endedAt != null) return Math.max(0, Math.round((endedAt - startedAt) / 1000));
+      if (crashPoint > 1) return Math.max(0, Math.round(Math.log(crashPoint) / k)); // rounds restored from the DB
     }
     return 0;
   })();
+
+  // How far to the right the tick labels may go: the end of the row belongs to
+  // the clock on desktop, so it is measured (clock width + a small gap) instead
+  // of guessed — that lets the ticks run all the way to the tip of the curve on
+  // wide screens while never colliding with the clock. Without layout (tests,
+  // SSR) the safe default is kept.
+  useEffect(() => {
+    const measure = () => {
+      const row = axisRowRef.current;
+      if (!row || !row.clientWidth) return;
+      const clock = axisClockRef.current;
+      const clockW = clock && clock.offsetWidth ? clock.offsetWidth + 14 : 0;
+      setTickLimit(Math.min(0.98, Math.max(0.5, (row.clientWidth - clockW) / row.clientWidth)));
+    };
+    measure();
+    const row = axisRowRef.current;
+    let ro = null;
+    if (typeof ResizeObserver !== 'undefined' && row) {
+      ro = new ResizeObserver(measure);
+      ro.observe(row);
+    }
+    window.addEventListener('resize', measure);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [compactAxis, totalSeconds]);
 
   const showBoard = phase !== 'boot';
   const showCurve = phase !== 'idle' && phase !== 'boot';
@@ -938,6 +1018,12 @@ function Crash({ gameRow }) {
               <span className={styles.historyYou}>‹ You</span>
             </div>
 
+            {/* Round clock, phone layout only: top right, right under the pills
+                (on desktop it lives at the end of the X axis row instead). */}
+            <div className={styles.stageTotal}>
+              <span className={styles.xTotalTop}>Total {totalSeconds}s</span>
+            </div>
+
             {/* Board */}
             <div className={styles.chartWrap}>
               {/* Y axis (gray labels centred on the spine, no grid) */}
@@ -1022,13 +1108,13 @@ function Crash({ gameRow }) {
 
               {/* X axis — seconds (white, no axis line). The total counter is
                   NOT part of the axis: it counts from 0 on every refresh. */}
-              <div className={styles.xAxis}>
+              <div className={styles.xAxis} ref={axisRowRef}>
                 {xTicks.map((t) => (
                   <div key={t} className={styles.xTick} style={{ left: `${(t / dispX) * 100}%` }}>
                     {t}s
                   </div>
                 ))}
-                <div className={styles.xTotal}>Total {totalSeconds}s</div>
+                <div className={`${styles.xTotal} ${styles.xTotalAxis}`} ref={axisClockRef}>Total {totalSeconds}s</div>
               </div>
             </div>
           </>
