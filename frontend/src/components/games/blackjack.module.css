@@ -288,8 +288,8 @@
   left: 0;
   top: 0;
   width: 114px;
-  height: 166px;
-  transform-origin: 20px 143px;
+  height: 186px;
+  transform-origin: 20px 163px;
 }
 
 .cardMotion {
@@ -302,7 +302,7 @@
 
 .card {
   width: 114px;
-  height: 166px;
+  height: 186px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.10);
@@ -410,14 +410,14 @@
 /* Deal flight — every card materialises face-down ON the deck, flat and
    straight (no tilt, no zoom), and starts MOVING toward its seat on the
    very first frame: no dwell at the source, only the fade-in ramps
-   (fully opaque by 12%) while the translate runs the whole 600ms —
+   (fully opaque by 12%) while the translate runs the whole 400ms —
    position only, no rotation, no bounce/overshoot. The start point
    comes from --deal-from-x/--deal-from-y (measured per card from the real
    deck position — see dealFromVars() in Blackjack.jsx); the fallback is
    only for the very first paint before measurement lands. The flip to
    face-up is a SEPARATE step that only starts once this flight completes,
-   and the next card's flight starts the instant this one arrives (step =
-   flight = 600ms) — the handoff never waits for the flip. The easing is
+   and the next card's flight starts 100ms after this one arrives (flight
+   400ms, step 500ms) — the handoff never waits for the flip. The easing is
    deliberately mild (not a deep ease-out) so the flight reads quick and
    even all the way into the seat. */
 @keyframes dealIn {
@@ -437,13 +437,13 @@
 }
 
 .cardDeal {
-  animation: dealIn 600ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  animation: dealIn 400ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
 }
 
 /* Exit flight — when a NEW bet is placed, every old card slides out
    diagonally down-left at 45° (ease-in, 15px max = 10.6px per axis)
    while fading out. Within one hand the cards stagger left to right
-   (200ms apart via animation-delay); every hand's own sequence starts
+   (100ms apart via animation-delay); every hand's own sequence starts
    at the same moment, in parallel with all other hands. */
 @keyframes cardOut {
   from {
@@ -458,7 +458,7 @@
 }
 
 .cardOut {
-  animation: cardOut 300ms ease-in both;
+  animation: cardOut 200ms ease-in both;
 }
 
 /* Total labels exit with a plain fade-out only — no slide, no diagonal
@@ -499,12 +499,12 @@
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transition: transform 650ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  transition: transform 750ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 .flipFaceUp {
   transform: rotateY(180deg);
-  animation: flipLift 650ms ease-out;
+  animation: flipLift 750ms ease-out;
 }
 
 @keyframes flipLift {
@@ -640,12 +640,12 @@
 @media (max-width: 420px) {
   .cardSlot {
     width: 96px;
-    height: 140px;
+    height: 157px;
   }
 
   .card {
     width: 96px;
-    height: 140px;
+    height: 157px;
     border-radius: 10px;
   }
 

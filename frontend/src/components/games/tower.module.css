@@ -452,6 +452,12 @@
     border-right: none;
   }
 
+  /* Reach reorder (see the global 900px rule): the switcher wrapper drops
+     to the very bottom of the stacked sidebar. */
+  .controlsHeader {
+    order: 999;
+  }
+
   /* Definite height — the stage sits first on mobile, the board gets
      "a screen minus the stacked sidebar", never a runaway height. */
   .boardWrap {

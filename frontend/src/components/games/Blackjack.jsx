@@ -38,22 +38,22 @@ const BJ_START_URL = "/api/games/blackjack/start";
 const BJ_ACTION_URL = "/api/games/blackjack/action";
 
 // animation timings (match CSS)
-const DEAL_FLIGHT_MS = 600; // one card's flight, deck -> seat (dealIn)
-// Step EQUALS flight: strictly sequential, zero idle — the next card starts
-// the instant the previous one arrives (P0 [0,600], D0 [600,1200], …).
-const DEAL_STEP_MS = 600;
+const DEAL_FLIGHT_MS = 400; // one card's flight, deck -> seat (dealIn)
+// Step EXCEEDS flight by 100ms: strictly sequential with a short breath
+// between cards (P0 [0,400], D0 [500,900], …).
+const DEAL_STEP_MS = 500;
 const DEAL_EXTRA_MS = 150; // lead-in before mid-round cards (hits, draws)
 const DEAL_FLIP_MS = 420; // post-flight flip (dealFlipIn)
-const FLIP_MS = 650; // hole-card reveal flip (flipWrap transition)
+const FLIP_MS = 750; // hole-card reveal flip (flipWrap transition)
 // Exit flight (new bet): one card's out-animation (cardOut) + the
 // left-to-right stagger between the cards of a single hand
-const EXIT_MS = 300;
-const EXIT_STAGGER_MS = 200;
+const EXIT_MS = 200;
+const EXIT_STAGGER_MS = 100;
 
 // Card geometry (match blackjack.module.css) — shared by the fan layout
 // AND the deck-origin math so they can never drift apart.
 const CARD_W = 114;
-const CARD_H = 166;
+const CARD_H = 186;
 const OVERLAP_X = 39; // fan cascade step, x (slot left = index * this)
 const OVERLAP_Y = 15; // fan cascade step, y (slot top = index * this)
 

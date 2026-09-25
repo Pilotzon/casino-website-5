@@ -588,6 +588,12 @@
     border-right: none;
   }
 
+  /* Reach reorder (see the global 900px rule): the switcher wrapper drops
+     to the very bottom of the stacked sidebar. */
+  .controlsHeader {
+    order: 999;
+  }
+
   .gameStage {
     padding: var(--stage-pad); /* equal on all four sides (global rule) */
   }

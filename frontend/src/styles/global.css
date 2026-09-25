@@ -579,6 +579,24 @@ input[type="number"] {
   }
 }
 
+/* Mobile: sidebar reach reorder — the bet button jumps to the very top of
+   the controls (above the bet-amount input) and the Manual/Auto switcher
+   drops to the very bottom (below the total-profit readout). Desktop is
+   untouched (DOM order). Every sidebar is a vertical flex container, so
+   order alone does it; games whose switcher sits inside a local
+   .controlsHeader wrapper (Flip, Tower, Dice) reorder that wrapper in
+   their own module instead. Scoped to .game-shell so the Dashboard
+   toggles that reuse .sidebar-mode-toggle are unaffected. */
+@media (max-width: 900px) {
+  .game-shell .ui-bet-wrap {
+    order: -1;
+  }
+
+  .game-shell .sidebar-mode-toggle {
+    order: 999;
+  }
+}
+
 /* ---- Manual/Auto mode switcher ----
    Track: #0f171e pill with 4px inner padding.
    Inactive: plain #b1bad2 text on the track — NO border of any kind.

@@ -25,6 +25,13 @@ import flipWinMp3 from "../../assets/flip/Win.mp3";
 import flipMidWinMp3 from "../../assets/flip/midwin.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
 
+// Chain-bet hygiene: the backend allows at most 8 decimals, but every win
+// multiplies the stake by 1.98, so float artifacts accumulate flip after
+// flip (e.g. 3.9204000000000003) and the 3rd+ choice gets rejected with
+// "Too many decimal places". The riding stake is rounded to 8dp at the
+// source; manual entries stay strict (the server validates those as typed).
+const roundBet8 = (n) => Math.round(Number(n) * 1e8) / 1e8;
+
 function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
   const toast = useToast();
@@ -274,7 +281,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           const flipBet = Number(pending.flipBet || 0);
           setWinMult(flipBet > 0 ? payout / flipBet : 1.98);
           // Continue: the payout rides as the next flip's stake
-          setChainBet(payout);
+          setChainBet(roundBet8(payout));
           setChainCount((c) => c + 1);
           setStage("choose");
         } else {
