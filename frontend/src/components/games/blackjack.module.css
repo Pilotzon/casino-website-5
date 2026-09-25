@@ -247,6 +247,13 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
+/* Push: the total label outlined in orange (same as the cards) */
+.totalPush {
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    0 0 0 2px #ff9d00;
+}
+
 /* Ribbon SVG */
 .ribbon {
   position: absolute;
@@ -310,6 +317,13 @@
   box-shadow:
     0 14px 22px rgba(0, 0, 0, 0.28),
     0 0 0 3px var(--lose-red);
+}
+
+/* Push: cards outlined in orange */
+.cardOutlinePush {
+  box-shadow:
+    0 14px 22px rgba(0, 0, 0, 0.28),
+    0 0 0 3px #ff9d00;
 }
 
 /* Front card */
@@ -383,15 +397,16 @@
   background-color: #007bff;
 }
 
-/* Deal Animation — every card flies in from the deck (top-right):
-   small + tilted at the deck, gliding down into the fan. */
+/* Deal flight — every card spawns face-down at the deck (top-right):
+   small + tilted, gliding down into its seat. The flip to face-up is a
+   SEPARATE step that only starts once this flight completes. */
 @keyframes dealIn {
   0% {
     opacity: 0;
-    transform: translate(150px, -170px) scale(0.55) rotate(10deg);
+    transform: translate(230px, -270px) scale(0.4) rotate(12deg);
   }
 
-  22% {
+  12% {
     opacity: 1;
   }
 
@@ -408,6 +423,23 @@
 
 .cardDeal {
   animation: dealIn 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Post-flight flip: back face -> front face, starting only after the
+   card's own flight ends (delay = stagger + full deal duration). */
+.dealFlipDo {
+  animation: dealFlipIn 420ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  animation-delay: var(--deal-flip-delay, 540ms);
+}
+
+@keyframes dealFlipIn {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(180deg);
+  }
 }
 
 /* Dealer hole-card flip — the card lifts slightly mid-flip */

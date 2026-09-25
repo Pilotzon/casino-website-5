@@ -206,54 +206,17 @@
 }
 
 /* Pointer — anchored to the wheel box (not the viewport), so it always sits
-   centred on the wheel's top edge at any wheel size. */
+   centred on the wheel's top edge at any wheel size. Fully static: no
+   rotation or bounce animation of any kind. */
 .pointerWrap {
   position: absolute;
   top: calc(-1 * var(--pointer-room));
   left: 50%;
-  width: 26px;
-  height: 44px;
+  width: 28px;
+  height: 48px;
   transform: translateX(-50%);
-  transform-origin: 50% 10px;
   z-index: 50;
   pointer-events: none;
-}
-
-.pointerBounce {
-  animation: pointerFlick var(--bounce-duration, 350ms) ease-out forwards;
-}
-
-/* The pointer snaps back past centre and oscillates down to rest —
-   while the wheel is fast the flicks chain into a rattle; as it slows
-   each peg hit reads as its own bounce. */
-@keyframes pointerFlick {
-  0% {
-    transform: translateX(-50%) rotate(0deg);
-  }
-
-  12% {
-    transform: translateX(-50%) rotate(-38deg);
-  }
-
-  30% {
-    transform: translateX(-50%) rotate(7deg);
-  }
-
-  48% {
-    transform: translateX(-50%) rotate(-4deg);
-  }
-
-  64% {
-    transform: translateX(-50%) rotate(2deg);
-  }
-
-  82% {
-    transform: translateX(-50%) rotate(-1deg);
-  }
-
-  100% {
-    transform: translateX(-50%) rotate(0deg);
-  }
 }
 
 .pointerPin {
@@ -268,6 +231,16 @@
   z-index: 2;
 }
 
+/* Slightly darker red inner circle inside the pin */
+.pointerPinInner {
+  position: absolute;
+  inset: 6px;
+  border-radius: 999px;
+  background: #b81f36;
+}
+
+/* Tip scaled up uniformly (+~14%: 24×28 → 28×32) so it reads slightly
+   taller with zero stretching or distortion of the shape. */
 .pointerDrop {
   position: absolute;
   left: 50%;
@@ -275,9 +248,9 @@
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-top: 28px solid #ff5b76;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 32px solid #ff5b76;
   z-index: 1;
 }
 
@@ -339,10 +312,8 @@
   inset: 22%;
   /* of the inner plate (was 92px of 420px) */
   border-radius: 50%;
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
-    inset 0 6px 18px rgba(0, 0, 0, 0.45);
-  background: radial-gradient(circle at 50% 35%, #8e1b2e 0%, #631222 62%, #400a15 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  background: rgba(15, 33, 46, 0.55);
 }
 
 /* Win popup — shared, dead-centre overlay (global.css) */

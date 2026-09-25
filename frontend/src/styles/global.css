@@ -1249,6 +1249,10 @@ textarea::placeholder {
   to { transform: translateX(0) scale(1); opacity: 1; }
 }
 @media (max-width: 900px) {
+  .ui-history-row {
+    margin-bottom: 8px;
+    gap: 6px;
+  }
   .ui-history-scroll {
     overflow-x: auto;
     overflow-y: hidden;

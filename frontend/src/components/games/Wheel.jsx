@@ -26,28 +26,8 @@ function isMobileNow() {
   return window.matchMedia && window.matchMedia("(max-width: 600px)").matches;
 }
 
-function makeCubicBezier(x1, y1, x2, y2) {
-  return function (x) {
-    if (x <= 0) return 0;
-    if (x >= 1) return 1;
-    let t = x;
-    for (let i = 0; i < 8; i++) {
-      const ct = 1 - t;
-      const bx = 3 * ct * ct * t * x1 + 3 * ct * t * t * x2 + t * t * t;
-      const dx = 3 * ct * ct * x1 + 6 * ct * t * (x2 - x1) + 3 * t * t * (1 - x2);
-      if (Math.abs(dx) < 1e-6) break;
-      t -= (bx - x) / dx;
-      t = Math.max(0, Math.min(1, t));
-    }
-    const ct = 1 - t;
-    return 3 * ct * ct * t * y1 + 3 * ct * t * t * y2 + t * t * t;
-  };
-}
-
-/* Fast ease-out: launches hard, then a long lazy settle. The pointer
-   tracker and the CSS transition below MUST use these same numbers. */
+/* Fast ease-out: launches hard, then a long lazy settle. */
 const SPIN_BEZIER = [0.1, 0.8, 0.08, 1];
-const spinEasingNormal = makeCubicBezier(...SPIN_BEZIER);
 
 export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
   const { updateBalance } = useAuth();
@@ -72,19 +52,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
 
   const [rotation, setRotation] = useState(0);
 
-  const [bounceKey, setBounceKey] = useState(0);
-  const [bounceDuration, setBounceDuration] = useState(350);
-  const pointerTrackRef = useRef({
-    rafId: null,
-    active: false,
-    startTime: 0,
-    duration: 0,
-    fromRot: 0,
-    toRot: 0,
-    segAngle: 36,
-    lastSegIndex: -1,
-  });
-
+  // The pointer is fully static — no rotation or bounce animation.
   const [hoverIdx, setHoverIdx] = useState(null);
   const [hoverMultiplier, setHoverMultiplier] = useState(null);
 
@@ -186,93 +154,6 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
     setHistory([]);
   }, [riskLevel, segments]);
 
-  const stopTracking = useCallback(() => {
-    const t = pointerTrackRef.current;
-    t.active = false;
-    if (t.rafId) {
-      cancelAnimationFrame(t.rafId);
-      t.rafId = null;
-    }
-  }, []);
-
-  const startTracking = useCallback((fromRot, toRot, durationMs, segAngle, easingFn) => {
-    const t = pointerTrackRef.current;
-    if (t.rafId) {
-      cancelAnimationFrame(t.rafId);
-    }
-    t.startTime = 0;
-    t.duration = durationMs;
-    t.fromRot = fromRot;
-    t.toRot = toRot;
-    t.segAngle = segAngle;
-    t.active = true;
-
-    const initNorm = ((fromRot % 360) + 360) % 360;
-    t.lastSegIndex = Math.floor(initNorm / segAngle);
-
-    const totalDelta = Math.abs(toRot - fromRot);
-
-    const loop = (timestamp) => {
-      if (!t.active) return;
-
-      if (t.startTime === 0) {
-        t.startTime = timestamp;
-      }
-
-      const elapsed = timestamp - t.startTime;
-      const progress = Math.min(1, elapsed / t.duration);
-      const eased = easingFn(progress);
-
-      const currentRot = t.fromRot + (t.toRot - t.fromRot) * eased;
-      const norm = ((currentRot % 360) + 360) % 360;
-      const segIdx = Math.floor(norm / t.segAngle);
-
-      if (segIdx !== t.lastSegIndex) {
-        const tiny = 0.001;
-        const p2 = Math.min(1, progress + tiny);
-        const eased2 = easingFn(p2);
-        const localSpeed = Math.abs((eased2 - eased) * totalDelta / (tiny * t.duration));
-
-        const msPerSegment = localSpeed > 0.001 ? t.segAngle / localSpeed : 2000;
-        const dur = Math.round(Math.max(200, Math.min(2500, msPerSegment * 1.2)));
-
-        setBounceDuration(dur);
-        setBounceKey((k) => k + 1);
-      }
-      t.lastSegIndex = segIdx;
-
-      if (progress < 1) {
-        t.rafId = requestAnimationFrame(loop);
-      } else {
-        t.active = false;
-      }
-    };
-
-    t.rafId = requestAnimationFrame(loop);
-  }, []);
-
-  useEffect(() => {
-    return () => stopTracking();
-  }, [stopTracking]);
-
-  /**
-   * TEASE SYSTEM
-   *
-   * Instead of trying to use CSS overshoot (which is unreliable),
-   * we do a TWO-PHASE animation:
-   *
-   * Phase 1: Wheel spins and lands in the GOOD segment (slightly past boundary)
-   * Phase 2: After a pause, wheel slowly drifts BACK into the gray segment
-   *
-   * This is done by:
-   * 1. First setRotation to overshoot target (into good segment)
-   * 2. After the main spin ends, setRotation back to the real target
-   *    with a slow, short transition (the "drift back")
-   *
-   * The player sees: wheel stops on good color → pointer sits there for a moment →
-   * wheel lazily creeps backward → lands on gray. "Nooo!"
-   */
-
   const handleSpin = useCallback(async () => {
     const b = parseFloat(betAmount);
     if (!b || b <= 0) {
@@ -320,27 +201,18 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       delta += fullSpins * 360;
       const toRot = fromRot + delta;
 
-      // Start tracking for pointer bounces
-      stopTracking();
-      startTracking(fromRot, toRot, durationMs, segAngle, spinEasingNormal);
-
       // Set the rotation - wheel will animate via CSS transition
       setRotation(toRot);
 
       // After spin completes, show result
       setTimeout(() => {
         if (animRef.current !== my) return;
-        stopTracking();
         setSpinning(false);
 
         if (data?.balance != null) updateBalance(data.balance);
 
         const won = Number(data?.payout || 0) > 0;
         setHistory((prev) => [{ multiplier: data?.multiplier, won }, ...prev].slice(0, 10));
-
-        // one last pointer thunk as the wheel locks in
-        setBounceDuration(420);
-        setBounceKey((k) => k + 1);
 
         if (won) {
           setWinAmount(Number(data.payout || 0));
@@ -353,11 +225,10 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       }, durationMs + 400);
 
     } catch (err) {
-      stopTracking();
       setError(err.response?.data?.message || "Spin failed");
       setSpinning(false);
     }
-  }, [betAmount, riskLevel, segments, wheelLayout, rotation, updateBalance, stopTracking, startTracking]);
+  }, [betAmount, riskLevel, segments, wheelLayout, rotation, updateBalance]);
   // Warn before a page refresh while a bet is live (see RefreshGuard).
   useActiveBetFlag("wheel", spinning);
 
@@ -505,13 +376,10 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
                 viewport) and the wheel itself fills it, so it can never be
                 stretched into an oval regardless of the panel's proportions. */}
             <div className={`${styles.wheelBox} ${spinning ? styles.spinning : ""}`}>
-              <div
-                key={bounceKey}
-                className={`${styles.pointerWrap} ${bounceKey > 0 ? styles.pointerBounce : ""}`}
-                style={{ "--bounce-duration": `${bounceDuration}ms` }}
-                aria-hidden="true"
-              >
-                <div className={styles.pointerPin} />
+              <div className={styles.pointerWrap} aria-hidden="true">
+                <div className={styles.pointerPin}>
+                  <div className={styles.pointerPinInner} />
+                </div>
                 <div className={styles.pointerDrop} />
               </div>
 

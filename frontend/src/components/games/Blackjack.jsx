@@ -38,7 +38,7 @@ const BJ_START_URL = "/api/games/blackjack/start";
 const BJ_ACTION_URL = "/api/games/blackjack/action";
 
 // animation timings (match CSS)
-const DEAL_MS = 520;
+const DEAL_MS = 540;
 const DEAL_STAGGER = 120;
 const FLIP_MS = 650;
 const FLIP_TOTAL_OFFSET_MS = 200;
@@ -706,18 +706,24 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
               const total = handTotalDisplay(hand);
               const outcome = ui.handOutcomes?.[hIdx] ?? null;
 
-              const outline =
-                ui.showResult && ui.phase === "settled"
-                  ? outcome === "win"
-                    ? "win"
-                    : outcome === "lose"
-                      ? "lose"
+              const settled = ui.showResult && ui.phase === "settled";
+              const outline = settled
+                ? outcome === "win"
+                  ? "win"
+                  : outcome === "lose"
+                    ? "lose"
+                    : outcome === "push"
+                      ? "push"
                       : "none"
-                  : "none";
+                : "none";
 
               return (
                 <div key={hIdx} className={styles.handWrap}>
-                  {ui.roundId ? <div className={styles.totalPillPlayer}>{total}</div> : null}
+                  {ui.roundId ? (
+                    <div className={`${styles.totalPillPlayer} ${settled && outcome === "push" ? styles.totalPush : ""}`}>
+                      {total}
+                    </div>
+                  ) : null}
 
                   <div className={styles.fanBottom}>
                     {hand.map((c, i) => (
@@ -797,7 +803,7 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
         style={animate ? { animationDelay: `${index * DEAL_STAGGER}ms` } : undefined}
       >
         <div
-          className={`${styles.card} ${hidden ? styles.cardNoClip : ""} ${outline === "win" ? styles.cardOutlineWin : outline === "lose" ? styles.cardOutlineLose : ""
+          className={`${styles.card} ${hidden ? styles.cardNoClip : ""} ${outline === "win" ? styles.cardOutlineWin : outline === "lose" ? styles.cardOutlineLose : outline === "push" ? styles.cardOutlinePush : ""
             }`}
         >
           {showFlip ? (
@@ -806,7 +812,16 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
               <div className={`${styles.flipFace} ${styles.flipBack}`}>{backFace}</div>
             </div>
           ) : !hidden ? (
-            frontFace
+            /* Dealt face-down at the deck, flown to its seat, and flipped
+               face-up only after the flight completes (the hole card keeps
+               the old reveal path — it never deal-flips). */
+            <div
+              className={`${styles.flipWrap} ${animate ? styles.dealFlipDo : styles.flipFaceUp}`}
+              style={animate ? { "--deal-flip-delay": `${index * DEAL_STAGGER + DEAL_MS}ms` } : undefined}
+            >
+              <div className={`${styles.flipFace} ${styles.flipFront}`}>{frontFace}</div>
+              <div className={`${styles.flipFace} ${styles.flipBack}`}>{backFace}</div>
+            </div>
           ) : (
             backFace
           )}

@@ -259,7 +259,22 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           className={`${styles.bigMultiplier} ${result ? (result.won ? styles.bigWin : styles.bigLoss) : ""
             }`}
         >
-          {displayMult.toFixed(2)}×
+          {/* Odometer: every digit gets a fixed slot, the decimal point is
+              anchored dead-centre, and the integer part grows leftward — the
+              string never shifts as digits change width or count. */}
+          <span className={styles.odInt} aria-hidden="true">
+            {displayMult.toFixed(2).split(".")[0].split("").map((d, i, arr) => (
+              <span key={arr.length - i} className={styles.odSlot}>{d}</span>
+            ))}
+          </span>
+          <span className={styles.odFrac} aria-hidden="true">
+            <span className={styles.odDot}>.</span>
+            {displayMult.toFixed(2).split(".")[1].split("").map((d, i) => (
+              <span key={i} className={styles.odSlot}>{d}</span>
+            ))}
+          </span>
+          <span className={styles.odSuffix} aria-hidden="true">×</span>
+          <span className={styles.odSrOnly}>{displayMult.toFixed(2)}×</span>
         </div>
 
         {result?.won && (

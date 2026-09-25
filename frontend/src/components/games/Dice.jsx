@@ -1,5 +1,5 @@
 import Stepper from "../common/Stepper";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import BetLockBadge from "../common/BetLockBadge";
@@ -70,10 +70,18 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [lastResult, setLastResult] = useState(null);
   const [resultPosition, setResultPosition] = useState(50);
   const [showResult, setShowResult] = useState(false);
-  // Retriggers the gem landing animation every roll (never reuses a key)
-  const [rollNonce, setRollNonce] = useState(0);
+  // Marker animation phasing (see dice.module.css — MOVE_MS matches the
+  // marker's left transition exactly):
+  //   pressing:  bet click → result (1.0 → 0.97 press)
+  //   gemMoving: bet click → arrival (text greyed, number swaps on arrival)
+  const [pressing, setPressing] = useState(false);
+  const [gemMoving, setGemMoving] = useState(false);
+  const [shownPosition, setShownPosition] = useState(50);
+  // Retriggers the arrival bounce every roll (never reuses a key)
+  const [arrivalNonce, setArrivalNonce] = useState(0);
   // Round history for the top pills (newest first, capped)
   const [history, setHistory] = useState([]);
+  const MOVE_MS = 450;
 
   // ✅ Win popup (Limbo-like)
   const [showWinPopup, setShowWinPopup] = useState(false);
@@ -135,6 +143,10 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setShowWinPopup(false);
     setWinPayout(0);
 
+    // marker press starts on click; it is "in motion" (grey text) until arrival
+    setPressing(true);
+    setGemMoving(true);
+
     // ✅ Round start sound
     sfx.play("round", { volume: 1 });
 
@@ -147,18 +159,24 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       const result = response.data.result;
 
-      // show new roll immediately; set lastResult before animation completes
+      // the move toward the target begins here — overlapping the tail end
+      // of the press — while the press releases back toward 1.0
       setLastResult(result);
-
       setShowResult(true);
       setResultPosition(result.roll);
-      setRollNonce((n) => n + 1);
+      setPressing(false);
       setHistory((prev) => [{ roll: result.roll, won: result.won }, ...prev].slice(0, 10));
 
-      // ✅ Wait for result gem movement animation to finish
-      await new Promise((r) => setTimeout(r, 500));
+      // ✅ Wait for the marker to arrive at its target
+      await new Promise((r) => setTimeout(r, MOVE_MS));
 
-      // ✅ After animation finishes: win sound + win popup
+      // on arrival: the number swaps in, the text takes its win/loss colour,
+      // and the overshoot bounce plays
+      setShownPosition(result.roll);
+      setGemMoving(false);
+      setArrivalNonce((n) => n + 1);
+
+      // ✅ After arrival: win sound + win popup
       if (result?.won) {
         sfx.play("win", { volume: 1 });
         setWinPayout(Number(result.payout || 0));
@@ -169,6 +187,8 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       if (result.won);
     } catch (error) {
+      setPressing(false);
+      setGemMoving(false);
       toast.error(error.response?.data?.message || "Roll failed");
     } finally {
       setIsRolling(false);
@@ -294,12 +314,12 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   useActiveBetFlag("dice", isRolling);
 
 
-  // Position text state: grey while rolling, then green (win) / red (loss)
-  const bubbleClass = !showResult || isRolling
-    ? ""
+  // Marker text state: grey while in motion, then green (win) / red (loss)
+  const labelClass = gemMoving
+    ? styles.labelMoving
     : lastResult?.won
-      ? styles.bubbleWin
-      : styles.bubbleLoss;
+      ? styles.labelWin
+      : styles.labelLoss;
 
   return (
     <div className={styles.container}>
@@ -434,12 +454,27 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                   className={`${styles.resultGem} ${showResult ? styles.visible : ""}`}
                   style={{ left: `${resultPosition}%` }}
                 >
-                  <div key={rollNonce} className={styles.gemBounce}>
-                    <div className={`${styles.resultValueBubble} ${bubbleClass}`}>
-                      {showResult ? Number(resultPosition).toFixed(2) : ""}
-                    </div>
-                    <div className={styles.gemHex}>
-                      <div className={styles.gemInner}></div>
+                  <div className={`${styles.gemPress} ${pressing ? styles.pressed : ""}`}>
+                    <div key={arrivalNonce} className={styles.gemBounce}>
+                      <svg className={styles.gemSvg} viewBox="0 0 100 112" aria-hidden="true">
+                        {/* rounded silhouette (round joins soften every corner) */}
+                        <path
+                          d="M50,4 L94,29 L94,83 L50,108 L6,83 L6,29 Z"
+                          fill="#7d92a9"
+                          stroke="#7d92a9"
+                          strokeWidth="8"
+                          strokeLinejoin="round"
+                        />
+                        {/* left facet: slightly darker */}
+                        <polygon points="10,32 50,56 50,103 10,80" fill="#d7dee7" />
+                        {/* right facet: darker still */}
+                        <polygon points="50,56 90,32 90,80 50,103" fill="#a9b7c6" />
+                        {/* top facet: white */}
+                        <polygon points="50,9 90,32 50,56 10,32" fill="#ffffff" />
+                      </svg>
+                      <div className={`${styles.gemLabel} ${labelClass}`}>
+                        {Number(shownPosition).toFixed(2)}
+                      </div>
                     </div>
                   </div>
                 </div>

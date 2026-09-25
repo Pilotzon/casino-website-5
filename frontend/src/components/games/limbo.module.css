@@ -101,19 +101,83 @@
   padding: var(--stage-pad); /* equal on all four sides (global rule) */
 }
 
-/* Desktop big number — tabular digits so the counting animation never
-   pushes the layout sideways as values change width. */
+/* Desktop big number — an odometer. The row is full-width flex with the
+   decimal point anchored dead-centre: the integer half is right-aligned
+   (new digits slot in on the LEFT), the fraction half is left-aligned and
+   fixed-width. Every digit sits in its own fixed slot, so "1" and "6"
+   occupy identical space and counting never shifts the string. */
 .bigMultiplier {
   font-size: 120px;
   font-weight: 900;
-  letter-spacing: -3px;
+  letter-spacing: 0;
   line-height: 1;
   color: var(--color-text-primary);
   user-select: none;
-  text-align: center;
   flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" on, "salt" on;
+}
+
+.odInt {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.odFrac {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.odSlot {
+  width: 0.6em;
+  flex: 0 0 auto;
+  text-align: center;
+  letter-spacing: 0;
+  animation: odSlotIn 180ms ease-out both;
+}
+
+.odDot {
+  width: 0.32em;
+  flex: 0 0 auto;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.odSuffix {
+  margin-left: 0.04em;
+  flex: 0 0 auto;
+  letter-spacing: 0;
+}
+
+@keyframes odSlotIn {
+  from {
+    transform: translateX(-0.25em);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.odSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .bigWin {

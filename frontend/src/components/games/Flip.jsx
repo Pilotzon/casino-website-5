@@ -197,13 +197,22 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     }
   };
 
-  // On mount: play starting_once exactly once
+  // On mount: the coin sits frozen on the first frame — nothing plays
+  // until a side is chosen (see flip()).
   useEffect(() => {
-    (async () => {
-      setPhase("idle_once");
-      setVideoSrc(startingOnce);
-      await setAndPlay(startingOnce);
-    })();
+    setPhase("hold");
+    setVideoSrc(startingOnce);
+    const v = videoRef.current;
+    if (!v) return undefined;
+    const freezeAtStart = () => {
+      try {
+        v.pause();
+        if (v.currentTime !== 0) v.currentTime = 0;
+      } catch { /* metadata not ready yet — loadeddata retries */ }
+    };
+    freezeAtStart();
+    v.addEventListener("loadeddata", freezeAtStart);
+    return () => v.removeEventListener("loadeddata", freezeAtStart);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -294,18 +294,22 @@
   cursor: grabbing;
 }
 
-/* Result marker — a white 3-tone hexagon. The outer rig only slides it
-   along the track; the landing squash/bounce runs on the inner element
-   (bottom-anchored, pivoting at the track) and retriggers every roll. */
+/* Result marker — a white 3-facet hexagon (SVG) with the value centred
+   inside it. Its bottom corner sits exactly on the range track.
+   Three nested rigs, all anchored at the bottom corner:
+     .resultGem  slides along the track (the move; 0.45s — MOVE_MS in JSX)
+     .gemPress   1.0 → 0.97 press on bet click, released when the move starts
+     .gemBounce  overshoot bounce, retriggered on arrival */
 .resultGem {
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
+  bottom: 5px;
+  /* the 10px track's vertical centre — the corner touches the track */
+  transform: translateX(-50%);
+  width: 76px;
+  height: 85px;
   z-index: 20;
   opacity: 0;
-  transition: left 0.45s cubic-bezier(0.22, 0.9, 0.3, 1), opacity 0.2s;
+  transition: left 0.45s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.2s;
   pointer-events: none;
 }
 
@@ -313,88 +317,95 @@
   opacity: 1;
 }
 
+.gemPress {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  transition: transform 280ms ease-in-out;
+}
+
+.gemPress.pressed {
+  transform: scale(0.97);
+}
+
 .gemBounce {
   position: relative;
   width: 100%;
   height: 100%;
   transform-origin: 50% 100%;
-  animation: diceGemLand 480ms ease-out;
+  animation: diceGemBounce 480ms ease-out;
 }
 
-@keyframes diceGemLand {
+/* Genuine bounce: overshoot past 1.0, then decaying oscillations — the
+   per-keyframe easings (not one linear ease) sell the physics. */
+@keyframes diceGemBounce {
   0% {
-    transform: translateY(-48px) scale(1, 1);
+    transform: scale(1, 1);
   }
 
-  55% {
-    transform: translateY(0) scale(1.14, 0.8);
+  28% {
+    transform: scale(1.05, 1.05);
     animation-timing-function: ease-out;
   }
 
-  72% {
-    transform: translateY(-11px) scale(0.96, 1.05);
-    animation-timing-function: ease-in;
+  46% {
+    transform: scale(0.985, 0.985);
+    animation-timing-function: ease-in-out;
   }
 
-  88% {
-    transform: translateY(0) scale(1.03, 0.96);
+  62% {
+    transform: scale(1.018, 1.018);
+    animation-timing-function: ease-in-out;
+  }
+
+  78% {
+    transform: scale(0.996, 0.996);
+    animation-timing-function: ease-in-out;
   }
 
   100% {
-    transform: translateY(0) scale(1, 1);
+    transform: scale(1, 1);
   }
 }
 
-/* White 3-tone hexagon: bright crown, cool mid, shaded base. */
-.gemHex {
+.gemSvg {
   position: absolute;
   inset: 0;
-  clip-path: polygon(25% 2%, 75% 2%, 98% 50%, 75% 98%, 25% 98%, 2% 50%);
-  background: linear-gradient(180deg,
-      #ffffff 0%,
-      #e6edf4 38%,
-      #a9bccf 72%,
-      #7d92a9 100%);
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
 }
 
-.gemInner {
+.gemLabel {
   position: absolute;
-  inset: 20%;
-  clip-path: polygon(25% 2%, 75% 2%, 98% 50%, 75% 98%, 25% 98%, 2% 50%);
-  background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.95) 0%,
-      rgba(255, 255, 255, 0.15) 55%,
-      rgba(125, 146, 169, 0.45) 100%);
-}
-
-.resultValueBubble {
-  position: absolute;
-  bottom: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-bg-panel);
-  /* sidebar panel */
-  color: var(--text-dim);
-  /* idle/rolling grey — win/loss classes recolour the text */
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 16px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 900;
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
-  border: 2px solid var(--bg-surface);
   white-space: nowrap;
 }
 
-.bubbleWin {
+.labelWin {
   color: var(--accent-green);
 }
 
-.bubbleLoss {
+.labelLoss {
   color: var(--accent-red);
 }
 
+.labelMoving {
+  color: #6b7c8c;
+  opacity: 0.5;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .gemPress {
+    transition: none;
+  }
+
   .gemBounce {
     animation: none;
   }
