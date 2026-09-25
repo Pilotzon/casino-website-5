@@ -573,8 +573,8 @@ async function main() {
     ok(/filter:\s*brightness\(0\) invert\(1\)/.test(firstRule(readCss('src/components/games/RPS.module.css'), '.choiceSmallIcon')),
       'RPS: the rock / paper / scissors marks are white');
     const flipCss = readCss('src/components/games/flip.module.css');
-    ok(/background:\s*var\(--color-text-primary\)/.test(firstRule(flipCss, '.dotHeads'))
-      && /background:\s*var\(--color-text-primary\)/.test(firstRule(flipCss, '.dotTails')), 'Flip: the heads / tails markers are white');
+    ok(/background:\s*#fca311/.test(firstRule(flipCss, '.dotHeads'))
+      && /background:\s*#3b82f6/.test(firstRule(flipCss, '.dotTails')), 'Flip: heads marker is gold #fca311, tails marker is blue #3b82f6');
     ok(/\.multSuffix\s*\{\s*composes:\s*sidebar-input-suffix from global/.test(readCss('src/components/games/crash.module.css'))
       && /color:\s*var\(--color-text-primary\)/.test(firstRule(global, '.sidebar-input-suffix')), "Crash: the × suffix is plain white");
     ok(!/--bitcoin|--accent-warning|color:/.test(firstRule(global, '.sidebar-currency-icon')), 'the sidebar currency slot is no longer orange');

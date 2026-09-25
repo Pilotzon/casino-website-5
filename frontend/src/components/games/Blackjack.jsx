@@ -701,18 +701,9 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
         <div className={styles.dealerArea}>
           {ui.roundId ? (
-            <div
-              className={`${styles.totalPillDark} ${ui.showResult && ui.phase === "settled"
-                ? ui.resultStatus === "win"
-                  ? styles.totalWin
-                  : ui.resultStatus === "lose"
-                    ? styles.totalLose
-                    : ui.resultStatus === "push"
-                      ? styles.totalPush
-                      : ""
-                : ""
-                }`}
-            >
+            /* Dealer total stays neutral dark — the win/loss highlight
+               belongs only on the settled player's own total pill. */
+            <div className={styles.totalPillDark}>
               {handTotalDisplay(
                 ui.dealer
                   .filter((c) => !c?.hidden)
@@ -810,8 +801,8 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
   const red = s ? isRedSuit(s) : false;
   const suitSrc = s ? suitIconSrc(s) : null;
 
-  const overlapX = 37;
-  const overlapY = 13;
+  const overlapX = 39;
+  const overlapY = 14;
   const x = index * overlapX;
   const y = index * overlapY;
   const rot = 0;

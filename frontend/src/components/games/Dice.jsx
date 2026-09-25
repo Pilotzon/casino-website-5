@@ -19,6 +19,33 @@ import roundMp3 from "../../assets/dice/Round.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
 import { IconArrowClockwise } from "../common/Icons";
 
+// Eases the live gem number with the exact curve of the gem's own `left`
+// transition (dice.module.css) so the digits track the marker frame-for-frame.
+function cubicBezierEasing(p1x, p1y, p2x, p2y) {
+  const cx = 3 * p1x;
+  const bx = 3 * (p2x - p1x) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * p1y;
+  const by = 3 * (p2y - p1y) - cy;
+  const ay = 1 - cy - by;
+  const sampleX = (t) => ((ax * t + bx) * t + cx) * t;
+  const sampleY = (t) => ((ay * t + by) * t + cy) * t;
+  const sampleDX = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  const solveX = (x) => {
+    let t = x;
+    for (let i = 0; i < 5; i++) {
+      const err = sampleX(t) - x;
+      if (Math.abs(err) < 1e-4) return t;
+      const d = sampleDX(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= err / d;
+    }
+    return t;
+  };
+  return (x) => (x <= 0 ? 0 : x >= 1 ? 1 : sampleY(solveX(x)));
+}
+const MOVE_EASE = cubicBezierEasing(0.25, 0.8, 0.3, 1);
+
 function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
   const toast = useToast();
@@ -71,21 +98,23 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [resultPosition, setResultPosition] = useState(50);
   const [showResult, setShowResult] = useState(false);
   // Marker animation phasing (see dice.module.css — MOVE_MS matches the
-  // marker's left transition exactly):
-  //   pressing:  bet click → arrival (the 0.97 dip is held through the move)
-  //   gemMoving: bet click → arrival (text greyed, number swaps on arrival)
+  // marker's left transition exactly, PRESS_MS its press transition):
+  //   pressing:  bet click → arrival (1.0 → 0.97 dip, held through the move)
+  //   gemMoving: bet click → arrival (text greyed while the number runs live)
   const [pressing, setPressing] = useState(false);
   const [gemMoving, setGemMoving] = useState(false);
   const [shownPosition, setShownPosition] = useState(50);
+  const shownPositionRef = useRef(50);
   // Retriggers the arrival bounce every roll (never reuses a key)
   const [arrivalNonce, setArrivalNonce] = useState(0);
   // Round history for the top pills (newest first, capped)
   const [history, setHistory] = useState([]);
   const MOVE_MS = 450;
-
-  // ✅ Win popup (Limbo-like)
-  const [showWinPopup, setShowWinPopup] = useState(false);
-  const [winPayout, setWinPayout] = useState(0);
+  // Press dip is 280ms (matches .gemPress); the move starts at its
+  // halfway point so the flight overlaps the dip's tail end.
+  const PRESS_MS = 280;
+  const PRESS_HALF_MS = PRESS_MS / 2;
+  // Dice never shows a win popup, under any outcome.
 
   // Input States
   const [multiplierInput, setMultiplierInput] = useState("1.9800");
@@ -139,11 +168,9 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
     setIsRolling(true);
 
-    // reset win popup per round
-    setShowWinPopup(false);
-    setWinPayout(0);
-
-    // marker press starts on click; it is "in motion" (grey text) until arrival
+    // marker press starts on click (1.0 → 0.97); it is "in motion"
+    // (grey text, live number) until arrival
+    const pressStart = Date.now();
     setPressing(true);
     setGemMoving(true);
 
@@ -158,31 +185,59 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       });
 
       const result = response.data.result;
+      setLastResult(result);
+      setHistory((prev) => [{ roll: result.roll, won: result.won }, ...prev].slice(0, 10));
+
+      // the move starts at the press's halfway point so the flight
+      // overlaps the tail end of the scale-down (never before it)
+      const pressElapsed = Date.now() - pressStart;
+      if (pressElapsed < PRESS_HALF_MS) {
+        await new Promise((r) => setTimeout(r, PRESS_HALF_MS - pressElapsed));
+      }
 
       // the move toward the target begins here — the press-dip stays held
       // for the whole flight and only releases on arrival
-      setLastResult(result);
       setShowResult(true);
       setResultPosition(result.roll);
-      setHistory((prev) => [{ roll: result.roll, won: result.won }, ...prev].slice(0, 10));
 
-      // ✅ Wait for the marker to arrive at its target
-      await new Promise((r) => setTimeout(r, MOVE_MS));
+      // the number runs live for the whole flight, eased with the gem's
+      // own motion curve so digits and marker arrive together
+      const reduceMotion =
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduceMotion) {
+        setShownPosition(result.roll);
+        shownPositionRef.current = result.roll;
+        await new Promise((r) => setTimeout(r, MOVE_MS));
+      } else {
+        const fromNum = shownPositionRef.current;
+        const toNum = result.roll;
+        const moveStart = performance.now();
+        await new Promise((resolve) => {
+          const tickNumber = (now) => {
+            const t = Math.min(1, (now - moveStart) / MOVE_MS);
+            setShownPosition(fromNum + (toNum - fromNum) * MOVE_EASE(t));
+            if (t < 1) requestAnimationFrame(tickNumber);
+            else resolve();
+          };
+          requestAnimationFrame(tickNumber);
+        });
+      }
 
-      // on arrival: the number swaps in, the text takes its win/loss colour,
-      // the press releases (280ms), and the bounce launches from the same
-      // 0.97 dip — the overlap reads as a touchdown squash before the
-      // 0.97 → 1.1 → 1.0 landing
+      // on arrival: the number snaps exact, the text takes its win/loss
+      // colour, the press releases (280ms), and the bounce launches from
+      // the same 0.97 dip — the overlap reads as a touchdown squash
+      // before the 0.97 → 1.1 → 1.0 landing
       setShownPosition(result.roll);
+      shownPositionRef.current = result.roll;
       setGemMoving(false);
       setPressing(false);
       setArrivalNonce((n) => n + 1);
 
-      // ✅ After arrival: win sound + win popup
+      // ✅ After arrival: win sound (Dice never shows a win popup)
       if (result?.won) {
         sfx.play("win", { volume: 1 });
-        setWinPayout(Number(result.payout || 0));
-        setShowWinPopup(true);
       }
 
       updateBalance(result.balance);
@@ -227,9 +282,6 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setTargetNumber(clampedVal);
     setShowResult(false);
 
-    // changing target hides prior popup
-    setShowWinPopup(false);
-    setWinPayout(0);
   };
 
   const handleMultiplierChange = (e) => {
@@ -250,9 +302,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       lastDragValueRef.current = newTarget;
       setShowResult(false);
 
-      setShowWinPopup(false);
-      setWinPayout(0);
-    }
+        }
   };
 
   const handleWinChanceChange = (e) => {
@@ -273,9 +323,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       lastDragValueRef.current = newTarget;
       setShowResult(false);
 
-      setShowWinPopup(false);
-      setWinPayout(0);
-    }
+        }
   };
 
   const handleTargetInputChange = (e) => {
@@ -288,8 +336,6 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     lastDragValueRef.current = rounded;
     setShowResult(false);
 
-    setShowWinPopup(false);
-    setWinPayout(0);
   };
 
   const toggleMode = () => {
@@ -301,8 +347,6 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     lastDragValueRef.current = clamped;
     setShowResult(false);
 
-    setShowWinPopup(false);
-    setWinPayout(0);
   };
 
   const leftBarColor = rollUnder ? styles.barGreen : styles.barRed;
@@ -386,14 +430,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-        {/* ✅ Limbo-style win popup */}
-        {showWinPopup && (
-          <div className={styles.winPopup}>
-            <div className={styles.winPopupMult}>{Number(lastResult?.multiplier || 0).toFixed(2)}×</div>
-            <div className={styles.winPopupDivider} aria-hidden="true" />
-            <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
-          </div>
-        )}
+        {/* Dice never shows a win popup, under any outcome. */}
 
         {/* Always rendered: an invisible placeholder pill reserves the
             row's space until the first real pill swaps in — the row never
@@ -466,19 +503,24 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 >
                   <div className={`${styles.gemPress} ${pressing ? styles.pressed : ""}`}>
                     <div key={arrivalNonce} className={styles.gemBounce}>
-                      <svg className={styles.gemSvg} viewBox="0 0 100 112" aria-hidden="true">
-                        {/* rounded-corner hexagon silhouette (quadratic corners,
-                            r≈6 — no stroke, the fill alone draws the ring) */}
-                        <path
-                          d="M44.8,7 Q50,4 55.2,7 L88.8,26 Q94,29 94,35 L94,77 Q94,83 88.8,86 L55.2,105 Q50,108 44.8,105 L11.2,86 Q6,83 6,77 L6,35 Q6,29 11.2,26 Z"
-                          fill="#9fb0c3"
-                        />
-                        {/* left facet: slightly darker */}
-                        <polygon points="10,32 50,56 50,103 10,80" fill="#e6ebf1" />
-                        {/* right facet: darker still */}
-                        <polygon points="50,56 90,32 90,80 50,103" fill="#c9d2dc" />
-                        {/* top facet: white */}
-                        <polygon points="50,9 90,32 50,56 10,32" fill="#ffffff" />
+                      {/* viewBox bottom = the corner itself (y 103), so the
+                          corner lands exactly on the track's vertical centre.
+                          No silhouette, no stroke, no ring — the three bare
+                          facets ARE the hexagon, rounded (r≈6) by the clip. */}
+                      <svg className={styles.gemSvg} viewBox="0 0 100 103" aria-hidden="true">
+                        <defs>
+                          <clipPath id="diceGemHex">
+                            <path d="M44.8,12 Q50,9 55.2,12 L84.8,29 Q90,32 90,38 L90,74 Q90,80 84.8,83 L55.2,100 Q50,103 44.8,100 L15.2,83 Q10,80 10,74 L10,38 Q10,32 15.2,29 Z" />
+                          </clipPath>
+                        </defs>
+                        <g clipPath="url(#diceGemHex)">
+                          {/* left facet */}
+                          <polygon points="10,32 50,56 50,103 10,80" fill="#eef2f7" />
+                          {/* right facet */}
+                          <polygon points="50,56 90,32 90,80 50,103" fill="#d7dfe8" />
+                          {/* top facet: white */}
+                          <polygon points="50,9 90,32 50,56 10,32" fill="#ffffff" />
+                        </g>
                       </svg>
                       <div className={`${styles.gemLabel} ${labelClass}`}>
                         {Number(shownPosition).toFixed(2)}

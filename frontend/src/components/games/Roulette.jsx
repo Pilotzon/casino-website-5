@@ -820,10 +820,16 @@ export default function Roulette({ gameRow }) {
               <div className={styles.historyCol}>
                 <div className={styles.historyLabel}>History</div>
                 <div className={styles.historyStack}>
-                  {historyShown.map((n, idx) => (
-                    <div key={`${n}-${idx}-${historyShown.length}`}
-                      className={`${styles.histBall} ${styles[`histColor_${numberColor(n)}`]}`}>{n}</div>
-                  ))}
+                  {/* Always 6 slots: invisible placeholders reserve the full
+                      column until real balls swap in — nothing below shifts. */}
+                  {Array.from({ length: HISTORY_MAX }).map((_, idx) =>
+                    idx < historyShown.length ? (
+                      <div key={`${historyShown[idx]}-${idx}-${historyShown.length}`}
+                        className={`${styles.histBall} ${styles[`histColor_${numberColor(historyShown[idx])}`]}`}>{historyShown[idx]}</div>
+                    ) : (
+                      <div key={`ph-${idx}`} className={`${styles.histBall} ${styles.histPlaceholder}`} aria-hidden="true">0</div>
+                    )
+                  )}
                 </div>
               </div>
             </div>
@@ -953,9 +959,15 @@ export default function Roulette({ gameRow }) {
                   </div>
                 </div>
                 <div className={styles.historyRow}>
-                  {historyShown.map((n, idx) => (
-                    <div key={`${n}-${idx}-m`} className={`${styles.histBall} ${styles[`histColor_${numberColor(n)}`]}`}>{n}</div>
-                  ))}
+                  {/* Always 6 slots: invisible placeholders reserve the full
+                      row until real balls swap in — nothing below shifts. */}
+                  {Array.from({ length: HISTORY_MAX }).map((_, idx) =>
+                    idx < historyShown.length ? (
+                      <div key={`${historyShown[idx]}-${idx}-m`} className={`${styles.histBall} ${styles[`histColor_${numberColor(historyShown[idx])}`]}`}>{historyShown[idx]}</div>
+                    ) : (
+                      <div key={`phm-${idx}`} className={`${styles.histBall} ${styles.histPlaceholder}`} aria-hidden="true">0</div>
+                    )
+                  )}
                 </div>
               </div>
               <button className={styles.mobileCloseBtn} type="button" onClick={() => setMobileWheelOpen(false)}>

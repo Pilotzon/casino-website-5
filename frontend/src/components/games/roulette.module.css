@@ -235,6 +235,12 @@
   box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -2px 0 rgba(0, 0, 0, 0.28);
 }
 
+/* Invisible placeholder ball: same 38px footprint, reserves history
+   slots from the start so the first results never shift the layout. */
+.histPlaceholder {
+  visibility: hidden;
+}
+
 /* the newest result carries a quiet ring */
 .historyStack .histBall:first-child,
 .historyRow .histBall:first-child {

@@ -275,23 +275,24 @@
   transition: none;
 }
 
-/* Click: the whole face (fill + shadow) scales up to 1.05, then back
-   down to 0 while fading out — the static icon is simply uncovered. */
+/* Click, two stages: the whole face (fill + shadow) first pops UP to
+   1.05 (ease-in), then collapses to 0 (ease-out) with the fade riding
+   only on the second stage. */
 .tileRevealed .cover {
-  animation: minesTileOut 400ms forwards;
+  animation: minesTileOut 450ms forwards;
 }
 
 @keyframes minesTileOut {
   0% {
     transform: scale(1);
     opacity: 1;
-    animation-timing-function: ease-out;
+    animation-timing-function: ease-in;
   }
 
-  35% {
+  40% {
     transform: scale(1.05);
     opacity: 1;
-    animation-timing-function: ease-in;
+    animation-timing-function: ease-out;
   }
 
   100% {
@@ -300,7 +301,7 @@
   }
 }
 
-/* Icon / Gem / Mine — static, revealed as the cover collapses */
+/* Icon / Gem / Mine — zoom-in reveal while the cover collapses */
 .icon {
   width: 60%;
   height: 60%;
@@ -308,6 +309,7 @@
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -315,6 +317,10 @@
     animation: none;
     transform: scale(0);
     opacity: 0;
+  }
+
+  .icon {
+    animation: none;
   }
 }
 

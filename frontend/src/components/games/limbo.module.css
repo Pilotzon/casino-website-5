@@ -93,8 +93,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* content centered in the panel */
-  justify-content: center;
+  /* top-anchored: pills first, then the display centres itself in the
+     leftover space and the bottom stack pins itself to the bottom */
+  justify-content: flex-start;
   overflow: hidden;
   /* nothing scrolls inside the box */
   gap: 16;
@@ -107,6 +108,9 @@
    fixed-width. Every digit sits in its own fixed slot, so "1" and "6"
    occupy identical space and counting never shifts the string. */
 .bigMultiplier {
+  /* centres vertically in the area above the bottom stack: this auto top
+     margin and the stack's auto top margin split the free space evenly */
+  margin-top: auto;
   font-size: 120px;
   font-weight: 900;
   letter-spacing: 0;
@@ -123,17 +127,17 @@
 }
 
 .odInt {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
   min-width: 0;
 }
 
-/* Right half: fraction + × suffix glued together, left-aligned against
-   the decimal point (the suffix must ride with the text, never the edge). */
+/* Fraction + × suffix glued to the integer part — the whole string
+   (number + X) centres as one combined unit, never split halves. */
 .odRight {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-start;
   align-items: baseline;
@@ -151,7 +155,6 @@
   flex: 0 0 auto;
   text-align: center;
   letter-spacing: 0;
-  animation: odSlotIn 180ms ease-out both;
 }
 
 .odDot {
@@ -165,18 +168,6 @@
   margin-left: 0.04em;
   flex: 0 0 auto;
   letter-spacing: 0;
-}
-
-@keyframes odSlotIn {
-  from {
-    transform: translateX(-0.25em);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
 }
 
 .odSrOnly {
@@ -223,7 +214,6 @@
    stays centred in what is left. */
 .historyRow {
   composes: ui-history-row from global;
-  margin-bottom: auto;
 }
 
 .historyScroll {
@@ -250,11 +240,13 @@
   composes: ui-hist-placeholder from global;
 }
 
-/* Bottom stack (target multiplier + win chance) — anchored to
-   the bottom of the game stage. The global .ui-stage-bottom insets give
-   it exactly 16px bottom/left/right (always centred) — no width math here. */
+/* Bottom stack (target multiplier + win chance) — in-flow, pinned to the
+   bottom of the stage by its auto top margin (same 16px side/bottom
+   insets the old absolute anchor gave it). In-flow so the display above
+   can centre in the true leftover area. */
 .bottomStack {
-  composes: ui-stage-bottom from global;
+  align-self: stretch;
+  margin: auto 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -358,16 +350,17 @@
     margin: 16px 0 10px 0;
   }
 
-  /* Mobile: the bottom stack leaves the flow and sits under the number
-     (scoped so it overrides the shared stage anchor). The win popup
+  /* Mobile: the stack flows under the number at the stage's own padding
+     (the desktop side/bottom margins are released here). The win popup
      stays a true overlay on every screen size. */
   .container .bottomStack {
     position: relative;
     left: auto;
-    right: auto; /* MUST be released too — a stale right:16px shifts the panel left */
+    right: auto;
     bottom: auto;
     transform: none;
     width: 100%;
+    margin: 0;
     gap: 10px;
   }
 

@@ -137,14 +137,12 @@
   composes: ui-action-active from global;
 }
 
-/* Disabled side buttons: a darkened fill (no blocked cursor); the markers
-   keep their full colour — nothing is desaturated or greyed out. */
-.sideBtn:disabled {
+/* Disabled side buttons: the whole button (fill, text, markers) is
+   darkened with a brightness filter — markers stay visibly coloured. */
+button.sideBtn:disabled {
   cursor: default;
-  filter: none;
-  background: #1E2C3A;
   color: var(--color-text-primary);
-  box-shadow: var(--shadow-md);
+  filter: brightness(0.75);
 }
 
 .textSide {
@@ -160,19 +158,19 @@
   color: var(--color-text-primary);
 }
 
-/* side markers: white like every other sidebar icon (only the currency
-   mark is coloured) — the round vs diamond shape tells them apart */
+/* side markers: always visibly coloured (same language as the history
+   strip — gold round = heads, blue diamond = tails) */
 .dotHeads {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--color-text-primary);
+  background: #fca311;
 }
 
 .dotTails {
   width: 12px;
   height: 12px;
-  background: var(--color-text-primary);
+  background: #3b82f6;
   transform: rotate(45deg);
 }
 

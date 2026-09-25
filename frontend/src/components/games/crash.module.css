@@ -142,6 +142,11 @@
   background: #2f4553;
   color: #fff;
 }
+/* Invisible placeholder: same footprint as a pill, no pop animation —
+   reserves the row's space until the first real pill swaps in. */
+.histPlaceholder {
+  composes: ui-hist-placeholder from global;
+}
 @keyframes histPop {
   from { transform: translateX(12px) scale(0.94); opacity: 0; }
   to   { transform: translateX(0) scale(1); opacity: 1; }

@@ -1047,14 +1047,22 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             <div className={styles.historyRow}>
               <div className={styles.historyScroll} ref={historyScrollRef}>
                 <div className={styles.historyPills}>
-                  {history.map((h) => (
-                    <span
-                      key={`${h.roundId}-${h.at}`}
-                      className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
-                    >
-                      {fmt(h.value)}×
+                  {/* Always rendered: an invisible placeholder pill reserves
+                      the row's space until the first real pill swaps in. */}
+                  {history.length === 0 ? (
+                    <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
+                      0.00×
                     </span>
-                  ))}
+                  ) : (
+                    history.map((h) => (
+                      <span
+                        key={`${h.roundId}-${h.at}`}
+                        className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
+                      >
+                        {fmt(h.value)}×
+                      </span>
+                    ))
+                  )}
                 </div>
               </div>
               <button className={styles.historyIcon} type="button" aria-label="My bets">

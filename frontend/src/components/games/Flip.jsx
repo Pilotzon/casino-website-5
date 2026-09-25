@@ -246,14 +246,14 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           updateBalance(pending.balance);
         }
 
-        // ✅ win sound + popup only after video ends
+        // ✅ win sound only after video ends (no popup here — the popup
+        // waits for an explicit cashout, and never shows on a loss)
         if (pending.won) {
           sfx.play("win", { volume: 1 });
           const payout = Number(pending.payout || 0);
           setWinPayout(payout);
           const flipBet = Number(pending.flipBet || 0);
           setWinMult(flipBet > 0 ? payout / flipBet : 1.98);
-          setShowWinPopup(true);
           // Continue: the payout rides as the next flip's stake
           setChainBet(payout);
           setChainCount((c) => c + 1);
@@ -301,10 +301,6 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const flip = async (side) => {
     if (stage !== "choose" || isBusy) return;
 
-    // hide the previous flip's popup once the player continues
-    setShowWinPopup(false);
-    setWinPayout(0);
-
     setStage("flipping");
     setIsBusy(true);
 
@@ -340,11 +336,16 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setStage("bet");
   };
 
-  // Walk away with the winnings (already paid out — just ends the round)
+  // Walk away with the winnings (already paid out — just ends the round).
+  // The win popup appears ONLY here, on explicit cashout — never mid-chain,
+  // and never on a loss without a cashout.
   const handleCollect = () => {
     if (stage !== "choose" || chainCount === 0) return;
-    setShowWinPopup(false);
-    setWinPayout(0);
+    const payout = Number(chainBet || 0);
+    setWinPayout(payout);
+    setWinMult(originalBet > 0 ? payout / originalBet : 1.98);
+    setShowWinPopup(true);
+    sfx.play("win", { volume: 1 });
     setChainBet(0);
     setOriginalBet(0);
     setChainCount(0);

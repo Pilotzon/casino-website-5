@@ -110,8 +110,8 @@
   background: var(--color-bg-game);
   /* game grid panel — exact Casino value */
   padding: var(--stage-pad); /* equal on all four sides (global rule) */
-  justify-content: center;
-  /* track fills + centers in the panel */
+  justify-content: flex-start;
+  /* top-anchored: pills first, the slider centres itself underneath */
   align-items: center;
   position: relative;
 }
@@ -121,7 +121,8 @@
 .sliderWrapper {
   width: min(1000px, 94%);
   /* fills the panel proportionally */
-  margin: 0;
+  /* centres itself in the space under the pills */
+  margin: auto 0;
   position: relative;
   padding: 0;
   box-sizing: border-box;
@@ -452,7 +453,6 @@
    stays centred in what is left. */
 .historyRow {
   composes: ui-history-row from global;
-  margin-bottom: auto;
 }
 
 .historyScroll {
