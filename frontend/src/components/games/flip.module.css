@@ -122,6 +122,9 @@
 .sideSelector {
   display: flex;
   gap: 10px;
+  /* same pull-up as Random Pick above it, so the Random Pick -> sides gap
+     exactly equals the Bet -> Random Pick gap (the tighter button rhythm) */
+  margin-top: calc(var(--sidebar-button-gap) - var(--sidebar-group-gap));
 }
 
 /* Heads/Tails — the canonical side action button (global.css);
@@ -137,8 +140,12 @@
   composes: ui-action-active from global;
 }
 
-/* Disabled side buttons: no override — they reuse the exact disabled
-   treatment of Blackjack's side buttons (global .ui-action-button). */
+/* Disabled side buttons: Blackjack's exact disabled treatment (global
+   .ui-action-button) plus the restored brightness() dimming, so an
+   unpickable side reads clearly darker — fill, text and marker alike. */
+.sideBtn:disabled {
+  filter: brightness(0.7);
+}
 
 .textSide {
   font-weight: 700;

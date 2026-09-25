@@ -351,8 +351,12 @@
   }
 
   /* Mobile: the stack flows under the number at the stage's own padding
-     (the desktop side/bottom margins are released here). The win popup
-     stays a true overlay on every screen size. */
+     (the desktop side/bottom margins are released here). The short stage
+     can't fit the win popup, so phones skip it entirely — the win still
+     reads on the multiplier itself, which turns green (bigWin). */
+  .winPopup {
+    display: none;
+  }
   .container .bottomStack {
     position: relative;
     left: auto;

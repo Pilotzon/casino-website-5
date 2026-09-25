@@ -387,7 +387,8 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
     /* fluid again on small screens */
     max-width: 100%;
-    gap: 12px;
+    /* tighter gaps on mobile — the 1fr tiles grow to take the freed space */
+    gap: 8px;
   }
 }
 
@@ -418,7 +419,7 @@
   }
 
   .grid {
-    gap: 10px;
+    gap: 6px;
     max-width: 520px;
   }
 
@@ -435,6 +436,6 @@
 
 @media (max-width: 380px) {
   .grid {
-    gap: 8px;
+    gap: 5px;
   }
 }

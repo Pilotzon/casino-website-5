@@ -26,6 +26,9 @@ const CELL_COUNT = GRID_SIZE * GRID_SIZE;
 // Full click animation: 450ms cover flight + the icon zoom (starts 392ms
 // in, runs 300ms) — the rest of the board reveals only after this.
 const CLICK_ANIM_MS = 700;
+// Gem/mine stings wait for the icon's zoom-in to begin — this MUST match
+// the animation-delay on .icon in mines.module.css (392ms).
+const ICON_REVEAL_DELAY_MS = 392;
 
 const format8 = (n) => Number(n || 0).toFixed(2); // 2 decimals everywhere
 
@@ -176,7 +179,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     }
   };
 
-  const playGemSound = () => {
+  // Resolves WHICH gem sting this reveal earns (streak/buff bookkeeping
+  // stays synchronous so rapid clicks keep their order) — the caller
+  // plays the returned key once the icon's zoom-in actually begins.
+  const pickGemSound = () => {
     // Increment streak on every gem
     const streak = gemStreakRef.current + 1;
     gemStreakRef.current = streak;
@@ -185,37 +191,33 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     // we must play Gem-3 and consume the buff, without re-arming.
     if (gem3BuffLockRef.current && gem3BuffRemainingRef.current > 0) {
       gem3BuffRemainingRef.current -= 1;
-      sfx.play("gem3", { volume: 1 });
 
       if (gem3BuffRemainingRef.current <= 0) {
         // buff consumption finished; unlock (normal logic resumes for future gems)
         gem3BuffLockRef.current = false;
       }
-      return;
+      return "gem3";
     }
 
     // Normal mapping for streak counts
     if (streak === 1) {
-      sfx.play("gem1", { volume: 1 });
-      return;
+      return "gem1";
     }
     if (streak === 2) {
-      sfx.play("gem2", { volume: 1 });
-      return;
+      return "gem2";
     }
 
     // streak >= 3:
     // On exactly the 3rd gem in a row: play Gem-3 and start the "next 2 gems" lock/buff.
     if (streak === 3) {
-      sfx.play("gem3", { volume: 1 });
       gem3BuffRemainingRef.current = 2;
       gem3BuffLockRef.current = true;
-      return;
+      return "gem3";
     }
 
     // For streak 4+ when NOT in the locked buff window:
     // You didn't specify additional sounds, so default back to Gem.
-    sfx.play("gem1", { volume: 1 });
+    return "gem1";
   };
 
   const reveal = async (idx) => {
@@ -236,9 +238,6 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       if (animRef.current !== myAnim) return;
 
       if (data.hitMine) {
-        // ✅ mine sound
-        sfx.play("mine", { volume: 1 });
-
         // reset streak/buff on mine
         resetGemSoundState();
 
@@ -253,6 +252,11 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           next[idx] = "mine";
           return next;
         });
+
+        // the mine sting starts when the icon's zoom-in begins, not on click
+        setTimeout(() => {
+          if (animRef.current === myAnim) sfx.play("mine", { volume: 1 });
+        }, ICON_REVEAL_DELAY_MS);
 
         await new Promise((r) => setTimeout(r, CLICK_ANIM_MS));
         if (animRef.current !== myAnim) return;
@@ -276,14 +280,19 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         return;
       }
 
-      // ✅ confirmed gem -> play the correct gem sound
-      playGemSound();
+      // ✅ confirmed gem -> resolve the correct gem sound, then play it
+      // only once the icon's zoom-in actually begins (not on click)
+      const gemKey = pickGemSound();
 
       setCells((prev) => {
         const next = [...prev];
         next[idx] = "gem";
         return next;
       });
+
+      setTimeout(() => {
+        if (animRef.current === myAnim) sfx.play(gemKey, { volume: 1 });
+      }, ICON_REVEAL_DELAY_MS);
 
       setRevealedCells(data.revealedCells || []);
       setCurrentMultiplier(Number(data.currentMultiplier) || 1.0);

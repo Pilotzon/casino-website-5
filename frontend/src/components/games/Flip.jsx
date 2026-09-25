@@ -428,19 +428,20 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         </div>
 
         <span className="ui-bet-wrap">
-          {/* No cancel exists: once a bet is placed the round cannot be
-              reversed — pre-first-flip there is no main action (the player
-              picks a side instead). */}
-          {stage === "choose" && chainCount === 0 ? null : (
+          {/* One button for the whole round: "Bet" until the bet is placed,
+              then "Cashout" in-place. It stays disabled for the entire
+              mid-bet window — before the first flip resolves AND while any
+              flip is in flight — until that phase resolves. (The backend
+              independently refuses overlapping flips, so the disabled
+              window holds even if the UI is bypassed.) */}
           <button
             className={styles.betButton}
             onClick={stage === "bet" ? handleBet : handleCollect}
-            disabled={isLocked || stage === "flipping"}
+            disabled={isLocked || stage === "flipping" || (stage === "choose" && chainCount === 0)}
             data-bet-sound="true"
             title={isLocked ? betErrorMessage : undefined}>
-          {stage === "flipping" ? "Flipping..." : stage === "choose" ? "Cashout" : "Bet"}
+          {stage === "bet" ? "Bet" : "Cashout"}
           </button>
-          )}
           <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
         </span>
 

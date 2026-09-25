@@ -1208,7 +1208,11 @@ textarea::placeholder {
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
+  /* the pill row always spans the stage's full content width (the stage's
+     own max-width minus padding) — the newest pill reaches the right edge
+     in every game; nothing may sit beside the pills inside this row */
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   margin-bottom: 10px;
 }

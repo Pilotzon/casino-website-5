@@ -408,26 +408,25 @@
 }
 
 /* Deal flight — every card materialises face-down ON the deck, flat and
-   straight (no tilt, no zoom), sits there a beat, then translates to its
-   seat — position only, no rotation, no bounce/overshoot. The start point
+   straight (no tilt, no zoom), and starts MOVING toward its seat on the
+   very first frame: no dwell at the source, only the fade-in ramps
+   (fully opaque by 12%) while the translate runs the whole 700ms —
+   position only, no rotation, no bounce/overshoot. The start point
    comes from --deal-from-x/--deal-from-y (measured per card from the real
    deck position — see dealFromVars() in Blackjack.jsx); the fallback is
    only for the very first paint before measurement lands. The flip to
-   face-up is a SEPARATE step that only starts once this flight completes. */
+   face-up is a SEPARATE step that only starts once this flight completes,
+   and the next card's flight starts the instant this one arrives (step =
+   flight = 700ms) — the handoff never waits for the flip. Arrival is
+   unchanged, so the flip + total schedule stays exact. */
 @keyframes dealIn {
   0% {
     opacity: 0;
     transform: translate(var(--deal-from-x, 230px), var(--deal-from-y, -270px));
   }
 
-  10% {
+  12% {
     opacity: 1;
-    transform: translate(var(--deal-from-x, 230px), var(--deal-from-y, -270px));
-  }
-
-  32% {
-    opacity: 1;
-    transform: translate(var(--deal-from-x, 230px), var(--deal-from-y, -270px));
   }
 
   100% {

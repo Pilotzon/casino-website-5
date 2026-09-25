@@ -96,8 +96,20 @@
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
-  margin-bottom: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 6px;
   min-width: 0;
+}
+/* History controls (My-bets icon + "You"): their own right-aligned line
+   under the pills — the pills row above keeps the full stage width. */
+.historyMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-bottom: 10px;
 }
 /* Scroller around the pills. Desktop keeps the old behaviour (the row simply
    runs past the left edge); on phones it becomes a real horizontal scroller —
@@ -392,7 +404,8 @@
   }
 
   /* --- history pills: horizontal scroller, newest at the right --- */
-  .historyRow { margin-bottom: 8px; gap: 6px; }
+  .historyRow { margin-bottom: 6px; gap: 6px; }
+  .historyMeta { margin-bottom: 8px; gap: 6px; }
   .historyScroll {
     overflow-x: auto;
     overflow-y: hidden;

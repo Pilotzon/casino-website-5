@@ -1073,6 +1073,11 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                   )}
                 </div>
               </div>
+            </div>
+            {/* Own right-aligned line: these controls must never steal width
+                from the pills row above (the newest pill reaches the stage's
+                right edge). */}
+            <div className={styles.historyMeta}>
               <button className={styles.historyIcon} type="button" aria-label="My bets">
                 <IconArticle size={18} />
               </button>

@@ -6,7 +6,7 @@
   bottom: 0;
   z-index: 1050;
   background: #1a242d;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  /* no top border — the bar meets the page with the shadow alone */
   box-shadow: 0 -8px 24px rgba(0,0,0,0.45), 0 -2px 8px rgba(0,0,0,0.35);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }

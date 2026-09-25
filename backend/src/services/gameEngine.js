@@ -105,6 +105,12 @@ function worsenNextDealerHitCard(deck, startIndex, maxLookahead = 24) {
   }
 }
 
+// In-flight flip guard (per user): the Cashout button is disabled for the
+// whole mid-bet window client-side, and this lock enforces the same window
+// server-side — a second /flip/play while one is still resolving is
+// rejected, so overlapping flips are impossible even past the UI.
+const flipsInFlight = new Set();
+
 class GameEngine {
   /**
    * Process a Coin Flip round
@@ -115,6 +121,10 @@ static async processFlip(userId, betAmount, selectedSide) {
 
   const bet = Number(betAmount);
   if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
+
+  const who = String(userId);
+  if (flipsInFlight.has(who)) throw new Error("A flip is already resolving — wait for it to finish");
+  flipsInFlight.add(who);
 
   // Lock credits (this returns balance AFTER subtracting bet)
   const balanceAfterBet = User.updateBalance(userId, -bet, "Flip bet placed");
@@ -161,6 +171,8 @@ static async processFlip(userId, betAmount, selectedSide) {
     // Refund bet on server error
     User.updateBalance(userId, bet, "Flip bet refunded due to error");
     throw error;
+  } finally {
+    flipsInFlight.delete(who);
   }
 }
 

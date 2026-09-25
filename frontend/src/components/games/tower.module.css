@@ -437,6 +437,14 @@
 @media (max-width: 900px) {
   .container {
     flex-direction: column;
+    /* tighter tile gaps on mobile — the 1fr tiles grow into the freed
+       space (54px tile + 8px gap = the same 62px row rhythm as desktop's
+       50px + 12px, so the board keeps its exact height) */
+    --tile-gap: 8px;
+  }
+
+  .tile {
+    height: 54px;
   }
 
   .sidebar {
@@ -480,6 +488,15 @@
 }
 
 @media (max-width: 600px) {
+  .container {
+    /* even tighter on phones (56px tile + 6px gap = the same 62px rows) */
+    --tile-gap: 6px;
+  }
+
+  .tile {
+    height: 56px;
+  }
+
   .gameStage {
     /* lighter than the 16px global pad — the proportional background
        already fills the board area; 10px keeps it from feeling walled */
