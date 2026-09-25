@@ -102,14 +102,10 @@
   min-width: 0;
 }
 /* History controls (My-bets icon + "You"): their own right-aligned line
-   under the pills — the pills row above keeps the full stage width. */
+   under the pills — the pills row above keeps the full stage width.
+   (Shared global rule; Crash's exact values are the source of truth.) */
 .historyMeta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex: 0 0 auto;
-  margin-bottom: 10px;
+  composes: ui-history-meta from global;
 }
 /* Scroller around the pills. Desktop keeps the old behaviour (the row simply
    runs past the left edge); on phones it becomes a real horizontal scroller —
@@ -162,25 +158,10 @@
   composes: ui-hist-placeholder from global;
 }
 .historyIcon {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-pill);
-  background: #2f4553;
-  color: #fff;
-  cursor: pointer;
-  transition: filter 140ms ease, transform 100ms ease;
+  composes: ui-history-icon from global;
 }
-.historyIcon:hover { filter: brightness(1.1); }
-.historyIcon:active { transform: scale(0.96); }
 .historyYou {
-  flex: 0 0 auto;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-control);
-  font-weight: 600;
+  composes: ui-history-you from global;
 }
 
 /* Chart layout */
@@ -405,7 +386,6 @@
 
   /* --- history pills: horizontal scroller, newest at the right --- */
   .historyRow { margin-bottom: 6px; gap: 6px; }
-  .historyMeta { margin-bottom: 8px; gap: 6px; }
   .historyScroll {
     overflow-x: auto;
     overflow-y: hidden;
@@ -430,8 +410,6 @@
     -webkit-mask-image: none;
   }
   .histPill { min-width: 58px; height: 34px; padding: 0 13px; font-size: 16px; }
-  .historyIcon { width: 36px; height: 34px; }
-  .historyYou { font-size: 16px; }
 
   /* --- round clock: top right, under the pills (the axis row loses it, so the
          X ticks get the whole row width on a phone) --- */

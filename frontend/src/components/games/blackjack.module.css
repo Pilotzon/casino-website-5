@@ -410,15 +410,16 @@
 /* Deal flight — every card materialises face-down ON the deck, flat and
    straight (no tilt, no zoom), and starts MOVING toward its seat on the
    very first frame: no dwell at the source, only the fade-in ramps
-   (fully opaque by 12%) while the translate runs the whole 700ms —
+   (fully opaque by 12%) while the translate runs the whole 600ms —
    position only, no rotation, no bounce/overshoot. The start point
    comes from --deal-from-x/--deal-from-y (measured per card from the real
    deck position — see dealFromVars() in Blackjack.jsx); the fallback is
    only for the very first paint before measurement lands. The flip to
    face-up is a SEPARATE step that only starts once this flight completes,
    and the next card's flight starts the instant this one arrives (step =
-   flight = 700ms) — the handoff never waits for the flip. Arrival is
-   unchanged, so the flip + total schedule stays exact. */
+   flight = 600ms) — the handoff never waits for the flip. The easing is
+   deliberately mild (not a deep ease-out) so the flight reads quick and
+   even all the way into the seat. */
 @keyframes dealIn {
   0% {
     opacity: 0;
@@ -436,7 +437,44 @@
 }
 
 .cardDeal {
-  animation: dealIn 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dealIn 600ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+/* Exit flight — when a NEW bet is placed, every old card slides out
+   diagonally down-left at 45° (ease-in, 15px max = 10.6px per axis)
+   while fading out. Within one hand the cards stagger left to right
+   (200ms apart via animation-delay); every hand's own sequence starts
+   at the same moment, in parallel with all other hands. */
+@keyframes cardOut {
+  from {
+    opacity: 1;
+    transform: translate(0px, 0px);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-10.6px, 10.6px);
+  }
+}
+
+.cardOut {
+  animation: cardOut 300ms ease-in both;
+}
+
+/* Total labels exit with a plain fade-out only — no slide, no diagonal
+   motion of any kind. */
+@keyframes totalOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.totalOut {
+  animation: totalOut 300ms ease-out both;
 }
 
 /* Post-flight flip: back face -> front face, starting only after the
@@ -521,42 +559,14 @@
   composes: ui-win-popup-divider from global;
 }
 
-.resultPopupAmountMuted {
-  composes: ui-win-popup-amount from global;
-}
-
-.resultPopup .resultPopupAmountMuted {
-  color: rgba(255, 255, 255, 0.65);
-}
-
-/* win — scoped so the state border beats the shared default */
+/* win — scoped so the state border beats the shared default (the only
+   popup variant: loss/push popups were removed globally) */
 .resultPopup.popupWin {
   border-color: rgba(0, 231, 1, 0.90);
 }
 
 .popupWin .resultPopupTitle {
   color: var(--accent-green);
-}
-
-.resultPopup.popupLose {
-  border-color: rgba(241, 44, 76, 0.90);
-}
-
-.popupLose .resultPopupTitle {
-  color: var(--accent-red);
-}
-
-.resultPopup.popupPush {
-  border-color: rgba(255, 157, 0, 0.9);
-}
-
-.popupPush .resultPopupTitle {
-  color: rgba(255, 255, 255, 0.80);
-}
-
-/* push multiplier reads neutral, not green */
-.popupPush .resultPopupMult {
-  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Responsive */

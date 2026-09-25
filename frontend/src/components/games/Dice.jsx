@@ -6,6 +6,7 @@ import usePillSlide from "../../hooks/usePillSlide";
 import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
+import { IconArticle } from "../common/Icons";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { gamesAPI } from "../../services/api";
@@ -110,8 +111,22 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [arrivalNonce, setArrivalNonce] = useState(0);
   // Round history for the top pills (newest first, capped)
   const [history, setHistory] = useState([]);
+  // Stable pill ids: the slide keys on the newest pill's IDENTITY (the row
+  // is capped, so its length stops changing while new pills keep arriving)
+  const pillSeqRef = useRef(0);
+  const historyScrollRef = useRef(null);
   // Pill row slides in from the right as one motion on every addition
-  const { pillsRef, slideKey, slideFrom } = usePillSlide(history.length);
+  const { pillsRef, slideKey, slideFrom } = usePillSlide(history[0]?._pillId ?? null);
+
+  // Crash parity (mobile scroller): keep the freshest pill in view
+  useEffect(() => {
+    const el = historyScrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth + 1) return;
+    const newest = el.firstElementChild?.firstElementChild;
+    if (newest && typeof newest.scrollIntoView === "function") {
+      newest.scrollIntoView({ inline: "nearest", block: "nearest" });
+    }
+  }, [history]);
   const MOVE_MS = 450;
   // Press dip is 280ms (matches .gemPress); the move starts at its
   // halfway point so the flight overlaps the dip's tail end.
@@ -189,7 +204,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       const result = response.data.result;
       setLastResult(result);
-      setHistory((prev) => [{ roll: result.roll, won: result.won }, ...prev].slice(0, 10));
+      setHistory((prev) => [{ roll: result.roll, won: result.won, _pillId: ++pillSeqRef.current }, ...prev].slice(0, 10));
 
       // the move starts at the press's halfway point so the flight
       // overlaps the tail end of the scale-down (never before it)
@@ -440,7 +455,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             grows, so content below never jumps. Newest-first, exactly like
             Crash (row-reverse puts the first pill at the right). */}
         <div className={styles.historyRow}>
-          <div className={styles.historyScroll}>
+          <div className={styles.historyScroll} ref={historyScrollRef}>
             <div
                   key={slideKey}
                   ref={pillsRef}
@@ -452,9 +467,9 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                   0.00
                 </span>
               ) : (
-                history.map((h, i) => (
+                history.map((h) => (
                   <span
-                    key={i}
+                    key={h._pillId}
                     className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
                   >
                     {Number(h.roll).toFixed(2)}
@@ -463,6 +478,13 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
               )}
             </div>
           </div>
+        </div>
+        {/* Crash's marker row, identical in every pills game */}
+        <div className={styles.historyMeta}>
+          <button className={styles.historyIcon} type="button" aria-label="My bets">
+            <IconArticle size={18} />
+          </button>
+          <span className={styles.historyYou}>‹ You</span>
         </div>
 
         <div className={styles.sliderWrapper}>

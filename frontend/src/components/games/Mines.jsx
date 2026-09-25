@@ -86,6 +86,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const [clickedCell, setClickedCell] = useState(null);
   const animRef = useRef(0);
+  // Sound generation: bumped ONLY on reset (never per click), so every
+  // click's sting survives rapid clicking — stings stack/overlap instead
+  // of cancelling each other, and only a new round voids pending ones.
+  const soundGenRef = useRef(0);
 
   // ✅ track whether round ended by loss (hit mine)
   const [didLose, setDidLose] = useState(false);
@@ -129,6 +133,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const reset = () => {
     animRef.current += 1;
+    soundGenRef.current += 1;
     setCells(Array.from({ length: CELL_COUNT }, () => "hidden"));
     setRevealedCells([]);
     setMinePositions(null);
@@ -228,6 +233,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setIsBusy(true);
     setClickedCell(idx);
     const myAnim = ++animRef.current;
+    // sounds key on the round generation, NOT the click animation: rapid
+    // clicks each keep their own sting (they stack/overlap via cloned
+    // audio nodes) instead of cancelling each other out
+    const mySound = soundGenRef.current;
 
     try {
       const res = await gamesAPI.revealMinesCell({ roundId, cellIndex: idx });
@@ -255,7 +264,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
         // the mine sting starts when the icon's zoom-in begins, not on click
         setTimeout(() => {
-          if (animRef.current === myAnim) sfx.play("mine", { volume: 1 });
+          if (soundGenRef.current === mySound) sfx.play("mine", { volume: 1 });
         }, ICON_REVEAL_DELAY_MS);
 
         await new Promise((r) => setTimeout(r, CLICK_ANIM_MS));
@@ -291,7 +300,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       });
 
       setTimeout(() => {
-        if (animRef.current === myAnim) sfx.play(gemKey, { volume: 1 });
+        if (soundGenRef.current === mySound) sfx.play(gemKey, { volume: 1 });
       }, ICON_REVEAL_DELAY_MS);
 
       setRevealedCells(data.revealedCells || []);

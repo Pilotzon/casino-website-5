@@ -233,7 +233,10 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [phase, setPhase] = useState('boot');
   const [history, setHistory] = useState([]);          // newest first (server order)
   // Pill row slides in from the right as one motion on every addition
-  const { pillsRef, slideKey, slideFrom } = usePillSlide(history.length);
+  // slide key = newest pill's identity (server ids — stable across polls,
+  // unlike object references or the capped row length)
+  const newestPillKey = history[0] ? `${history[0].roundId}-${history[0].at}` : null;
+  const { pillsRef, slideKey, slideFrom } = usePillSlide(newestPillKey);
   const [lastRound, setLastRound] = useState(null);    // finished round on the board
   const [activeBet, setActiveBet] = useState(null);    // { betAmount, autoCashout }
   const [cashout, setCashout] = useState(null);        // { multiplier, payout }
@@ -266,6 +269,11 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const endedRoundsRef = useRef([]);               // round ids already seen finished
   const cashoutPendingRef = useRef(false);         // optimistic cash-out in flight
   const roundIdRef = useRef(null);                 // round currently on the board
+  // Previous-session round ids: snapshot from the FIRST payload after page
+  // load — every round in it ended before this session started, so those
+  // pills + last round are NEVER displayed (the session always boots clean;
+  // only rounds ending after mount appear). A live round is never in here.
+  const bootIdsRef = useRef(null);
   const cooldownActiveRef = useRef(false);
   const lastFrameAtRef = useRef(0);                // render-pump watchdog
   const historyScrollRef = useRef(null);           // horizontal pill scroller (mobile)
@@ -335,7 +343,19 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       lastStampRef.current = Math.max(lastStampRef.current, stamp);
     }
     if (typeof d.growthK === 'number' && d.growthK > 0) growthKRef.current = d.growthK;
-    if (Array.isArray(d.history)) setHistory(d.history);
+    if (Array.isArray(d.history)) {
+      // the first history payload defines the previous session — snapshot
+      // its ids so those pills are filtered out of every payload forever
+      if (bootIdsRef.current === null) {
+        bootIdsRef.current = new Set(
+          d.history.map((h) => h?.roundId).filter((id) => id != null)
+        );
+        const bootLast = d.lastRound?.roundId;
+        if (bootLast != null) bootIdsRef.current.add(bootLast);
+      }
+      const boot = bootIdsRef.current;
+      setHistory(d.history.filter((h) => h && !boot.has(h.roundId)));
+    }
     if (typeof d.balance === 'number' && Math.abs((lastBalanceRef.current ?? -1) - d.balance) > 1e-9) {
       lastBalanceRef.current = d.balance;
       updateBalance(d.balance);
@@ -425,6 +445,17 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     // ---- no live round for us
     const ended = d.lastRound || null;
     if (ended) {
+      // the previous session's last round must never display after a
+      // reload — boot clean (idle, empty board) instead. (If the first
+      // payload carried a last round but no history, it still ended
+      // before this page loaded, so it seeds the boot set on its own.)
+      if (bootIdsRef.current === null) {
+        bootIdsRef.current = new Set(ended.roundId != null ? [ended.roundId] : []);
+      }
+      if (ended.roundId != null && bootIdsRef.current.has(ended.roundId)) {
+        if (phaseRef.current === 'boot') setPhaseSafe('idle');
+        return;
+      }
       if (ended.roundId && !endedRoundsRef.current.includes(ended.roundId)) {
         endedRoundsRef.current = [...endedRoundsRef.current.slice(-4), ended.roundId];
       }
@@ -467,8 +498,9 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setPhaseSafe('boot');
 
     (async () => {
-      // 1) public snapshot — FINISHED rounds only, so nothing can leak and the
-      //    pills/last round are already correct on the very first paint.
+      // 1) public snapshot — FINISHED rounds only, so nothing can leak. Its
+      //    rounds seed the boot set (previous session) and are NOT displayed —
+      //    the board boots clean and fills with this session's rounds only.
       try {
         const res = await gamesAPI.crashLast();
         if (!cancelled) applyStateRef.current(res.data?.data);

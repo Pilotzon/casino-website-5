@@ -1214,7 +1214,42 @@ textarea::placeholder {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  /* 6px: the marker row below carries the rest of the bottom rhythm
+     (Crash parity — its local row uses the same 6px) */
+  margin-bottom: 6px;
+}
+/* History marker row (Crash is the source of truth — every game with
+   pills renders this identical line under its pills): the My-bets icon +
+   "‹ You", right-aligned on their own line so the pills row above keeps
+   the stage's full width. */
+.ui-history-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
   margin-bottom: 10px;
+}
+.ui-history-icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: #2f4553;
+  color: #fff;
+  cursor: pointer;
+  transition: filter 140ms ease, transform 100ms ease;
+}
+.ui-history-icon:hover { filter: brightness(1.1); }
+.ui-history-icon:active { transform: scale(0.96); }
+.ui-history-you {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-control);
+  font-weight: 600;
 }
 .ui-history-scroll {
   flex: 1 1 auto;
@@ -1282,6 +1317,12 @@ textarea::placeholder {
     margin-bottom: 8px;
     gap: 6px;
   }
+  .ui-history-meta {
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+  .ui-history-icon { width: 36px; height: 34px; }
+  .ui-history-you { font-size: 16px; }
   .ui-history-scroll {
     overflow-x: auto;
     overflow-y: hidden;

@@ -505,6 +505,18 @@
   composes: ui-history-row from global;
 }
 
+.historyMeta {
+  composes: ui-history-meta from global;
+}
+
+.historyIcon {
+  composes: ui-history-icon from global;
+}
+
+.historyYou {
+  composes: ui-history-you from global;
+}
+
 .historyScroll {
   composes: ui-history-scroll from global;
 }
