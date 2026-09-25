@@ -9,7 +9,10 @@ import { useAuth } from "../../context/AuthContext";
 import styles from "./wheel.module.css";
 import Modal from "../common/Modal";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 import { IconChartPieSlice } from "../common/Icons";
+import HistoryPills from "../common/HistoryPills";
+import useGameHistory from "../../hooks/useGameHistory";
 
 const RISK_LEVELS = ["low", "medium", "high"];
 const SEGMENT_OPTIONS = [10, 20, 30, 40, 50];
@@ -26,25 +29,24 @@ function isMobileNow() {
   return window.matchMedia && window.matchMedia("(max-width: 600px)").matches;
 }
 
-function makeCubicBezier(x1, y1, x2, y2) {
-  return function (x) {
-    if (x <= 0) return 0;
-    if (x >= 1) return 1;
-    let t = x;
-    for (let i = 0; i < 8; i++) {
-      const ct = 1 - t;
-      const bx = 3 * ct * ct * t * x1 + 3 * ct * t * t * x2 + t * t * t;
-      const dx = 3 * ct * ct * x1 + 6 * ct * t * (x2 - x1) + 3 * t * t * (1 - x2);
-      if (Math.abs(dx) < 1e-6) break;
-      t -= (bx - x) / dx;
-      t = Math.max(0, Math.min(1, t));
-    }
-    const ct = 1 - t;
-    return 3 * ct * ct * t * y1 + 3 * ct * t * t * y2 + t * t * t;
-  };
-}
+/* Spin: fast and smooth, with a long, soft stop (heavy ease-out). A few
+   full turns only — at this speed more turns just strobe. */
+const SPIN_EASE = "cubic-bezier(0.15, 0.75, 0.2, 1)";
+const SPIN_TURNS = 5;
+const SPIN_BASE_MS = 3000;
+const SPIN_EXTRA_MS = 400; // + random 0..400ms so spins don't feel canned
 
-const spinEasingNormal = makeCubicBezier(0.06, 0.9, 0.06, 1.0);
+/* The pointer: one static pin (round head + tapering point, drawn as a true
+   shape so it never distorts), with a slightly darker red circle inset in
+   the head. It does not move or rotate. */
+function WheelPointer({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 28 50" aria-hidden="true" focusable="false">
+      <path d="M14 50L26.9 19.45A14 14 0 1 0 1.1 19.45Z" fill="#ff5b76" />
+      <circle cx="14" cy="14" r="6" fill="#d9415b" />
+    </svg>
+  );
+}
 
 export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
   const { updateBalance } = useAuth();
@@ -63,23 +65,10 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
   const [wheelLayout, setWheelLayout] = useState([]);
 
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
   const [rotation, setRotation] = useState(0);
 
-  const [bounceKey, setBounceKey] = useState(0);
-  const [bounceDuration, setBounceDuration] = useState(350);
-  const pointerTrackRef = useRef({
-    rafId: null,
-    active: false,
-    startTime: 0,
-    duration: 0,
-    fromRot: 0,
-    toRot: 0,
-    segAngle: 36,
-    lastSegIndex: -1,
-  });
 
   const [hoverIdx, setHoverIdx] = useState(null);
   const [hoverMultiplier, setHoverMultiplier] = useState(null);
@@ -89,6 +78,10 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMultiplier, setWinMultiplier] = useState(0);
+
+  // History pills above the wheel (same row as Crash / Dice / Limbo)
+  const { history, push: pushHistory } = useGameHistory("wheel");
 
   const animRef = useRef(0);
   const spinDurationRef = useRef(5000);
@@ -177,95 +170,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
     setCellModalMultiplier(null);
     setShowWinPopup(false);
     setWinAmount(0);
-    setResult(null);
   }, [riskLevel, segments]);
-
-  const stopTracking = useCallback(() => {
-    const t = pointerTrackRef.current;
-    t.active = false;
-    if (t.rafId) {
-      cancelAnimationFrame(t.rafId);
-      t.rafId = null;
-    }
-  }, []);
-
-  const startTracking = useCallback((fromRot, toRot, durationMs, segAngle, easingFn) => {
-    const t = pointerTrackRef.current;
-    if (t.rafId) {
-      cancelAnimationFrame(t.rafId);
-    }
-    t.startTime = 0;
-    t.duration = durationMs;
-    t.fromRot = fromRot;
-    t.toRot = toRot;
-    t.segAngle = segAngle;
-    t.active = true;
-
-    const initNorm = ((fromRot % 360) + 360) % 360;
-    t.lastSegIndex = Math.floor(initNorm / segAngle);
-
-    const totalDelta = Math.abs(toRot - fromRot);
-
-    const loop = (timestamp) => {
-      if (!t.active) return;
-
-      if (t.startTime === 0) {
-        t.startTime = timestamp;
-      }
-
-      const elapsed = timestamp - t.startTime;
-      const progress = Math.min(1, elapsed / t.duration);
-      const eased = easingFn(progress);
-
-      const currentRot = t.fromRot + (t.toRot - t.fromRot) * eased;
-      const norm = ((currentRot % 360) + 360) % 360;
-      const segIdx = Math.floor(norm / t.segAngle);
-
-      if (segIdx !== t.lastSegIndex) {
-        const tiny = 0.001;
-        const p2 = Math.min(1, progress + tiny);
-        const eased2 = easingFn(p2);
-        const localSpeed = Math.abs((eased2 - eased) * totalDelta / (tiny * t.duration));
-
-        const msPerSegment = localSpeed > 0.001 ? t.segAngle / localSpeed : 2000;
-        const dur = Math.round(Math.max(200, Math.min(2500, msPerSegment * 1.2)));
-
-        setBounceDuration(dur);
-        setBounceKey((k) => k + 1);
-      }
-      t.lastSegIndex = segIdx;
-
-      if (progress < 1) {
-        t.rafId = requestAnimationFrame(loop);
-      } else {
-        t.active = false;
-      }
-    };
-
-    t.rafId = requestAnimationFrame(loop);
-  }, []);
-
-  useEffect(() => {
-    return () => stopTracking();
-  }, [stopTracking]);
-
-  /**
-   * TEASE SYSTEM
-   *
-   * Instead of trying to use CSS overshoot (which is unreliable),
-   * we do a TWO-PHASE animation:
-   *
-   * Phase 1: Wheel spins and lands in the GOOD segment (slightly past boundary)
-   * Phase 2: After a pause, wheel slowly drifts BACK into the gray segment
-   *
-   * This is done by:
-   * 1. First setRotation to overshoot target (into good segment)
-   * 2. After the main spin ends, setRotation back to the real target
-   *    with a slow, short transition (the "drift back")
-   *
-   * The player sees: wheel stops on good color → pointer sits there for a moment →
-   * wheel lazily creeps backward → lands on gray. "Nooo!"
-   */
 
   const handleSpin = useCallback(async () => {
     const b = parseFloat(betAmount);
@@ -280,7 +185,6 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
 
     setError("");
     setSpinning(true);
-    setResult(null);
     setShowWinPopup(false);
     setWinAmount(0);
 
@@ -298,9 +202,8 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       const centerOfSegment = landedIndex * segAngle + segAngle / 2;
       const targetRotMod360 = ((360 - centerOfSegment) % 360 + 360) % 360;
 
-      const fullSpins = 12;
       const fromRot = rotation;
-      const durationMs = 5000 + Math.random() * 2000;
+      const durationMs = SPIN_BASE_MS + Math.random() * SPIN_EXTRA_MS;
       spinDurationRef.current = durationMs;
 
       // Add some jitter so it doesn't always land perfectly centered
@@ -311,12 +214,8 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       const currentMod = ((fromRot % 360) + 360) % 360;
       let delta = targetRotMod360 + jitter - currentMod;
       while (delta < 0) delta += 360;
-      delta += fullSpins * 360;
+      delta += SPIN_TURNS * 360;
       const toRot = fromRot + delta;
-
-      // Start tracking for pointer bounces
-      stopTracking();
-      startTracking(fromRot, toRot, durationMs, segAngle, spinEasingNormal);
 
       // Set the rotation - wheel will animate via CSS transition
       setRotation(toRot);
@@ -324,28 +223,32 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       // After spin completes, show result
       setTimeout(() => {
         if (animRef.current !== my) return;
-        stopTracking();
-        setResult(data);
         setSpinning(false);
 
         if (data?.balance != null) updateBalance(data.balance);
 
-        const won = Number(data?.payout || 0) > 0;
+        const payout = Number(data?.payout || 0);
+        const won = payout > 0;
+        pushHistory({
+          roundId: res.data?.round?.round_uuid ?? `wheel-${Date.now()}`,
+          value: Number(data.multiplier) || 0,
+          won,
+        });
         if (won) {
-          setWinAmount(Number(data.payout || 0));
+          setWinAmount(payout);
+          setWinMultiplier(Number(data.multiplier) || (b > 0 ? payout / b : 0));
           setShowWinPopup(true);
           setTimeout(() => {
             if (animRef.current === my) setShowWinPopup(false);
-          }, 1400);
+          }, 1600);
         }
-      }, durationMs + 400);
+      }, durationMs + 120);
 
     } catch (err) {
-      stopTracking();
       setError(err.response?.data?.message || "Spin failed");
       setSpinning(false);
     }
-  }, [betAmount, riskLevel, segments, wheelLayout, rotation, updateBalance, stopTracking, startTracking]);
+  }, [betAmount, riskLevel, segments, wheelLayout, rotation, updateBalance, pushHistory]);
   // Warn before a page refresh while a bet is live (see RefreshGuard).
   useActiveBetFlag("wheel", spinning);
 
@@ -461,13 +364,16 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
         {/* Win popup — direct child of the stage so it is always dead
             centred over the whole game area as a true overlay. */}
         {showWinPopup && winAmount > 0 && (
-          <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>${formatMoney(winAmount)}</div>
-          </div>
+          <WinPopup multiplier={winMultiplier} amount={winAmount} className={styles.winPopup} />
         )}
 
         <div className={styles.boardWrap}>
+          {/* History pills — the Crash row, at the top: each round's multiplier */}
+          <HistoryPills
+            className={styles.historyTop}
+            items={history.map((h) => ({ key: h.roundId, label: `${Number(h.value).toFixed(2)}×`, won: h.won }))}
+          />
+
           <div className={styles.wheelStage}>
 
             {/* .wheelBox is a strict 1:1 square sized from the smaller of the
@@ -475,23 +381,15 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
                 viewport) and the wheel itself fills it, so it can never be
                 stretched into an oval regardless of the panel's proportions. */}
             <div className={styles.wheelBox}>
-              <div
-                key={bounceKey}
-                className={`${styles.pointerWrap} ${bounceKey > 0 ? styles.pointerBounce : ""}`}
-                style={{ "--bounce-duration": `${bounceDuration}ms` }}
-                aria-hidden="true"
-              >
-                <div className={styles.pointerPin} />
-                <div className={styles.pointerDrop} />
+              <div className={styles.pointerWrap} aria-hidden="true">
+                <WheelPointer className={styles.pointerSvg} />
               </div>
 
               <div
                 className={styles.wheelOuter}
                 style={{
                   transform: `rotate(${rotation}deg)`,
-                  transition: spinning
-                    ? `transform ${spinDurationRef.current / 1000}s cubic-bezier(0.06, 0.9, 0.06, 1.0)`
-                    : "none",
+                  transition: spinning ? `transform ${spinDurationRef.current / 1000}s ${SPIN_EASE}` : "none",
                 }}
               >
                 <div className={styles.rim} />
@@ -625,16 +523,6 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
             )}
           </Modal>
 
-          {result && (
-            <div className={styles.resultLine}>
-              <span className={styles.resultKey}>Result:</span>
-              <span className={styles.resultVal}>{Number(result.multiplier).toFixed(2)}×</span>
-              <span className={styles.resultSep}>•</span>
-              <span className={styles.resultVal}>
-                {result.won ? `Won $${formatMoney(result.payout)}` : "No win"}
-              </span>
-            </div>
-          )}
         </div>
           </>
         )}

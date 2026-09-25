@@ -544,30 +544,7 @@
   object-fit: contain;
 }
 
-/* ═══════ Cashout Win Popup — shared overlay (global.css), slightly
-   more compact than the house style; scoped rules keep RPS' look. ═══════ */
-.cashoutPopup {
-  composes: ui-win-popup from global;
-}
-
-.container .cashoutPopup {
-  border-radius: 14px;
-  padding: 14px 20px;
-  min-width: 200px;
-}
-
-.cashoutPopupTitle {
-  composes: ui-win-popup-title from global;
-}
-
-.cashoutPopupAmount {
-  composes: ui-win-popup-amount from global;
-}
-
-/* win status — scoped so it beats the shared green border */
-.cashoutPopup.popupWin {
-  border-color: rgba(0, 231, 1, 0.85);
-}
+/* The cashout win popup is the shared WinPopup (common/WinPopup.jsx). */
 
 /* ═══════ Responsive ═══════ */
 @media (max-width: 900px) {

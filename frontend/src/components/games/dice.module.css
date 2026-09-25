@@ -294,66 +294,22 @@
   cursor: grabbing;
 }
 
-.resultGem {
+/* The result marker is DiceResultCube.jsx (+ diceCube.module.css): a white
+   isometric hexagon sitting on the track above the roll. */
+
+/* History pills — the shared row (HistoryPills.jsx), pinned to the top of
+   the stage so the slider stays centred */
+.historyTop {
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 3px solid #fff;
-  z-index: 20;
-  opacity: 0;
-  transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-}
-
-.resultGem.visible {
-  opacity: 1;
-}
-
-.gemWin {
-  background: var(--accent-green);
-}
-
-.gemLoss {
-  background: var(--accent-red);
-}
-
-.gemInner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-}
-
-.resultValueBubble {
-  position: absolute;
-  top: -55px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-bg-panel);
-  /* sidebar panel */
-  color: var(--color-text-primary);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 16px;
-  border: 2px solid var(--bg-surface);
-  white-space: nowrap;
+  top: var(--stage-pad);
+  left: var(--stage-pad);
+  right: var(--stage-pad);
+  z-index: 2;
 }
 
 /* ✅ Win popup — shared, dead-centre overlay (global.css) */
 .winPopup {
   composes: ui-win-popup from global;
-}
-
-.winPopupTitle {
-  composes: ui-win-popup-title from global;
-}
-
-.winPopupAmount {
-  composes: ui-win-popup-amount from global;
 }
 
 /* Stats panel — shared bottom-anchored panel + surface (global.css).
@@ -368,8 +324,11 @@
   box-shadow: var(--shadow-md);
 }
 
+/* the three fields share the row exactly: a number input's intrinsic width
+   (~150px) must not decide the layout, or the last field spills out */
 .statBox {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .statHeader {
@@ -404,6 +363,8 @@
   font-weight: 700;
   font-size: var(--font-size-control);
   flex: 1;
+  min-width: 0;
+  width: 0;
   outline: none;
 }
 
@@ -489,7 +450,9 @@
 
   .sliderWrapper {
     max-width: 100%;
-    margin: 10px auto 16px auto;
+    /* room above the track for the result hexagon (it stands on the track
+       and reaches above the 0/25/50 labels) so it never touches the pills */
+    margin: 40px auto 16px auto;
   }
 
   .scaleLabels {
@@ -503,6 +466,12 @@
 
   .trackContainer {
     height: 54px;
+  }
+
+  /* phones: the pills row joins the flow at the top of the stage */
+  .container .historyTop {
+    position: static;
+    width: 100%;
   }
 
   /* Make stats panel part of layout instead of overlay —

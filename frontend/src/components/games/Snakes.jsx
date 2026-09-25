@@ -20,6 +20,7 @@ import cashoutSound from "../../assets/snakes/Cashout.mp3";
 import betSound from "../../assets/Bet.mp3";
 import multUpSound from "../../assets/snakes/MultUp.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 import { IconDiceTwo } from "../common/Icons";
 
 const DIFFS = [
@@ -190,6 +191,7 @@ export default function Snakes({ gameRow }) {
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMultiplier, setWinMultiplier] = useState(0);
   const [showLossPopup, setShowLossPopup] = useState(false);
 
   // Audio refs
@@ -738,6 +740,7 @@ export default function Snakes({ gameRow }) {
         if (payout > 0) {
           setShowWinPopup(true);
           setWinAmount(payout);
+          setWinMultiplier(bet > 0 ? payout / bet : 0);
         }
 
         await new Promise((rr) => setTimeout(rr, 1800));
@@ -797,6 +800,7 @@ export default function Snakes({ gameRow }) {
       if (payout > 0) {
         setShowWinPopup(true);
         setWinAmount(payout);
+        setWinMultiplier(bet > 0 ? payout / bet : 0);
 
         await new Promise((rr) => setTimeout(rr, 1800));
         if (animRef.current !== my) return;
@@ -1032,16 +1036,13 @@ export default function Snakes({ gameRow }) {
         {/* Win / loss popups — direct children of the stage so they are
             always dead-centred over the board as true overlays. */}
         {showWinPopup && winAmount > 0 && (
-          <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>${fmt2(winAmount)}</div>
-          </div>
+          <WinPopup multiplier={winMultiplier} amount={winAmount} className={styles.winPopup} />
         )}
 
         {showLossPopup && (
           <div className={styles.lossPopup} role="status" aria-live="polite">
             <div className={styles.lossPopupTitle}>YOU LOST</div>
-            <div className={styles.lossPopupAmount}>-${fmt2(bet)}</div>
+            <div className={styles.lossPopupAmount}>-{fmt2(bet)}<CurrencyIcon /></div>
           </div>
         )}
 

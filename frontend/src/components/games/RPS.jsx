@@ -45,6 +45,7 @@ import ChooseSound from "../../assets/rps/Choose.wav";
 import WinMidRoundSound from "../../assets/rps/winMidRound.mp3";
 import DrawStateSound from "../../assets/rps/drawState.wav";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 
 const FLIP_MS = 650;
 const SLIDE_MS = 380;
@@ -164,6 +165,7 @@ export default function RPS({ gameRow }) {
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMultiplier, setWinMultiplier] = useState(0);
 
   const busyRef = useRef(false);
   const drawTimerRef = useRef(null);
@@ -371,6 +373,7 @@ export default function RPS({ gameRow }) {
       playSound(WinSound);
 
       setWinAmount(payout);
+      setWinMultiplier(Number(r.multiplier) || 0);
       setShowWinPopup(true);
       setTimeout(() => setShowWinPopup(false), 1800);
     } catch (e) {
@@ -468,10 +471,7 @@ export default function RPS({ gameRow }) {
           <>
         {/* Cashout popup — direct child of the stage, dead-centre overlay */}
         {showWinPopup && winAmount > 0 && (
-          <div className={`${styles.cashoutPopup} ${styles.popupWin}`}>
-            <div className={styles.cashoutPopupTitle}>YOU WON</div>
-            <div className={styles.cashoutPopupAmount}>${format2(winAmount)}</div>
-          </div>
+          <WinPopup multiplier={winMultiplier} amount={winAmount} />
         )}
 
         <div className={styles.stageInner}>

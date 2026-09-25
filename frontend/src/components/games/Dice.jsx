@@ -1,5 +1,5 @@
 import Stepper from "../common/Stepper";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import BetLockBadge from "../common/BetLockBadge";
@@ -17,6 +17,10 @@ import dragMp3 from "../../assets/dice/Drag.mp3";
 import winMp3 from "../../assets/dice/Win.mp3";
 import roundMp3 from "../../assets/dice/Round.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
+import HistoryPills from "../common/HistoryPills";
+import useGameHistory from "../../hooks/useGameHistory";
+import DiceResultCube from "./DiceResultCube";
 import { IconArrowClockwise } from "../common/Icons";
 
 function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
@@ -66,14 +70,15 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   }, [betAmount, isLocked, betErrorMessage]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Result State
-  const [lastResult, setLastResult] = useState(null);
-  const [resultPosition, setResultPosition] = useState(50);
-  const [showResult, setShowResult] = useState(false);
+  // Result marker (the white hexagon) — driven imperatively, see DiceResultCube
+  const cubeRef = useRef(null);
+  // History pills above the board (same row as Crash / Wheel / Limbo)
+  const { history, push: pushHistory } = useGameHistory("dice");
 
-  // ✅ Win popup (Limbo-like)
+  // ✅ Win popup
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winPayout, setWinPayout] = useState(0);
+  const [winMultiplier, setWinMultiplier] = useState(0);
 
   // Input States
   const [multiplierInput, setMultiplierInput] = useState("1.9800");
@@ -134,6 +139,9 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     // ✅ Round start sound
     sfx.play("round", { volume: 1 });
 
+    // the marker shrinks to 0.97 on its bottom corner right away …
+    cubeRef.current?.press();
+
     try {
       const response = await gamesAPI.playDice({
         betAmount: amount,
@@ -143,26 +151,25 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       const result = response.data.result;
 
-      // show new roll immediately; set lastResult before animation completes
-      setLastResult(result);
+      // … travels to the roll (showing its live position) and lands
+      await cubeRef.current?.land(result.roll, result.won);
 
-      setShowResult(true);
-      setResultPosition(result.roll);
-
-      // ✅ Wait for result gem movement animation to finish
-      await new Promise((r) => setTimeout(r, 400));
-
-      // ✅ After animation finishes: win sound + win popup
+      // ✅ Landed: win sound + win popup
       if (result?.won) {
         sfx.play("win", { volume: 1 });
         setWinPayout(Number(result.payout || 0));
+        setWinMultiplier(Number(result.multiplier) || (amount > 0 ? Number(result.payout || 0) / amount : 0));
         setShowWinPopup(true);
       }
 
       updateBalance(result.balance);
-
-      if (result.won);
+      pushHistory({
+        roundId: response.data?.round?.round_uuid ?? `dice-${Date.now()}`,
+        value: Number(result.roll),
+        won: Boolean(result.won),
+      });
     } catch (error) {
+      cubeRef.current?.release();
       toast.error(error.response?.data?.message || "Roll failed");
     } finally {
       setIsRolling(false);
@@ -197,7 +204,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     }
 
     setTargetNumber(clampedVal);
-    setShowResult(false);
+    cubeRef.current?.markStale();
 
     // changing target hides prior popup
     setShowWinPopup(false);
@@ -220,7 +227,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       newTarget = clamp(Math.round(newTarget), TARGET_MIN, TARGET_MAX);
       setTargetNumber(newTarget);
       lastDragValueRef.current = newTarget;
-      setShowResult(false);
+      cubeRef.current?.markStale();
 
       setShowWinPopup(false);
       setWinPayout(0);
@@ -243,7 +250,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       newTarget = clamp(Math.round(newTarget), TARGET_MIN, TARGET_MAX);
       setTargetNumber(newTarget);
       lastDragValueRef.current = newTarget;
-      setShowResult(false);
+      cubeRef.current?.markStale();
 
       setShowWinPopup(false);
       setWinPayout(0);
@@ -258,7 +265,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     const rounded = Math.round(val);
     setTargetNumber(rounded);
     lastDragValueRef.current = rounded;
-    setShowResult(false);
+    cubeRef.current?.markStale();
 
     setShowWinPopup(false);
     setWinPayout(0);
@@ -271,7 +278,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     const clamped = clamp(flipped, TARGET_MIN, TARGET_MAX);
     setTargetNumber(clamped);
     lastDragValueRef.current = clamped;
-    setShowResult(false);
+    cubeRef.current?.markStale();
 
     setShowWinPopup(false);
     setWinPayout(0);
@@ -287,11 +294,6 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   // Warn before a page refresh while a bet is live (see RefreshGuard).
   useActiveBetFlag("dice", isRolling);
 
-
-  const gemClass = useMemo(() => {
-    if (!lastResult) return styles.gemLoss;
-    return lastResult.won ? styles.gemWin : styles.gemLoss;
-  }, [lastResult]);
 
   return (
     <div className={styles.container}>
@@ -356,12 +358,15 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-        {/* ✅ Limbo-style win popup */}
+        {/* History pills — same row as Crash / Wheel / Limbo: the ROLL of each round */}
+        <HistoryPills
+          className={styles.historyTop}
+          items={history.map((h) => ({ key: h.roundId, label: Number(h.value).toFixed(2), won: h.won }))}
+        />
+
+        {/* ✅ Win popup */}
         {showWinPopup && (
-          <div className={styles.winPopup}>
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={winMultiplier} amount={winPayout} className={styles.winPopup} />
         )}
 
         <div className={styles.sliderWrapper}>
@@ -404,15 +409,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                   </div>
                 </div>
 
-                <div
-                  className={`${styles.resultGem} ${showResult ? styles.visible : ""} ${gemClass}`}
-                  style={{ left: `${resultPosition}%` }}
-                >
-                  <div className={styles.gemInner}></div>
-                  <div className={styles.resultValueBubble}>
-                    {showResult ? Number(resultPosition).toFixed(2) : ""}
-                  </div>
-                </div>
+                <DiceResultCube ref={cubeRef} />
 
                 <input
                   type="range"
@@ -439,43 +436,46 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
         </div>
 
-        <div className={styles.statsPanel}>
+        {/* Locked while the roll runs: nothing in this row can change mid-round */}
+        <div className={`${styles.statsPanel} ${isRolling ? "ui-stats-locked" : ""}`} aria-disabled={isRolling || undefined}>
           <div className={styles.statBox}>
             <div className={styles.statHeader}>Multiplier</div>
-            <div className={`${styles.statInput} ${styles.editable}`}>
+            <div className={`${styles.statInput} ${styles.editable} ui-stats-field`}>
               <input
                 type="number"
                 value={multiplierInput}
                 onChange={handleMultiplierChange}
                 step="0.0001"
+                disabled={isRolling}
               />
               <span className={styles.statSuffix}>×</span>
-              <Stepper value={multiplierInput} onChange={(v) => handleMultiplierChange({ target: { value: v } })} step={0.01} min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} decimals={4} />
+              <Stepper value={multiplierInput} onChange={(v) => handleMultiplierChange({ target: { value: v } })} step={0.01} min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} decimals={4} disabled={isRolling} />
             </div>
           </div>
 
           <div className={styles.statBox}>
             <div className={styles.statHeader}>Roll {rollUnder ? "Under" : "Over"}</div>
-            <div className={`${styles.statInput} ${styles.editable}`}>
-              <input type="number" value={targetNumber} onChange={handleTargetInputChange} />
-              <button className={styles.swapBtn} onClick={toggleMode} type="button">
+            <div className={`${styles.statInput} ${styles.editable} ui-stats-field`}>
+              <input type="number" value={targetNumber} onChange={handleTargetInputChange} disabled={isRolling} />
+              <button className={styles.swapBtn} onClick={toggleMode} type="button" disabled={isRolling} aria-label={`Switch to roll ${rollUnder ? "over" : "under"}`}>
                 <IconArrowClockwise />
               </button>
-              <Stepper value={targetNumber} onChange={(v) => handleTargetInputChange({ target: { value: v } })} step={1} min={TARGET_MIN} max={TARGET_MAX} decimals={0} />
+              <Stepper value={targetNumber} onChange={(v) => handleTargetInputChange({ target: { value: v } })} step={1} min={TARGET_MIN} max={TARGET_MAX} decimals={0} disabled={isRolling} />
             </div>
           </div>
 
           <div className={styles.statBox}>
             <div className={styles.statHeader}>Win Chance</div>
-            <div className={`${styles.statInput} ${styles.editable}`}>
+            <div className={`${styles.statInput} ${styles.editable} ui-stats-field`}>
               <input
                 type="number"
                 value={winChanceInput}
                 onChange={handleWinChanceChange}
                 step="0.01"
+                disabled={isRolling}
               />
               <span className={styles.statSuffix}>%</span>
-              <Stepper value={winChanceInput} onChange={(v) => handleWinChanceChange({ target: { value: v } })} step={1} min={0.01} max={98} decimals={2} />
+              <Stepper value={winChanceInput} onChange={(v) => handleWinChanceChange({ target: { value: v } })} step={1} min={0.01} max={98} decimals={2} disabled={isRolling} />
             </div>
           </div>
         </div>

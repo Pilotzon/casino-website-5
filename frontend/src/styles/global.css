@@ -261,7 +261,13 @@
      Deliberately green/red: these are game semantics, not chrome. */
   --accent-green: #00e701;
   --accent-red: #FB7984;
+  --accent-orange: #FBA002; /* a push / "money back" outcome (Blackjack) */
   --bitcoin: #fca311;
+
+  /* Win popup (WinPopup.jsx): multiplier / divider / amount */
+  --color-win-popup-bg: #1A3242;
+  --color-win-popup-divider: #415B69;
+  --color-win-popup-border: rgba(0, 172, 0, 0.9);
 
   /* The currency mark (CurrencyIcon: green disc, "$" cut out) — the ONE
      colour every "$" icon on the site uses. */
@@ -1126,18 +1132,57 @@ textarea::placeholder {
   left: 50%;
   transform: translate(-50%, -50%);
   transform-origin: center;
-  background: var(--color-bg-game);
-  /* game grid panel — popup blends with the stage */
-  border: 2px solid rgba(0, 172, 0, 0.9);
+  background: var(--color-win-popup-bg); /* #1A3242 */
+  border: 3px solid var(--color-win-popup-border);
   border-radius: 16px;
-  padding: 18px 24px;
+  padding: 14px 20px 15px;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-  min-width: 240px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  min-width: 184px;
   max-width: calc(100% - 32px);
+  box-sizing: border-box;
   pointer-events: none;
   z-index: 60;
   animation: ui-win-pop 160ms ease-out;
+}
+
+/* WinPopup.jsx layout: multiplier / divider / amount */
+.ui-win-popup-multiplier {
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+  color: var(--accent-green);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ui-win-popup-divider {
+  height: 2px;
+  margin: 11px 0 10px;
+  border-radius: 1px;
+  background: var(--color-win-popup-divider); /* #415B69 */
+}
+
+/* push / lose tones (Blackjack's result popup) */
+.ui-win-popup--push {
+  border-color: var(--accent-orange);
+}
+
+.ui-win-popup--push .ui-win-popup-multiplier {
+  color: var(--accent-orange);
+}
+
+.ui-win-popup--lose {
+  border-color: rgba(241, 44, 76, 0.9);
+}
+
+.ui-win-popup--lose .ui-win-popup-multiplier {
+  color: #f12c4c;
+}
+
+.ui-win-popup--lose .ui-win-popup-amount {
+  color: rgba(255, 255, 255, 0.65);
 }
 
 @keyframes ui-win-pop {
@@ -1161,10 +1206,12 @@ textarea::placeholder {
 }
 
 .ui-win-popup-amount {
-  margin-top: 8px;
-  font-weight: 900;
+  font-weight: 800;
   font-size: 18px;
+  line-height: 1.2;
   color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   /* amount + currency mark (CurrencyIcon, 1em) as one centred row */
   display: flex;
   align-items: center;
@@ -1831,12 +1878,38 @@ html[data-maintenance="on"] .sidebar-bet-button::after {
   height: 12px;
 }
 
-.ui-stepper button:hover {
+.ui-stepper button:hover:not(:disabled) {
   filter: brightness(1.1);
 }
 
-.ui-stepper button:active {
+.ui-stepper button:active:not(:disabled) {
   transform: scale(var(--bet-btn-press-scale));
+}
+
+.ui-stepper button:disabled {
+  cursor: not-allowed;
+}
+
+/* ---- A bottom stats row that is locked while a bet runs (Limbo, Dice) ----
+   Add .ui-stats-locked to the row: every field in it dims and stops taking
+   input (the inputs / steppers are `disabled` too — this is the look). */
+.ui-stats-locked {
+  cursor: not-allowed;
+}
+
+.ui-stats-locked input,
+.ui-stats-locked button {
+  pointer-events: none;
+}
+
+.ui-stats-locked .ui-stats-field {
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+/* the field itself dims — its (disabled) input must not dim a second time */
+.ui-stats-locked .ui-stats-field :disabled {
+  opacity: 1;
 }
 
 /* hide the browser's own spinner wherever a stepper is used */

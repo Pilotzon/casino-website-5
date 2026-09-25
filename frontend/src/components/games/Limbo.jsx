@@ -16,6 +16,42 @@ import useGameAudio from "../../hooks/useGameAudio";
 import limboWinMp3 from "../../assets/limbo/Win.mp3";
 import limboRoundMp3 from "../../assets/limbo/Round.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
+import HistoryPills from "../common/HistoryPills";
+import useGameHistory from "../../hooks/useGameHistory";
+
+/* The big multiplier, one fixed-width SLOT per digit: a narrow "1" and a
+   wide "6" take exactly the same room, so while the number counts up the
+   digits never shove each other around. A new integer digit simply opens
+   one more slot on the left (keys count from the right, so the existing
+   slots keep their identity). Very long results shrink to fit. */
+function SlotNumber({ value, className }) {
+  const text = `${Number(value || 0).toFixed(2)}×`;
+  const chars = text.split("");
+  const scale = chars.length > 8 ? 8 / chars.length : 1;
+  return (
+    <div
+      className={className}
+      style={scale < 1 ? { "--limbo-mult-scale": scale } : undefined}
+      role="img"
+      aria-label={text}
+      data-limbo-number={text}
+    >
+      {chars.map((ch, i) => {
+        const digit = ch >= "0" && ch <= "9";
+        return (
+          <span
+            key={chars.length - i}
+            className={digit ? styles.slotDigit : ch === "." ? styles.slotDot : styles.slotMark}
+            aria-hidden="true"
+          >
+            {ch}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
@@ -60,7 +96,7 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   }, [betAmount, isLocked, betErrorMessage]);
 
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState([]);
+  const { history, push: pushHistory } = useGameHistory("limbo");
 
   const [displayMult, setDisplayMult] = useState(1.0);
   const animTokenRef = useRef(0);
@@ -145,10 +181,15 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         won: res.won,
         payout: res.payout,
         balance: res.balance,
+        target, // what a win pays (payout = bet × target)
       };
 
       setResult(uiRes);
-      setHistory((prev) => [uiRes, ...prev].slice(0, 10));
+      pushHistory({
+        roundId: response.data?.round?.round_uuid ?? `limbo-${Date.now()}`,
+        value: res.multiplier,
+        won: res.won,
+      });
 
       // ✅ after animation: set server-truth balance
       updateBalance(res.balance);
@@ -238,45 +279,27 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-        <div
-          className={`${styles.bigMultiplier} ${result ? (result.won ? styles.bigWin : styles.bigLoss) : ""
-            }`}
-        >
-          {displayMult.toFixed(2)}×
-        </div>
+        {/* History pills — same row as Crash / Wheel / Dice, top of the stage */}
+        <HistoryPills
+          className={styles.historyTop}
+          items={history.map((h) => ({ key: h.roundId, label: `${Number(h.value).toFixed(2)}×`, won: h.won }))}
+        />
+
+        <SlotNumber
+          value={displayMult}
+          className={`${styles.bigMultiplier} ${result ? (result.won ? styles.bigWin : styles.bigLoss) : ""}`}
+        />
 
         {result?.won && (
-          <div className={styles.winPopup}>
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(result.payout).toFixed(2)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={result.target} amount={result.payout} className={styles.winPopup} />
         )}
 
         <div className={styles.bottomStack}>
-          {/* History sits ABOVE the stats panel; invisible (space reserved)
-              until the first round so its appearance never shifts layout. */}
-          <div className={`${styles.recentPanel} ${history.length === 0 ? styles.recentHidden : ""}`}>
-            <div className={styles.recentLabel}>Recent Multipliers</div>
-            <div className={styles.recentRow}>
-              {history.length === 0 ? (
-                <div className={styles.recentEmpty}>—</div>
-              ) : (
-                history.map((h, i) => (
-                  <div
-                    key={i}
-                    className={`${styles.recentChip} ${h.won ? styles.chipWin : styles.chipLoss}`}
-                  >
-                    {Number(h.resultMultiplier).toFixed(2)}×
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className={styles.bottomPanel}>
+          {/* Locked while a bet runs: nothing in this row can change mid-round */}
+          <div className={`${styles.bottomPanel} ${isPlaying ? "ui-stats-locked" : ""}`} aria-disabled={isPlaying || undefined}>
             <div className={styles.bottomBox}>
               <div className={styles.bottomLabel}>Target Multiplier</div>
-              <div className={styles.bottomInputWrap}>
+              <div className={`${styles.bottomInputWrap} ui-stats-field`}>
                 <input
                   className={styles.bottomInput}
                   type="number"
@@ -293,12 +316,13 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
             <div className={styles.bottomBox}>
               <div className={styles.bottomLabel}>Win Chance</div>
-              <div className={styles.bottomInputWrap}>
+              <div className={`${styles.bottomInputWrap} ui-stats-field`}>
                 <input
                   className={styles.bottomInput}
                   type="text"
                   value={winChance.toFixed(2)}
                   readOnly
+                  disabled={isPlaying}
                 />
                 <span className={styles.percentSuffix}>%</span>
               </div>

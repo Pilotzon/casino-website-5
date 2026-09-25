@@ -75,6 +75,14 @@ export const gamesAPI = {
   getGame: (gameName) => api.get(`/games/${gameName}`),
 
   playFlip: (data) => api.post("/games/flip/play", data),
+  // Flip round: bet first, then call heads/tails (repeatable), then cash out
+  startFlip: (data) => api.post("/games/flip/start", data),
+  chooseFlip: (data) => api.post("/games/flip/choose", data),
+  cashoutFlip: (data) => api.post("/games/flip/cashout", data),
+  activeFlip: () => api.get("/games/flip/active"),
+
+  // The player's latest rounds of one game (history pills above the board)
+  getGameHistory: (gameName, params) => api.get(`/games/${gameName}/history`, { params }),
   playDice: (data) => api.post("/games/dice/play", data),
   playLimbo: (data) => api.post("/games/limbo/play", data),
 

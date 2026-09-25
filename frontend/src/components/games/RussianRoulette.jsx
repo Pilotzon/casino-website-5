@@ -24,6 +24,7 @@ import playerBlue from "../../assets/russian-roulette/PlayerBlue.png";
 import playerPurple from "../../assets/russian-roulette/PlayerPurple.png";
 import playerYellow from "../../assets/russian-roulette/PlayerYellow.png";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 
 const PLAYERS = 5;
 const USER_INDEX = 2;
@@ -325,8 +326,8 @@ export default function RussianRoulette({ gameRow }) {
     });
   }, []);
 
-  function showWinPayout(totalPayout) {
-    setWinPopup({ amount: totalPayout });
+  function showWinPayout(totalPayout, totalWager) {
+    setWinPopup({ amount: totalPayout, multiplier: totalWager > 0 ? totalPayout / totalWager : 0 });
     if (winPopupTimer.current) clearTimeout(winPopupTimer.current);
     winPopupTimer.current = setTimeout(() => setWinPopup(null), 2200);
   }
@@ -434,7 +435,7 @@ export default function RussianRoulette({ gameRow }) {
       const totalWager = Number(res.totalWager) || 0;
       const netProfit = Number(res.netProfit);
 
-      if (totalPayout > 0) showWinPayout(totalPayout);
+      if (totalPayout > 0) showWinPayout(totalPayout, totalWager);
 
       // Losing a round is an outcome, not an error — it gets the "Loss" toast.
       if (Number.isFinite(netProfit) && netProfit < 0) {
@@ -688,10 +689,7 @@ export default function RussianRoulette({ gameRow }) {
         {/* Win popup — direct child of the stage (outside the scaled
             scene) so it is always dead-centred at full size. */}
         {winPopup && (
-          <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(winPopup.amount).toFixed(2)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={winPopup.multiplier} amount={winPopup.amount} className={styles.winPopup} />
         )}
 
         <div className={styles.sceneWrap} ref={sceneWrapRef}>

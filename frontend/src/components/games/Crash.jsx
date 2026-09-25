@@ -12,7 +12,7 @@ import useGameAudio from "../../hooks/useGameAudio";
 import crashWinMp3 from "../../assets/crash/Win.mp3";
 import styles from './crash.module.css';
 import CurrencyIcon from "../common/CurrencyIcon";
-import { IconArticle } from "../common/Icons";
+import HistoryPills from "../common/HistoryPills";
 
 /**
  * ===========================================================================
@@ -265,7 +265,6 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const roundIdRef = useRef(null);                 // round currently on the board
   const cooldownActiveRef = useRef(false);
   const lastFrameAtRef = useRef(0);                // render-pump watchdog
-  const historyScrollRef = useRef(null);           // horizontal pill scroller (mobile)
   const axisRowRef = useRef(null);                 // X axis row (tick clearance)
   const axisClockRef = useRef(null);               // "Total Ns" label in that row
 
@@ -817,17 +816,6 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     [dispX, compactAxis, tickLimit]
   );
 
-  // When the pill row is scrollable (phones), a newly added round must stay in
-  // view: scroll the freshest pill back into the right-hand edge.
-  useEffect(() => {
-    const el = historyScrollRef.current;
-    if (!el || el.scrollWidth <= el.clientWidth + 1) return;
-    const newest = el.firstElementChild?.firstElementChild;
-    if (newest && typeof newest.scrollIntoView === 'function') {
-      newest.scrollIntoView({ inline: 'nearest', block: 'nearest' });
-    }
-  }, [history]);
-
   const cooldownLeft = Math.max(0, cooldownEndsAt - nowServer);
   const inCooldown = cooldownLeft > 0;
   // "Total Ns" — NOT part of the chart axis: it is the elapsed time OF THE
@@ -1042,26 +1030,11 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-            {/* History pills — newest at the right, older continue to the left.
-                On phones the wrapper scrolls sideways instead of clipping. */}
-            <div className={styles.historyRow}>
-              <div className={styles.historyScroll} ref={historyScrollRef}>
-                <div className={styles.historyPills}>
-                  {history.map((h) => (
-                    <span
-                      key={`${h.roundId}-${h.at}`}
-                      className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
-                    >
-                      {fmt(h.value)}×
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <button className={styles.historyIcon} type="button" aria-label="My bets">
-                <IconArticle size={18} />
-              </button>
-              <span className={styles.historyYou}>‹ You</span>
-            </div>
+            {/* History pills — the shared row (common/HistoryPills.jsx): newest
+                at the right, older continue to the left; phones scroll it. */}
+            <HistoryPills
+              items={history.map((h) => ({ key: `${h.roundId}-${h.at}`, label: `${fmt(h.value)}×`, won: h.won }))}
+            />
 
             {/* Round clock, phone layout only: top right, right under the pills
                 (on desktop it lives at the end of the X axis row instead). */}

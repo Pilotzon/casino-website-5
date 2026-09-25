@@ -191,49 +191,27 @@
   }
 }
 
+/* ---- Tile = a button holding two layers ----
+   .hole  — the dark pit (+ the gem / mine), one bevel LOWER than the tile
+   .cover — the #2F4553 face with its bevel; it hides the hole until opened
+   The button itself paints nothing, so the hover lift shows only the cover
+   moving (the pit is invisible until the tile is clicked). */
 .tile {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
+  padding: 0;
   border: none;
   outline: none;
-  cursor: pointer;
+  background: transparent;
   border-radius: var(--mines-tile-radius);
-
-  background-color: var(--mines-tile-face);
-  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
-
-  /* CHANGED: Added transition for transform/shadow/bg-color 
-     This handles the reset animation when starting a new game.
-  */
-  transition: transform 0s ease, box-shadow 0s ease, background-color 0.35s ease;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 5.5px;
-}
-
-/* Hover: LEVITATE THE WHOLE TILE 
-   Transition here can be 'none' or '0.1s' for responsiveness. 
-   Keeping it short so clicking feels snappy.
-*/
-.tile:not(.tileRevealed):hover {
-  background-color: var(--mines-tile-hover);
-  transform: translateY(-3.5px);
-  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
   cursor: pointer;
-  transition: transform 0s ease, box-shadow 0s ease;
+  margin-bottom: 5.5px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Active (Click): UNREVEALED TILE
-   Instantly snaps back.
-*/
-.tile:not(.tileRevealed):active {
-  background-color: var(--mines-tile-hover);
-  transform: translateY(0) scale(1);
-  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
-  transition: none;
+.tile:active {
+  transform: none; /* never the generic button press zoom */
 }
 
 .tile:disabled {
@@ -241,63 +219,138 @@
   opacity: 1;
 }
 
-/* Revealed: Becomes a hole sitting on the "ground" */
-.tileRevealed {
-  background-color: var(--mines-tile-hole);
-  box-shadow: 0 0 0 var(--mines-tile-shadow);
-  /* Shrink shadow to zero */
-  transform: translateY(var(--mines-base-height));
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  cursor: default;
+.tile:focus-visible .cover {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
 }
 
-/* Active (Click): REVEALED TILE (Mines/Gems)
-   Forced scale(1) to stop the global button zoom.
-*/
-.tileRevealed:active {
-  transform: translateY(var(--mines-base-height)) scale(1);
+.hole {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--mines-tile-radius);
+  background: var(--mines-tile-hole);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  /* the pit sits where the bottom of the bevel was */
+  transform: translateY(var(--mines-base-height));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tilePending .hole,
+.tileRevealed .hole {
+  opacity: 1;
+}
+
+.cover {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--mines-tile-radius);
+  background-color: var(--mines-tile-face);
+  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
+  transform-origin: 50% 50%; /* every scale is anchored at the exact centre */
+  transition: transform 0s ease, background-color 0.35s ease;
+  pointer-events: none;
+  /* new round: the covers drop back onto the board (no fill mode, so the
+     hover transform below is never pinned by a finished animation) */
+  animation: minesCoverIn 240ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+/* Hover (unchanged): the tile levitates and lightens — instant */
+.tile:not(.tileRevealed):not(.tilePending):hover .cover {
+  background-color: var(--mines-tile-hover);
+  transform: translateY(-3.5px);
+  transition: transform 0s ease, box-shadow 0s ease;
+}
+
+/* Press: snaps back down instantly */
+.tile:not(.tileRevealed):not(.tilePending):active .cover {
+  background-color: var(--mines-tile-hover);
+  transform: translateY(0) scale(1);
   transition: none;
 }
 
-/* Icon / Gem / Mine Animation */
+/* 1) Clicked: the cover lifts to 1.03 (held until the server answers) */
+.tilePending .cover {
+  background-color: var(--mines-tile-hover);
+  transform: scale(1.03);
+  transition: transform 150ms cubic-bezier(0.25, 0.8, 0.35, 1), background-color 120ms ease;
+  animation: none;
+}
+
+/* 2) Opened: 1.03 -> 0 around the centre (the player's own pick keeps the
+      lifted colour, so nothing jumps between the two steps) */
+.tileRevealed .cover {
+  background-color: var(--mines-tile-hover);
+  transform: scale(0);
+  transition: none;
+  animation: minesCoverOut 190ms cubic-bezier(0.4, 0, 0.7, 0.45) var(--reveal-delay, 0ms) both;
+}
+
+/* …and when the end-of-round reveal opens a tile: 1 -> 1.03 -> 0 */
+.tileAuto .cover {
+  background-color: var(--mines-tile-face);
+  animation: minesCoverPop 270ms cubic-bezier(0.4, 0, 0.7, 0.45) var(--reveal-delay, 0ms) both;
+}
+
+/* 3) The gem / mine scales up out of the hole once the cover is gone */
 .icon {
   width: 60%;
   height: 60%;
   object-fit: contain;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
-
-  /* The ONLY smooth animation: Zoom In */
-  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transform-origin: 50% 50%;
+  user-select: none;
+  -webkit-user-drag: none;
+  animation: minesIconIn 320ms cubic-bezier(0.175, 0.885, 0.32, 1.275) calc(var(--reveal-delay, 0ms) + 160ms) both;
 }
 
-/* ✅ Win popup — shared, dead-centre overlay (global.css).
-   Scoped rule keeps Mines' signature 3px border. */
+.tileAuto .icon {
+  animation-delay: calc(var(--reveal-delay, 0ms) + 220ms);
+}
+
+/* Round over: tiles the player did NOT open are shown at 70% */
+.tileRevealed.tileDim .hole {
+  opacity: 0.7;
+}
+
+@keyframes minesCoverIn {
+  from { transform: scale(0.94); opacity: 0.35; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes minesCoverOut {
+  from { transform: scale(1.03); }
+  to { transform: scale(0); }
+}
+
+@keyframes minesCoverPop {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.03); }
+  100% { transform: scale(0); }
+}
+
+@keyframes minesIconIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover,
+  .tileRevealed .cover,
+  .tileAuto .cover,
+  .icon {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+
+/* ✅ Win popup — the shared WinPopup (common/WinPopup.jsx), dead-centre */
 .winPopup {
   composes: ui-win-popup from global;
-}
-
-.container .winPopup {
-  border: 3px solid rgb(0, 187, 0);
-}
-
-.winPopupTitle {
-  composes: ui-win-popup-title from global;
-}
-
-.winPopupAmount {
-  composes: ui-win-popup-amount from global;
-}
-
-@keyframes zoomIn {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 @media (max-width: 900px) {
@@ -320,29 +373,6 @@
     max-width: 100%;
     gap: 12px;
   }
-}
-
-/* ========================================= */
-/* LOSS DARKENING (AFTER HIT MINE)            */
-/* ========================================= */
-
-/* Darken ONLY the unrevealed tiles after losing */
-.gridLost .tile:not(.tileRevealed) {
-  background-color: #1a2f3b;
-  /* darker than --mines-tile-face */
-  box-shadow: 0 var(--mines-base-height) 0 #162a34;
-  /* darker base */
-  filter: saturate(0.85) brightness(0.95);
-}
-
-/* Keep holes slightly dim too (optional, matches "lost" feel) */
-.gridLost .tileRevealed {
-  filter: brightness(0.92);
-}
-
-/* Keep icons readable */
-.gridLost .icon {
-  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6));
 }
 
 /* ===== Mobile polish (Mines) ===== */

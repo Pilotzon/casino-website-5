@@ -233,11 +233,12 @@ function Navigation() {
             )}
           </div>
 
+          {/* The balance box sits dead-centre in the bar (its own grid column) */}
+          <div className={styles.center}>{isAuthenticated ? <BalanceBox /> : null}</div>
+
           <div className={styles.actions}>
             {isAuthenticated ? (
               <>
-                <BalanceBox />
-
                 <div className={styles.user}>
                   <span className={styles.username}>{user?.username}</span>
                   <Button variant="secondary" size="sm" className={styles.authBtn} onClick={handleLogout}>

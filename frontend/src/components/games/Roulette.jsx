@@ -27,6 +27,7 @@ import chip1000 from "../../assets/roulette/Chip1000.png";
 import chip5000 from "../../assets/roulette/Chip5000.png";
 import chip10000 from "../../assets/roulette/Chip10000.png";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 import { IconCaretLeft, IconCaretRight, IconUndo, IconX } from "../common/Icons";
 
 // ============================================================
@@ -318,6 +319,7 @@ export default function Roulette({ gameRow }) {
   const [shownResult, setShownResult] = useState(null);
   const [winningNumber, setWinningNumber] = useState(null);
   const [lastPayout, setLastPayout] = useState(0);
+  const [lastMultiplier, setLastMultiplier] = useState(0);
   const [showWinPopup, setShowWinPopup] = useState(false);
   const winPopupTimer = useRef(null);
   const [historyShown, setHistoryShown] = useState([]);
@@ -659,6 +661,7 @@ export default function Roulette({ gameRow }) {
 
       if (payout > 0) {
         setLastPayout(payout);
+        setLastMultiplier(totalBet > 0 ? payout / totalBet : 0);
         setShowWinPopup(true);
         winPopupTimer.current = setTimeout(() => setShowWinPopup(false), WIN_POPUP_DURATION);
       }
@@ -790,10 +793,7 @@ export default function Roulette({ gameRow }) {
           <>
         {/* Win popup — direct child of the stage, dead-centre overlay */}
         {showWinPopup && (
-          <div className={styles.winPopup}>
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(lastPayout).toFixed(2)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={lastMultiplier} amount={lastPayout} className={styles.winPopup} />
         )}
 
         <div className={styles.stageCard}>

@@ -14,13 +14,14 @@ export default function Stepper({ value, onChange, step = 1, min, max, decimals,
     if (max != null) next = Math.min(max, next);
     onChange(next.toFixed(d));
   };
-  if (disabled) return null;
+  // Disabled (e.g. mid-bet): the column stays put, dimmed and inert — it
+  // never vanishes, so nothing in the field shifts while a round runs.
   return (
-    <div className="ui-stepper" aria-hidden="false">
-      <button type="button" onClick={() => bump(1)} aria-label="Increase" tabIndex={-1}>
+    <div className={`ui-stepper${disabled ? " ui-stepper--disabled" : ""}`} aria-hidden="false">
+      <button type="button" onClick={() => bump(1)} aria-label="Increase" tabIndex={-1} disabled={disabled}>
         <IconPlus />
       </button>
-      <button type="button" onClick={() => bump(-1)} aria-label="Decrease" tabIndex={-1}>
+      <button type="button" onClick={() => bump(-1)} aria-label="Decrease" tabIndex={-1} disabled={disabled}>
         <IconMinus />
       </button>
     </div>

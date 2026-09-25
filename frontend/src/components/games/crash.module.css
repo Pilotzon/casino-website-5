@@ -88,85 +88,8 @@
   overflow: hidden;
 }
 
-/* History pills row — top of the stage.
-   Newest pill sits at the TOP RIGHT; older rounds continue to the left and
-   simply fall off the (faded) left edge. */
-.historyRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  margin-bottom: 10px;
-  min-width: 0;
-}
-/* Scroller around the pills. Desktop keeps the old behaviour (the row simply
-   runs past the left edge); on phones it becomes a real horizontal scroller —
-   see the media query below. */
-.historyScroll {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-}
-.historyPills {
-  display: flex;
-  flex-direction: row-reverse;   /* start at the right, continue left */
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  width: 100%;
-  min-width: 0;
-  /* fade the OLD end (left) instead of the new end (right) */
-  mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
-}
-.histPill { direction: ltr; }
-.histPill {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 56px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: var(--radius-pill);
-  font-size: var(--font-size-control);
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  animation: histPop 260ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
-}
-.histGreen {
-  background: var(--accent-green);
-  color: #07210f;
-}
-.histGray {
-  background: #2f4553;
-  color: #fff;
-}
-@keyframes histPop {
-  from { transform: translateX(12px) scale(0.94); opacity: 0; }
-  to   { transform: translateX(0) scale(1); opacity: 1; }
-}
-.historyIcon {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-pill);
-  background: #2f4553;
-  color: #fff;
-  cursor: pointer;
-  transition: filter 140ms ease, transform 100ms ease;
-}
-.historyIcon:hover { filter: brightness(1.1); }
-.historyIcon:active { transform: scale(0.96); }
-.historyYou {
-  flex: 0 0 auto;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-control);
-  font-weight: 600;
-}
+/* History pills row — the shared component (common/HistoryPills.jsx +
+   historyPills.module.css), the same row Wheel, Dice and Limbo use. */
 
 /* Chart layout */
 .chartWrap {
@@ -388,34 +311,7 @@
     padding: 12px;
   }
 
-  /* --- history pills: horizontal scroller, newest at the right --- */
-  .historyRow { margin-bottom: 8px; gap: 6px; }
-  .historyScroll {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
-    padding-bottom: 4px;
-  }
-  .historyScroll::-webkit-scrollbar { height: 5px; }
-  .historyScroll::-webkit-scrollbar-track { background: transparent; }
-  .historyScroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.28);
-    border-radius: 3px;
-  }
-  /* RTL row = items still start at the RIGHT (newest first) but overflow
-     grows to the left in the normal inline direction, which is what makes
-     the scroller behave the same in every browser. */
-  .historyPills {
-    flex-direction: row;
-    direction: rtl;
-    mask-image: none;
-    -webkit-mask-image: none;
-  }
-  .histPill { min-width: 58px; height: 34px; padding: 0 13px; font-size: 16px; }
-  .historyIcon { width: 36px; height: 34px; }
-  .historyYou { font-size: 16px; }
+  /* (the history pills scroller lives in historyPills.module.css) */
 
   /* --- round clock: top right, under the pills (the axis row loses it, so the
          X ticks get the whole row width on a phone) --- */

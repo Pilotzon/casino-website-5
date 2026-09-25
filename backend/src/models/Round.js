@@ -130,6 +130,43 @@ class Round {
     return round;
   }
 
+  /**
+   * One player's latest rounds of ONE game, newest first (history pills).
+   * `outcome` is returned parsed.
+   */
+  static getUserGameRounds(userId, gameName, limit = 20) {
+    const rows = db.prepare(`
+      SELECT r.id, r.round_uuid, r.bet_amount, r.payout_amount, r.multiplier,
+             r.outcome, r.created_at
+        FROM rounds r
+        JOIN games g ON g.id = r.game_id
+       WHERE r.user_id = ? AND g.name = ?
+       ORDER BY r.id DESC
+       LIMIT ?
+    `).all(userId, gameName, limit);
+    return rows.map((row) => {
+      let outcome = {};
+      try { outcome = JSON.parse(row.outcome) || {}; } catch { outcome = {}; }
+      return { ...row, outcome };
+    });
+  }
+
+  /**
+   * The newest round of one game for one player (full row, parsed like
+   * findById) — used to find a multi-step round that is still open.
+   */
+  static findLatestUserGameRound(userId, gameName) {
+    const row = db.prepare(`
+      SELECT r.id
+        FROM rounds r
+        JOIN games g ON g.id = r.game_id
+       WHERE r.user_id = ? AND g.name = ?
+       ORDER BY r.id DESC
+       LIMIT 1
+    `).get(userId, gameName);
+    return row ? this.findById(row.id) : null;
+  }
+
   static getUserRounds(userId, limit = 50, offset = 0) {
     return db.prepare(`
       SELECT

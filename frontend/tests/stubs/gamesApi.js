@@ -1,6 +1,7 @@
 /**
- * Test double for `src/services/api.js` — only the crash endpoints matter for
- * the board tests. `__api` lets a test drive the server side directly.
+ * Test double for `src/services/api.js` — the crash endpoints for the board
+ * tests, plus the game endpoints the site-wide suite drives (flip, limbo,
+ * dice, mines, history pills). `__api` lets a test play the server side.
  */
 export const __api = {
   last: null, state: null, start: null, cashout: null, stop: null,
@@ -26,7 +27,37 @@ function respond(key) {
   return Promise.resolve(finish());
 }
 
+/* Raw bodies for the endpoints whose callers read `res.data.<field>` directly
+   (flip / limbo / dice / mines): `__api[key]` is the whole response body, a
+   function of the request data, or `{ __error }` to reject. */
+function respondRaw(key, args) {
+  __api.calls.push(key);
+  (__api.args[key] = __api.args[key] || []).push(args);
+  let v = __api[key];
+  if (typeof v === 'function') v = v(args);
+  const d = __api.delay[key] || 0;
+  const finish = () => (v && v.__error ? Promise.reject(v.__error) : Promise.resolve({ data: v }));
+  return d > 0 ? new Promise((r) => setTimeout(r, d)).then(finish) : finish();
+}
+__api.args = {};
+
 export const gamesAPI = {
+  // the history pills above the board (useGameHistory): rows in `__api.history`
+  getGameHistory: (game, params) => {
+    (__api.args.history = __api.args.history || []).push([game, params]);
+    return respond('history');
+  },
+  // Coin Flip rounds
+  startFlip: (d) => respondRaw('flipStart', d),
+  chooseFlip: (d) => respondRaw('flipChoose', d),
+  cashoutFlip: (d) => respondRaw('flipCashout', d),
+  activeFlip: () => respondRaw('flipActive'),
+  // single-shot games + mines
+  playLimbo: (d) => respondRaw('limbo', d),
+  playDice: (d) => respondRaw('dice', d),
+  startMines: (d) => respondRaw('minesStart', d),
+  revealMinesCell: (d) => respondRaw('minesReveal', d),
+  cashoutMines: (d) => respondRaw('minesCashout', d),
   crashLast: () => respond('last'),
   // record the options so tests can assert the live long-poll (`hold`) wiring
   crashState: (opts) => {

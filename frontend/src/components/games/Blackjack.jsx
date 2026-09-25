@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import BetLockBadge from "../common/BetLockBadge";
@@ -33,15 +33,36 @@ import flipMp3 from "../../assets/blackjack/Flip.mp3";
 
 import useGameAudio from "../../hooks/useGameAudio";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 
 const BJ_START_URL = "/api/games/blackjack/start";
 const BJ_ACTION_URL = "/api/games/blackjack/action";
 
-// animation timings (match CSS)
-const DEAL_MS = 520;
-const DEAL_STAGGER = 120;
-const FLIP_MS = 650;
-const FLIP_TOTAL_OFFSET_MS = 200;
+/* ============================================================================
+ * Deal choreography (ms)
+ *
+ * Every card leaves the deck (top right) face-down, slides to its place and
+ * only turns over once it has landed. The opening deal goes player, dealer,
+ * player, dealer — the dealer's second card (the hole card) stays down until
+ * the settlement turns it over in place, then the dealer draws.
+ * ==========================================================================*/
+export const DEAL_GAP_MS = 180; // between consecutive cards of one deal
+export const DEAL_MOVE_MS = 380; // deck -> place
+export const DEAL_FLIP_MS = 280; // turn-over after landing
+export const REVEAL_FLIP_MS = 420; // the hole card turning over at settlement
+const REVEAL_PAUSE_MS = 140; // beat between the player's last card and the reveal
+const DRAW_PAUSE_MS = 120; // beat between the reveal and the dealer's draws
+const RESULT_PAUSE_MS = 180; // last card face-up -> result popup
+// a turning card counts towards its total once its face is showing — the
+// turn eases out, so the face is up well before the transition ends
+const FACE_SHOWN_AT = 0.6;
+const DEAL_EASE = "cubic-bezier(0.25, 0.8, 0.3, 1)";
+
+// Where the top card sits on the deck art (deckentity.png, 126×60): it spans
+// the full image width and its bottom edge is 72% of the way down — a dealt
+// card starts exactly on top of it, so it reads as lifting off the deck.
+const DECK_CARD_WIDTH = 1;
+const DECK_CARD_BOTTOM = 0.72;
 
 function isRedSuit(s) {
   return s === "hearts" || s === "diamonds";
@@ -58,17 +79,30 @@ function toUiCard(c) {
   if (!c) return null;
   if (c.hidden) return { hidden: true };
   return {
-    id: c.id,
     r: c.r ?? c.rank ?? c.value,
     s: c.s ?? c.suit,
     hidden: false,
   };
 }
 
-function cardKey(c, i) {
-  if (!c) return `x-${i}`;
-  if (c.hidden) return `hidden-${i}`;
-  return c.id ?? `${c.r}-${c.s}-${i}`;
+/* A round is dealt from ONE shuffled 52-card deck, so rank + suit is unique
+ * within a round and makes a stable identity: a card keeps its key when a
+ * split moves it to the new hand (so it is not dealt a second time), and the
+ * dealer's hole card keeps its slot key while it turns over. */
+function keyDealer(hand, roundId) {
+  return (hand ?? [])
+    .map(toUiCard)
+    .filter(Boolean)
+    .map((c, i) => ({ ...c, key: i === 1 ? `d-hole-${roundId}` : `d-${roundId}-${c.r}${c.s}` }));
+}
+
+function keyHands(hands, roundId) {
+  return (hands ?? [[]]).map((hand) =>
+    (hand ?? [])
+      .map(toUiCard)
+      .filter(Boolean)
+      .map((c, i) => ({ ...c, key: c.hidden ? `p-${roundId}-hidden-${i}` : `p-${roundId}-${c.r}${c.s}` }))
+  );
 }
 
 function summarizeResult(handOutcomes, totalPayout) {
@@ -82,28 +116,32 @@ function sum(arr) {
   return (arr || []).reduce((a, b) => a + (Number(b) || 0), 0);
 }
 
-function rankValue(r) {
-  if (r === "A") return 11;
+function rankPoints(r) {
+  if (r === "A") return 1;
   if (["K", "Q", "J"].includes(r)) return 10;
   const n = Number(r);
   return Number.isFinite(n) ? n : 0;
 }
 
-function handTotalUi(hand) {
-  let total = 0;
+/**
+ * The total label for a hand (face-up cards only).
+ * A soft hand shows both totals — "7, 17" for A+6 — until it is decided:
+ * a soft 21 is just "21", and a finished hand shows its best total.
+ */
+export function handTotalLabel(cards, final = false) {
+  let low = 0;
   let aces = 0;
-
-  for (const c of hand || []) {
-    total += rankValue(c?.r);
-    if (c?.r === "A") aces += 1;
+  let count = 0;
+  for (const c of cards || []) {
+    if (!c || c.hidden || !c.r) continue;
+    count += 1;
+    low += rankPoints(c.r);
+    if (c.r === "A") aces += 1;
   }
-
-  while (total > 21 && aces > 0) {
-    total -= 10;
-    aces -= 1;
-  }
-
-  return total;
+  if (count === 0) return null;
+  const high = aces > 0 && low + 10 <= 21 ? low + 10 : low;
+  if (high !== low && high !== 21 && !final) return `${low}, ${high}`;
+  return String(high);
 }
 
 export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
@@ -132,30 +170,14 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   const [betError, setBetError] = useState(null);
 
   // inline bet errors clear themselves as soon as they are resolved
-
   useEffect(() => {
-
     setBetError((cur) => {
-
       if (!cur) return cur;
-
       if (cur === "Log in to place a bet") return isAuthenticated ? null : cur;
-
       const amt = parseFloat(betAmount) || 0;
-
       return amt > 0 && amt <= (user?.balance ?? 0) ? null : cur;
-
     });
-
   }, [betAmount, isAuthenticated, user?.balance]);
-  const revealTimerRef = useRef(null);
-  const dealerTotalTimersRef = useRef([]);
-
-  // ✅ Card deal sound timers (initial deal)
-  const dealSoundTimersRef = useRef([]);
-
-  // ✅ Dealer draw/flip sound timers (after stand / settlement)
-  const dealerSoundTimersRef = useRef([]);
 
   const [ui, setUi] = useState(() => ({
     phase: "idle", // idle | playerTurn | settled
@@ -165,12 +187,8 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     playerHands: [[]],
     activeHandIndex: 0,
 
-    handTotals: [],
     handBets: [],
     handOutcomes: [],
-
-    dealerShownTotal: 0,
-    dealerTotal: 0,
 
     settled: false,
     payout: 0,
@@ -180,14 +198,47 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     showResult: false,
     resultStatus: null, // "win" | "lose" | "push"
     resultPayout: 0,
-    pendingOutcomes: null,
-    pendingPayout: 0,
   }));
+
+  // ---- deal timeline -------------------------------------------------------
+  const deckRef = useRef(null);
+  const knownRef = useRef(new Set()); // card keys already dealt this round
+  const planRef = useRef(new Map()); // key -> { delay } | { flipDelay } for the latest update
+  const holeDownRef = useRef(false); // the dealer's hole card is lying face-down
+  const dealClockRef = useRef(0); // performance.now() at which the running deal ends
+  const timersRef = useRef([]);
+  const [revealed, setRevealed] = useState(() => new Set()); // face-up (counted) card keys
+  const [animating, setAnimating] = useState(false);
+
+  const clearTimeline = () => {
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current = [];
+  };
+
+  useEffect(() => () => clearTimeline(), []);
+
+  const markRevealed = (key) =>
+    setRevealed((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+
+  const resetTable = () => {
+    clearTimeline();
+    knownRef.current = new Set();
+    planRef.current = new Map();
+    holeDownRef.current = false;
+    dealClockRef.current = 0;
+    setRevealed(new Set());
+    setAnimating(false);
+  };
 
   const bet = useMemo(() => Number.parseFloat(betAmount) || 0, [betAmount]);
 
-  const canDeal = !ui.busy && (ui.phase === "idle" || ui.phase === "settled");
-  const canAct = !ui.busy && ui.phase === "playerTurn" && !ui.settled;
+  const canDeal = !ui.busy && !animating && (ui.phase === "idle" || ui.phase === "settled");
+  const canAct = !ui.busy && !animating && ui.phase === "playerTurn" && !ui.settled;
 
   const activeHand = ui.playerHands?.[ui.activeHandIndex] ?? [];
 
@@ -253,143 +304,12 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     return data;
   };
 
-  const clearDealerTotalTimers = () => {
-    dealerTotalTimersRef.current.forEach((t) => clearTimeout(t));
-    dealerTotalTimersRef.current = [];
-  };
-
-  const clearDealSoundTimers = () => {
-    dealSoundTimersRef.current.forEach((t) => clearTimeout(t));
-    dealSoundTimersRef.current = [];
-  };
-
-  const clearDealerSoundTimers = () => {
-    dealerSoundTimersRef.current.forEach((t) => clearTimeout(t));
-    dealerSoundTimersRef.current = [];
-  };
-
-  const scheduleDealSounds = (gs) => {
-    clearDealSoundTimers();
-
-    const dealerCount = (gs?.dealerHand ?? []).length;
-    const playerCount = sum((gs?.playerHands ?? [[]]).map((h) => h?.length ?? 0));
-    const totalCards = dealerCount + playerCount;
-
-    for (let i = 0; i < totalCards; i++) {
-      dealSoundTimersRef.current.push(
-        setTimeout(() => {
-          sfx.play("card", { volume: 1 });
-        }, i * DEAL_STAGGER)
-      );
-    }
-  };
-
-  const scheduleDealerRevealSounds = ({ gs, hadHoleCardHidden }) => {
-    clearDealerSoundTimers();
-
-    const dealerCount = (gs?.dealerHand ?? []).length;
-
-    if (hadHoleCardHidden) {
-      dealerSoundTimersRef.current.push(
-        setTimeout(() => {
-          sfx.play("flip", { volume: 1 });
-        }, 0)
-      );
-
-      for (let i = 2; i < dealerCount; i++) {
-        const delay = FLIP_TOTAL_OFFSET_MS + (i - 1) * DEAL_STAGGER;
-        dealerSoundTimersRef.current.push(
-          setTimeout(() => {
-            sfx.play("card", { volume: 1 });
-          }, delay)
-        );
-      }
-    } else {
-      for (let i = 1; i < dealerCount; i++) {
-        const delay = DEAL_MS + i * DEAL_STAGGER;
-        dealerSoundTimersRef.current.push(
-          setTimeout(() => {
-            sfx.play("card", { volume: 1 });
-          }, delay)
-        );
-      }
-    }
-  };
-
-  const scheduleDealerTotalCountUp = ({ gs, hadHoleCardHidden }) => {
-    clearDealerTotalTimers();
-
-    const dealer = (gs.dealerHand ?? []).map(toUiCard).filter(Boolean);
-    if (dealer.length === 0) return;
-
-    if (hadHoleCardHidden) {
-      dealerTotalTimersRef.current.push(
-        setTimeout(() => {
-          setUi((prev) => ({
-            ...prev,
-            dealerShownTotal: handTotalUi(dealer.slice(0, Math.min(2, dealer.length))),
-          }));
-        }, FLIP_TOTAL_OFFSET_MS)
-      );
-
-      for (let i = 2; i < dealer.length; i++) {
-        const delay = FLIP_TOTAL_OFFSET_MS + (i - 1) * DEAL_STAGGER;
-
-        dealerTotalTimersRef.current.push(
-          setTimeout(() => {
-            setUi((prev) => ({
-              ...prev,
-              dealerShownTotal: handTotalUi(dealer.slice(0, i + 1)),
-            }));
-          }, delay)
-        );
-      }
-
-      return;
-    }
-
-    for (let i = 1; i < dealer.length; i++) {
-      const delay = DEAL_MS + i * DEAL_STAGGER;
-
-      dealerTotalTimersRef.current.push(
-        setTimeout(() => {
-          setUi((prev) => ({
-            ...prev,
-            dealerShownTotal: handTotalUi(dealer.slice(0, i + 1)),
-          }));
-        }, delay)
-      );
-    }
-  };
-
-  const scheduleReveal = ({ gs, outcomes, payout, hadHoleCardHidden }) => {
-    if (revealTimerRef.current) {
-      clearTimeout(revealTimerRef.current);
-      revealTimerRef.current = null;
-    }
-
-    const { status, payout: summaryPayout } = summarizeResult(outcomes, payout);
-
-    const maxCards = Math.max(0, ...(gs.playerHands ?? [[]]).map((h) => (h?.length ?? 0)));
-    const dealDelay = DEAL_MS + Math.max(0, maxCards - 1) * DEAL_STAGGER;
-
-    const delay = hadHoleCardHidden ? FLIP_MS : dealDelay;
-
-    revealTimerRef.current = setTimeout(() => {
-      if (status === "win") sfx.play("win", { volume: 1 });
-      else if (status === "lose") sfx.play("lose", { volume: 1 });
-
-      setUi((prev) => ({
-        ...prev,
-        showResult: true,
-        resultStatus: status,
-        resultPayout: summaryPayout,
-        handOutcomes: prev.pendingOutcomes ?? prev.handOutcomes,
-      }));
-      revealTimerRef.current = null;
-    }, delay);
-  };
-
+  /**
+   * Apply a server snapshot and schedule how it plays out on the table:
+   * which cards are new (dealt from the deck, in order), whether the hole card
+   * turns over, and when the sounds and the result come. Totals follow the
+   * cards themselves: each card reports when its face is showing.
+   */
   const applyServerState = (data) => {
     const gs = data.gameState;
     if (!gs) throw new Error("Invalid server response (missing gameState)");
@@ -397,14 +317,79 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     if (typeof gs.balance === "number") updateBalance?.(gs.balance);
 
     const settled = gs.status === "finished";
-
-    const dealer = (gs.dealerHand ?? []).map(toUiCard).filter(Boolean);
-    const playerHands = (gs.playerHands ?? [[]]).map((hand) => (hand ?? []).map(toUiCard).filter(Boolean));
-
+    const roundId = gs.roundId ?? ui.roundId ?? "x";
+    const dealer = keyDealer(gs.dealerHand, roundId);
+    const playerHands = keyHands(gs.playerHands, roundId);
     const serverOutcomes = gs.handOutcomes ?? [];
     const serverPayout = gs.payout ?? 0;
 
-    const hadHoleCardHidden = ui.dealer?.some((c) => c?.hidden);
+    const known = knownRef.current;
+    const plan = new Map();
+    const events = [];
+    const now = performance.now();
+    let t = Math.max(0, dealClockRef.current - now); // queue behind a deal still running
+    let end = t;
+
+    const deal = (card) => {
+      plan.set(card.key, { delay: t });
+      known.add(card.key);
+      events.push([t, () => sfx.play("card", { volume: 1 })]);
+      if (card.hidden) holeDownRef.current = true;
+      end = Math.max(end, t + DEAL_MOVE_MS + (card.hidden ? 0 : DEAL_FLIP_MS));
+      t += DEAL_GAP_MS;
+    };
+
+    const dealNew = (cards) => cards.forEach((c) => { if (!known.has(c.key)) deal(c); });
+
+    if (known.size === 0) {
+      // opening deal: player, dealer, player, dealer (hole card)
+      const first = playerHands[0] ?? [];
+      [first[0], dealer[0], first[1], dealer[1]].filter(Boolean).forEach(deal);
+      playerHands.forEach(dealNew);
+      dealNew(dealer);
+    } else {
+      const before = known.size;
+      playerHands.forEach(dealNew);
+
+      // settlement: the hole card turns over where it lies, then the dealer draws
+      const hole = dealer[1];
+      if (hole && !hole.hidden && holeDownRef.current) {
+        holeDownRef.current = false;
+        const start = known.size > before ? end + REVEAL_PAUSE_MS : t;
+        plan.set(hole.key, { flipDelay: start });
+        events.push([start, () => sfx.play("flip", { volume: 1 })]);
+        end = Math.max(end, start + REVEAL_FLIP_MS);
+        t = Math.max(t, start + REVEAL_FLIP_MS + DRAW_PAUSE_MS);
+      }
+      dealNew(dealer);
+    }
+
+    planRef.current = plan;
+    dealClockRef.current = now + end;
+
+    if (settled) {
+      const { status, payout } = summarizeResult(serverOutcomes, serverPayout);
+      events.push([
+        end + RESULT_PAUSE_MS,
+        () => {
+          if (status === "win") sfx.play("win", { volume: 1 });
+          else if (status === "lose") sfx.play("lose", { volume: 1 });
+          setUi((prev) => ({
+            ...prev,
+            showResult: true,
+            resultStatus: status,
+            resultPayout: payout,
+            handOutcomes: serverOutcomes,
+          }));
+          setAnimating(false);
+        },
+      ]);
+    } else {
+      events.push([end, () => setAnimating(false)]);
+    }
+
+    setAnimating(true);
+    events.forEach(([at, fn]) => timersRef.current.push(setTimeout(fn, Math.max(0, at))));
 
     setUi((s) => ({
       ...s,
@@ -415,33 +400,15 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
       playerHands,
       activeHandIndex: gs.activeHandIndex ?? 0,
 
-      handTotals: gs.handTotals ?? [],
       handBets: gs.handBets ?? [],
-
       handOutcomes: settled ? [] : serverOutcomes,
-
-      dealerShownTotal: settled
-        ? s.dealerShownTotal
-        : typeof gs.dealerShownTotal === "number"
-          ? gs.dealerShownTotal
-          : 0,
-      dealerTotal: typeof gs.dealerTotal === "number" ? gs.dealerTotal : 0,
 
       settled,
       payout: serverPayout,
       busy: false,
 
-      pendingOutcomes: settled ? serverOutcomes : null,
-      pendingPayout: settled ? serverPayout : 0,
-
       ...(settled ? null : { showResult: false, resultStatus: null, resultPayout: 0 }),
     }));
-
-    if (settled) {
-      scheduleDealerRevealSounds({ gs, hadHoleCardHidden });
-      scheduleDealerTotalCountUp({ gs, hadHoleCardHidden });
-      scheduleReveal({ gs, outcomes: serverOutcomes, payout: serverPayout, hadHoleCardHidden });
-    }
   };
 
   const handleDeal = async () => {
@@ -456,30 +423,19 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
     updateBalance?.((b) => b - bet);
 
-    if (revealTimerRef.current) {
-      clearTimeout(revealTimerRef.current);
-      revealTimerRef.current = null;
-    }
-    clearDealerTotalTimers();
-    clearDealSoundTimers();
-    clearDealerSoundTimers();
-
     setUi((s) => ({
       ...s,
       busy: true,
       showResult: false,
       resultStatus: null,
       resultPayout: 0,
-      pendingOutcomes: null,
-      pendingPayout: 0,
       handOutcomes: [],
     }));
 
     try {
       const data = await apiPost(BJ_START_URL, { betAmount: bet });
-
-      scheduleDealSounds(data.gameState);
-
+      // a fresh table: the previous round's cards leave, the new ones are dealt
+      resetTable();
       applyServerState(data);
     } catch (e) {
       console.error("Blackjack deal failed:", e);
@@ -492,7 +448,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   const handleAction = async (action) => {
     if (!ui.roundId) return;
     if (!["hit", "stand", "double", "split"].includes(action)) return;
-    if (ui.busy) return;
+    if (ui.busy || animating) return;
 
     const prevBalance = user?.balance ?? 0;
     const extraCost = action === "double" || action === "split" ? bet : 0;
@@ -511,12 +467,6 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         handIndex: ui.activeHandIndex ?? 0,
       });
 
-      if (action === "hit" || action === "double") sfx.play("card", { volume: 1 });
-      if (action === "split") {
-        sfx.play("card", { volume: 1 });
-        setTimeout(() => sfx.play("card", { volume: 1 }), DEAL_STAGGER);
-      }
-
       applyServerState(data);
     } catch (e) {
       console.error("Blackjack action failed:", e);
@@ -532,6 +482,17 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     "blackjack",
     Boolean(ui.roundId) && !ui.settled && ui.phase !== "idle" && ui.phase !== "settled"
   );
+
+  // ---- totals (face-up cards only, so they count up as cards turn over) ----
+  const faceUp = (cards) => (cards || []).filter((c) => !c.hidden && revealed.has(c.key));
+  const dealerFinal = ui.phase === "settled" && ui.dealer.every((c) => !c.hidden && revealed.has(c.key));
+  const dealerLabel = handTotalLabel(faceUp(ui.dealer), dealerFinal);
+
+  const totalBet = sum(ui.handBets);
+  const popupMultiplier =
+    ui.resultStatus === "push" ? 1 : ui.resultStatus === "win" && totalBet > 0 ? ui.resultPayout / totalBet : 0;
+
+  const plan = planRef.current;
 
   return (
     <div className={styles.container}>
@@ -609,45 +570,37 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         ) : (
           <>
         <div className={styles.deckEntity} aria-hidden="true">
-          <img className={styles.deckEntityImg} src={deckEntityPng} alt="" draggable="false" />
+          <img ref={deckRef} className={styles.deckEntityImg} src={deckEntityPng} alt="" draggable="false" />
         </div>
 
         {ui.showResult && (
-          <div
-            className={`${styles.resultPopup} ${ui.resultStatus === "win"
-                ? styles.popupWin
-                : ui.resultStatus === "lose"
-                  ? styles.popupLose
-                  : styles.popupPush
-              }`}
-          >
-            <div className={styles.resultPopupTitle}>
-              {ui.resultStatus === "win" ? "YOU WON" : ui.resultStatus === "lose" ? "YOU LOST" : "PUSH"}
-            </div>
-
-            {ui.resultStatus === "win" || ui.resultStatus === "push" ? (
-              <div className={styles.resultPopupAmount}>{Number(ui.resultPayout || 0).toFixed(2)}<CurrencyIcon /></div>
-            ) : (
-              <div className={styles.resultPopupAmountMuted}>-{sum(ui.handBets).toFixed(2)}<CurrencyIcon /></div>
-            )}
-          </div>
+          <WinPopup
+            tone={ui.resultStatus === "win" ? "win" : ui.resultStatus === "push" ? "push" : "lose"}
+            multiplier={popupMultiplier}
+            amount={ui.resultStatus === "lose" ? totalBet : ui.resultPayout}
+            amountPrefix={ui.resultStatus === "lose" ? "-" : ""}
+          />
         )}
 
         <div className={styles.dealerArea}>
-          {ui.roundId ? <div className={styles.totalPillDark}>{ui.dealerShownTotal}</div> : null}
+          {dealerLabel != null ? (
+            <div className={styles.totalPillDark} data-bj-total="dealer">{dealerLabel}</div>
+          ) : null}
 
           <div className={styles.fanTop}>
             {ui.dealer.map((c, i) => (
               <Card
-                key={i === 1 ? `dealer-hole-${ui.roundId ?? "x"}` : cardKey(c, i)}
+                key={c.key}
                 index={i}
                 card={c}
-                hidden={!!c.hidden}
+                faceUp={!c.hidden}
+                dealDelay={plan.get(c.key)?.delay}
+                flipDelay={plan.get(c.key)?.flipDelay}
+                flipMs={i === 1 ? REVEAL_FLIP_MS : DEAL_FLIP_MS}
+                deckRef={deckRef}
                 outline="none"
-                animate
                 cardBackSrc={cardBackSvg}
-                flip={i === 1}
-                faceUp={!c?.hidden}
+                onFaceShown={() => markRevealed(c.key)}
               />
             ))}
           </div>
@@ -660,32 +613,37 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         <div className={styles.playerArea}>
           <div className={styles.handsRow}>
             {ui.playerHands.map((hand, hIdx) => {
-              const total = ui.handTotals?.[hIdx] ?? 0;
               const outcome = ui.handOutcomes?.[hIdx] ?? null;
-
               const outline =
-                ui.showResult && ui.phase === "settled"
-                  ? outcome === "win"
-                    ? "win"
-                    : outcome === "lose"
-                      ? "lose"
-                      : "none"
-                  : "none";
+                ui.showResult && ui.phase === "settled" && ["win", "lose", "push"].includes(outcome) ? outcome : "none";
+              // decided (settled, or play has moved past it) and every card is face-up
+              const handDone =
+                (ui.phase === "settled" || hIdx < (ui.activeHandIndex ?? 0)) && hand.every((c) => revealed.has(c.key));
+              const label = handTotalLabel(faceUp(hand), handDone);
+              const pillTone =
+                outline === "win" ? styles.totalPillWin : outline === "lose" ? styles.totalPillLose : outline === "push" ? styles.totalPillPush : "";
 
               return (
                 <div key={hIdx} className={styles.handWrap}>
-                  {ui.roundId ? <div className={styles.totalPillPlayer}>{total}</div> : null}
+                  {label != null ? (
+                    <div className={`${styles.totalPillPlayer} ${pillTone}`} data-bj-total={`hand-${hIdx}`} data-outline={outline}>
+                      {label}
+                    </div>
+                  ) : null}
 
                   <div className={styles.fanBottom}>
                     {hand.map((c, i) => (
                       <Card
-                        key={cardKey(c, i)}
+                        key={c.key}
                         index={i}
                         card={c}
-                        hidden={false}
+                        faceUp={!c.hidden}
+                        dealDelay={plan.get(c.key)?.delay}
+                        flipMs={DEAL_FLIP_MS}
+                        deckRef={deckRef}
                         outline={outline}
-                        animate
                         cardBackSrc={cardBackSvg}
+                        onFaceShown={() => markRevealed(c.key)}
                       />
                     ))}
                   </div>
@@ -701,72 +659,160 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   );
 }
 
-function Card({ index, card, hidden, outline = "none", animate = false, cardBackSrc, flip = false, faceUp = true }) {
+/**
+ * One card on the table.
+ *
+ * `dealDelay` (read once, on mount) = this card is being dealt: it waits that
+ * long, slides from the deck to its place face-down, and turns over after it
+ * lands when `faceUp`. Cards without it (already on the table — e.g. moved to
+ * a new hand by a split) simply appear in place.
+ * When `faceUp` later turns true (the dealer's hole card) it turns over in
+ * place after `flipDelay`.
+ */
+function Card({ index, card, faceUp = true, dealDelay, flipDelay = 0, flipMs = DEAL_FLIP_MS, deckRef, outline = "none", cardBackSrc, onFaceShown }) {
   const r = card?.r;
   const s = card?.s;
   const red = s ? isRedSuit(s) : false;
   const suitSrc = s ? suitIconSrc(s) : null;
 
+  const motionRef = useRef(null);
+  const dealRef = useRef(dealDelay);
+  const [shownFace, setShownFace] = useState(() => (dealDelay == null ? faceUp : false));
+  const faceShownRef = useRef(onFaceShown);
+  faceShownRef.current = onFaceShown;
+
+  // start turning over now; report once the face is showing
+  const turnOver = () => {
+    setShownFace(true);
+    return setTimeout(() => faceShownRef.current?.(), flipMs * FACE_SHOWN_AT);
+  };
+
+  // a card that is simply on the table (not being dealt) counts right away
+  useEffect(() => {
+    if (dealRef.current == null && faceUp) faceShownRef.current?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Deal: deck -> place (WAAPI, so it runs off the compositor), then turn over.
+  useLayoutEffect(() => {
+    const delay = dealRef.current;
+    if (delay == null) return undefined;
+
+    let anim = null;
+    let landTimer = null;
+    let faceTimer = null;
+    let live = true;
+    const el = motionRef.current;
+    const deck = deckRef?.current;
+    if (el && deck && typeof el.animate === "function") {
+      const a = el.getBoundingClientRect();
+      const d = deck.getBoundingClientRect();
+      if (a.width > 0 && d.width > 0) {
+        const scale = Math.min(1, (d.width * DECK_CARD_WIDTH) / a.width);
+        const fromX = d.left + d.width / 2 - (a.left + a.width / 2);
+        const fromY = d.top + d.height * DECK_CARD_BOTTOM - (a.height * scale) / 2 - (a.top + a.height / 2);
+        anim = el.animate(
+          [
+            { transform: `translate(${fromX}px, ${fromY}px) scale(${scale})`, opacity: 0, offset: 0 },
+            { opacity: 1, offset: 0.1 },
+            { transform: "translate(0px, 0px) scale(1)", opacity: 1, offset: 1 },
+          ],
+          { duration: DEAL_MOVE_MS, delay, easing: DEAL_EASE, fill: "backwards" }
+        );
+      }
+    }
+
+    // turn over only once it has landed: on the move's own finish event
+    // (a timer could beat a move the compositor started a frame late)
+    const land = () => {
+      if (live && faceUp) faceTimer = turnOver();
+    };
+    if (anim) anim.onfinish = land;
+    else landTimer = setTimeout(land, delay + DEAL_MOVE_MS);
+
+    return () => {
+      live = false;
+      clearTimeout(landTimer);
+      clearTimeout(faceTimer);
+      if (anim) {
+        anim.onfinish = null;
+        anim.cancel();
+      }
+    };
+    // mount-only: a card is dealt once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The hole card turning over at settlement (in place, no move).
+  const prevFaceUp = useRef(faceUp);
+  useEffect(() => {
+    if (prevFaceUp.current === faceUp) return undefined;
+    prevFaceUp.current = faceUp;
+    if (!faceUp) {
+      setShownFace(false);
+      return undefined;
+    }
+    let faceTimer = null;
+    const t = setTimeout(() => {
+      faceTimer = turnOver();
+    }, Math.max(0, flipDelay || 0));
+    return () => {
+      clearTimeout(t);
+      clearTimeout(faceTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faceUp]);
+
   const overlapX = 34;
   const overlapY = 12;
   const x = index * overlapX;
   const y = index * overlapY;
-  const rot = 0;
 
-  const showFlip = !!flip;
-
-  const frontFace = (
-    <>
-      <div className={styles.corner}>
-        <div className={`${styles.rank} ${red ? styles.redText : styles.blackText}`}>{r}</div>
-      </div>
-
-      <div className={styles.center}>
-        {suitSrc ? (
-          <img
-            className={`${styles.centerSuitIconLarge} ${red ? styles.suitIconRed : styles.suitIconBlack}`}
-            src={suitSrc}
-            alt=""
-            draggable="false"
-          />
-        ) : null}
-      </div>
-    </>
-  );
-
-  const backFace = (
-    <div className={styles.cardBackWrap}>
-      <img className={styles.cardBackImg} src={cardBackSrc} alt="" draggable="false" />
-    </div>
-  );
-
+  const outlineClass =
+    outline === "win"
+      ? styles.cardOutlineWin
+      : outline === "lose"
+        ? styles.cardOutlineLose
+        : outline === "push"
+          ? styles.cardOutlinePush
+          : "";
 
   return (
     <div
       className={styles.cardSlot}
-      style={{
-        transform: `translate(${x}px, ${y}px) rotate(${rot}deg)`,
-        zIndex: 10 + index,
-      }}
+      style={{ transform: `translate(${x}px, ${y}px)`, zIndex: 10 + index }}
+      data-bj-card={faceUp && r ? `${r}${s ? s[0] : ""}` : "hidden"}
+      data-face={shownFace ? "up" : "down"}
     >
-      <div
-        className={`${styles.cardMotion} ${animate ? styles.cardDeal : ""}`}
-        style={animate ? { animationDelay: `${index * DEAL_STAGGER}ms` } : undefined}
-      >
-        <div
-          className={`${styles.card} ${hidden ? styles.cardNoClip : ""} ${outline === "win" ? styles.cardOutlineWin : outline === "lose" ? styles.cardOutlineLose : ""
-            }`}
-        >
-          {showFlip ? (
-            <div className={`${styles.flipWrap} ${faceUp ? styles.flipFaceUp : ""}`}>
-              <div className={`${styles.flipFace} ${styles.flipFront}`}>{frontFace}</div>
-              <div className={`${styles.flipFace} ${styles.flipBack}`}>{backFace}</div>
+      <div ref={motionRef} className={styles.cardMotion}>
+        <div className={`${styles.card} ${outlineClass}`} style={{ "--flip-ms": `${flipMs}ms` }}>
+          <div className={`${styles.flipWrap} ${shownFace ? styles.flipFaceUp : ""}`}>
+            <div className={`${styles.flipFace} ${styles.flipFront}`}>
+              {r ? (
+                <>
+                  <div className={styles.corner}>
+                    <div className={`${styles.rank} ${red ? styles.redText : styles.blackText}`}>{r}</div>
+                  </div>
+
+                  <div className={styles.center}>
+                    {suitSrc ? (
+                      <img
+                        className={`${styles.centerSuitIconLarge} ${red ? styles.suitIconRed : styles.suitIconBlack}`}
+                        src={suitSrc}
+                        alt=""
+                        draggable="false"
+                      />
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
             </div>
-          ) : !hidden ? (
-            frontFace
-          ) : (
-            backFace
-          )}
+            <div className={`${styles.flipFace} ${styles.flipBack}`}>
+              <div className={styles.cardBackWrap}>
+                <img className={styles.cardBackImg} src={cardBackSrc} alt="" draggable="false" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

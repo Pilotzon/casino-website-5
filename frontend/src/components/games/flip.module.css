@@ -92,20 +92,6 @@
   composes: sidebar-bet-button from global;
 }
 
-/* ✅ Win popup — shared, dead-centre overlay (global.css).
-   Flip adds nothing: the stage already is position:relative. */
-.winPopup {
-  composes: ui-win-popup from global;
-}
-
-.winPopupTitle {
-  composes: ui-win-popup-title from global;
-}
-
-.winPopupAmount {
-  composes: ui-win-popup-amount from global;
-}
-
 /* Random Pick — unified secondary button (defined once in global.css) */
 .randomButton {
   composes: sidebar-secondary-button from global;
@@ -124,22 +110,13 @@
   justify-content: space-between;
 }
 
-/* Active: recolor only — zero layout shift */
-.activeSide {
-  composes: ui-action-active from global;
-}
-
 .textSide {
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: inherit; /* white — muted with the button when it is disabled */
   font-size: var(--font-size-control);
   font-family: 'proxima-nova';
   font-feature-settings: "salt" on;
   ;
-}
-
-.activeSide .textSide {
-  color: var(--color-text-primary);
 }
 
 /* side markers: white like every other sidebar icon (only the currency
@@ -158,6 +135,13 @@
   transform: rotate(45deg);
 }
 
+/* Heads / Tails only take a call inside a round (after Bet): outside one
+   they read as disabled — the text and the marker mute together */
+.sideBtn:disabled .dotHeads,
+.sideBtn:disabled .dotTails {
+  background: var(--color-text-muted);
+}
+
 .gameStage {
   flex: 1;
   display: flex;
@@ -172,6 +156,7 @@
 }
 
 .coinVideoWrap {
+  position: relative; /* the clips stack inside (see .coinVideo) */
   width: 260px;
   height: 260px;
   /* desktop override below: scales with the panel, proportions kept */
@@ -184,7 +169,12 @@
   background: transparent;
 }
 
+/* One <video> per clip, stacked; only the active one shows (Flip.jsx) —
+   switching clips never reloads a source, so there is no blank frame. */
 .coinVideo {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -194,6 +184,10 @@
   will-change: contents;
   outline: none;
   background: transparent;
+}
+
+.coinVideoActive {
+  opacity: 1;
 }
 
 /* Desktop: coin scales to fill the game panel, aspect ratio kept
@@ -220,11 +214,31 @@
   width: auto;
 }
 
+.historyHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .historyLabel {
   font-size: var(--font-size-control);
   font-weight: 700;
   color: var(--text-secondary);
+}
 
+/* mid-round: what the next correct call pays */
+.historyNext {
+  font-size: var(--font-size-control);
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.historyNext b {
+  color: var(--accent-green);
+  font-weight: 800;
 }
 
 .historyGrid {
@@ -250,6 +264,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* this round's flips: a won call gets a green foot, the losing one red */
+.slotWon {
+  box-shadow: inset 0 -3px 0 var(--accent-green);
+}
+
+.slotLost {
+  box-shadow: inset 0 -3px 0 #e9103c;
 }
 
 .hHead {

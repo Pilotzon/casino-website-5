@@ -1,0 +1,92 @@
+/* =========================================================
+   Dice result marker (DiceResultCube.jsx) — a white isometric
+   "cube" hexagon whose bottom corner sits on the slider track.
+   ========================================================= */
+.cube {
+  --cube-w: 62px;
+  /* bottom corner -> top edge of the track: (58px track - 10px bar) / 2,
+     minus 2px so it visibly sits ON the track */
+  --cube-lift: 22px;
+  position: absolute;
+  bottom: calc(100% + var(--cube-lift));
+  left: 50%;
+  width: var(--cube-w);
+  height: calc(var(--cube-w) * 1.1547); /* 2 / √3 — a regular hexagon */
+  translate: -50% 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+}
+
+.cubeShown {
+  opacity: 1;
+}
+
+/* the part that scales — anchored at the bottom corner */
+.cubeBody {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+}
+
+.cubeSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.faceTop {
+  fill: #ffffff;
+}
+
+.faceLeft {
+  fill: #e1e6ea; /* a little darker */
+}
+
+.faceRight {
+  fill: #c5ced5; /* darker still */
+}
+
+.cubeText {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.1px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #2f4553;
+  transition: color 140ms ease;
+}
+
+/* travelling: gray; landed: green (won) / red (lost) */
+.cube[data-tone="moving"] .cubeText {
+  color: rgba(47, 69, 83, 0.5);
+  transition: none;
+}
+
+.cube[data-tone="win"] .cubeText {
+  color: #00c702;
+}
+
+.cube[data-tone="loss"] .cubeText {
+  color: #e9103c;
+}
+
+@media (max-width: 600px) {
+  .cube {
+    --cube-w: 54px;
+    --cube-lift: 20px; /* the phone track is 54px tall */
+  }
+
+  .cubeText {
+    font-size: 13px;
+  }
+}

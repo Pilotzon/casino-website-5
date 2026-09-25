@@ -22,9 +22,12 @@ router.get("/", optionalAuth, GamesController.getGames);
 // Get specific game
 router.get("/:gameName", optionalAuth, GamesController.getGame);
 
+// The player's latest rounds of one game (history pills: dice, limbo, wheel)
+router.get("/:gameName/history", optionalAuth, GamesController.getGameHistory);
+
 // ---- Betting / playing routes (blocked during maintenance) ----
 
-// Play Coin Flip
+// Play Coin Flip (single call, side chosen up front — kept for autobet/API use)
 router.post(
   "/flip/play",
   authenticateToken,
@@ -33,6 +36,37 @@ router.post(
   userRateLimit(100, 60000),
   GamesController.playFlip
 );
+
+// Coin Flip round: bet first, then call heads/tails (repeatable), cash out
+router.post(
+  "/flip/start",
+  authenticateToken,
+  requireNotMaintenance,
+  requireNotTimedOut,
+  userRateLimit(100, 60000),
+  GamesController.startFlip
+);
+
+router.post(
+  "/flip/choose",
+  authenticateToken,
+  requireNotMaintenance,
+  requireNotTimedOut,
+  userRateLimit(200, 60000),
+  GamesController.chooseFlip
+);
+
+router.post(
+  "/flip/cashout",
+  authenticateToken,
+  requireNotMaintenance,
+  requireNotTimedOut,
+  userRateLimit(100, 60000),
+  GamesController.cashoutFlip
+);
+
+// The player's open flip round (resume after a reload); read-only
+router.get("/flip/active", authenticateToken, GamesController.activeFlip);
 
 // Play Dice
 router.post(

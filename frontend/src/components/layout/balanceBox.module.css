@@ -8,7 +8,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin-right: var(--space-sm); /* clear air before the username */
+  /* the box is centred in the navbar (its own grid column) */
 }
 
 .box {
@@ -125,7 +125,10 @@
 .panel {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  /* hangs centred under the (centred) box; `translate` is used so the
+     open animation's transform does not undo the centring */
+  left: 50%;
+  translate: -50% 0;
   z-index: 20;
   width: 320px;
   max-width: calc(100vw - 24px);
@@ -139,7 +142,7 @@
   color: var(--color-text-primary);
   font-family: var(--font-primary);
   animation: balance-panel-in 140ms ease both;
-  transform-origin: top right;
+  transform-origin: top center;
 }
 
 @keyframes balance-panel-in {
@@ -387,10 +390,6 @@
    Responsive: tablet / phone navbar (username + Logout live elsewhere)
    ===================================================================== */
 @media (max-width: 1024px) {
-  .root {
-    margin-right: 0;
-  }
-
   .box {
     height: 40px;
   }
@@ -467,13 +466,14 @@
 }
 
 /* phones: the panel spans the screen under the navbar instead of hanging
-   off the box (which sits at the far right edge) */
+   off the box (a 320px card would not fit next to the screen edges) */
 @media (max-width: 480px) {
   .panel {
     position: fixed;
     top: calc(var(--nav-height) - 6px);
     left: 12px;
     right: 12px;
+    translate: none;
     width: auto;
     max-width: none;
     transform-origin: top center;

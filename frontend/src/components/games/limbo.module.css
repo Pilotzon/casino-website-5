@@ -101,16 +101,49 @@
   padding: var(--stage-pad); /* equal on all four sides (global rule) */
 }
 
-/* Desktop big number */
+/* History pills — the shared row (HistoryPills.jsx), pinned to the top of
+   the stage so the big number stays dead-centre */
+.historyTop {
+  position: absolute;
+  top: var(--stage-pad);
+  left: var(--stage-pad);
+  right: var(--stage-pad);
+  z-index: 2;
+}
+
+/* Desktop big number — one fixed-width slot per digit (SlotNumber) */
 .bigMultiplier {
-  font-size: 120px;
+  --limbo-mult-size: 120px;
+  font-size: calc(var(--limbo-mult-size) * var(--limbo-mult-scale, 1));
   font-weight: 900;
-  letter-spacing: -3px;
   line-height: 1;
   color: var(--color-text-primary);
   user-select: none;
-  text-align: center;
   flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+/* every digit gets the SAME box: 1ch (= the width of "0") with tabular
+   figures, centred — so "1" and "6" never push their neighbours */
+.slotDigit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.slotDot {
+  display: inline-block;
+  text-align: center;
+  margin: 0 -0.02em;
+}
+
+.slotMark {
+  display: inline-block;
+  margin-left: 0.04em;
 }
 
 .bigWin {
@@ -127,15 +160,7 @@
   composes: ui-win-popup from global;
 }
 
-.winPopupTitle {
-  composes: ui-win-popup-title from global;
-}
-
-.winPopupAmount {
-  composes: ui-win-popup-amount from global;
-}
-
-/* Bottom stack (target multiplier + recent multipliers) — anchored to
+/* Bottom stack (target multiplier + win chance) — anchored to
    the bottom of the game stage. The global .ui-stage-bottom insets give
    it exactly 16px bottom/left/right (always centred) — no width math here. */
 .bottomStack {
@@ -146,7 +171,7 @@
   flex-shrink: 0;
 }
 
-/* Both bottom panels (stats + recent multipliers) share the same surface
+/* The bottom stats panel uses the shared surface
    (global.css) and the same width — they simply fill .bottomStack. */
 .bottomPanel {
   composes: ui-panel-surface from global;
@@ -205,62 +230,6 @@
   font-weight: 900;
 }
 
-.recentPanel {
-  composes: ui-panel-surface from global;
-  width: 100%;
-  /* identical width to .bottomPanel above */
-  box-sizing: border-box;
-  box-shadow: var(--shadow-md);
-}
-
-/* Hidden until the first round — INVISIBLE but space-reserved (the empty
-   "—" placeholder keeps the height constant), so its first appearance
-   never shifts the layout. */
-.recentHidden {
-  visibility: hidden;
-}
-
-.recentLabel {
-  font-size: var(--font-size-control);
-  font-weight: 800;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-
-}
-
-.recentRow {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.recentEmpty {
-  color: rgba(255, 255, 255, 0.35);
-  font-weight: 800;
-}
-
-.recentChip {
-  padding: 7px 12px;
-  background: #0f212e;
-  /* neutral slot (win/loss classes override color) */
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.chipWin {
-  background: rgba(0, 231, 1, 0.2);
-  color: var(--accent-green);
-}
-
-.chipLoss {
-  background: rgba(241, 44, 76, 0.2);
-  color: var(--accent-red);
-}
-
 @media (max-width: 900px) {
   .container {
     flex-direction: column;
@@ -273,7 +242,7 @@
   }
 
   .bigMultiplier {
-    font-size: 76px;
+    --limbo-mult-size: 76px;
   }
 
   .bottomStack {
@@ -293,9 +262,14 @@
   }
 
   .bigMultiplier {
-    font-size: 64px;
-    letter-spacing: -2px;
+    --limbo-mult-size: 64px;
     margin: 16px 0 10px 0;
+  }
+
+  /* phones: the pills row joins the flow at the top of the stage */
+  .container .historyTop {
+    position: static;
+    width: 100%;
   }
 
   /* Mobile: the bottom stack leaves the flow and sits under the number
@@ -317,8 +291,4 @@
     gap: 10px;
   }
 
-  .recentRow {
-    gap: 8px;
-    -webkit-overflow-scrolling: touch;
-  }
 }

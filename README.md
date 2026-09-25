@@ -39,8 +39,9 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   (`retryInMs` is returned with a 429).
 * `npm run test:crash` (in `backend/`) runs the 79-check engine smoke test
   against a throw-away database; `npm run test:http` boots the real server on a
-  spare port and drives the same endpoints over HTTP (33 checks, also against a
-  throw-away database — including `GET /api/dashboard/today`);
+  spare port and drives the same endpoints over HTTP (57 checks, also against a
+  throw-away database — including `GET /api/dashboard/today`, the multi-step
+  Coin Flip round and `GET /api/games/:game/history`);
   `npm run test:keno` checks the Keno payout tables (147 checks). `npm test`
   runs all three.
 
@@ -83,15 +84,18 @@ column headers, each row becomes a two-line card (name/key, then status + the
 action buttons) and the row buttons turn **icon-only** — 44 × 44 tiles with
 24 px icons, so the power / phone glyphs stay readable — while keeping their
 `aria-label` and `title`, so the meaning survives the missing text.
-* `npm run test:board` (in `frontend/`) runs the 96-check DOM test of the Crash
+* `npm run test:board` (in `frontend/`) runs the 97-check DOM test of the Crash
   board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
   component (polling, cash-out, render pump) against a scripted server and
   measures what the board actually renders.
-* `npm run test:ui` (in `frontend/`) runs the 248-check site UI suite
+* `npm run test:ui` (in `frontend/`) runs the 332-check site UI suite
   (`frontend/tests/site-ui/`): the toast kinds, the games-page filter row, the
   admin panel's phone layout, the bet-button hazard badge on **every** game, the
   Scroll-up pill, the bypass permission in the UI, the filled icon set, the
-  currency mark, the mobile bottom bar and the balance box with its Today panel.
+  currency mark, the mobile bottom bar, the balance box with its Today panel,
+  and the game behaviour described under *Games* below (win popup, history
+  pills, Limbo's digit slots, rows that lock mid-bet, the Mines end-of-round
+  board, Blackjack's deal / totals / push outline and the Coin Flip round).
 * `npm test` runs both frontend suites.
 
 ### Scroll up
@@ -135,6 +139,49 @@ back-to-top button of their own.
   midnight, so "today" is the player's own day; an unparseable value, one in the
   future or one more than 26 h old falls back to the server's UTC midnight. It
   counts casino rounds only, not custom bets.
+
+### Games
+
+* **Win popup** — every game announces a win with the one shared
+  `components/common/WinPopup.jsx`, centred on the game stage: the multiplier
+  on top (green), a `#415B69` divider, then the amount won with the currency
+  mark, on a `#1A3242` card with a 3 px green border. `tone="push"` (orange)
+  and `tone="lose"` (red) exist for Blackjack. Don't hand-roll popup markup.
+* **History pills** — `components/common/HistoryPills.jsx` is the row of
+  result pills above the board in Crash, Wheel, Dice (the roll) and Limbo (the
+  multiplier): newest at the top right, green = won, gray = lost; old rounds fade
+  out on the left on desktop and scroll sideways on phones. Wheel / Dice / Limbo
+  load the player's latest rounds with `hooks/useGameHistory.js` from
+  `GET /api/games/:game/history?limit=20` (`[{ roundId, value, won, at }]`,
+  newest first; guests get `[]`), so the pills survive a reload.
+* **Coin Flip** is a multi-step round: **Bet** takes the stake and opens the
+  round, and the coin freezes on the first frame of its next flip; only then
+  can the player call Heads, Tails or Random Pick, and the flip plays. A correct
+  call keeps the round open and doubles the multiplier (1.98×, 3.96×, 7.92× …,
+  up to 20 flips); a wrong call ends it. **Cashout** (after at least one win)
+  pays stake × multiplier. The history bar under the coin lists this round's
+  flips (green foot = won, red = lost) and is cleared by every new Bet. The
+  round lives on the server — `POST /api/games/flip/start`, `/flip/choose`
+  `{ roundId, side }`, `/flip/cashout` `{ roundId }`, `GET /flip/active` — so a
+  reload brings it back, and a second start answers `409 FLIP_ROUND_OPEN`
+  (the page then loads the open round). The old one-shot `/flip/play` still
+  works.
+* **Blackjack** — each card leaves the deck face-down, glides to its place and
+  only then turns over; totals follow the faces that are visible. A soft hand
+  shows both totals ("7, 17") until it is 21 or finished. A push outlines the
+  cards and the total pill orange (win green, loss red).
+* **Mines** — a pressed tile's cover lifts to 1.03 and collapses into its
+  centre before the gem / mine grows in. Hitting a mine (or cashing out) opens
+  the whole board; tiles the player did not open show at 0.7 opacity.
+* **Dice** — the result marker is a three-tone hexagon whose bottom corner sits
+  on the track: it dips to 0.97 on Bet, travels to the roll (number gray while
+  moving) and lands with a 1.05 bounce, green on a win, red on a loss.
+* **Limbo** — every digit of the big multiplier has its own fixed-width slot,
+  so counting never shoves the digits around.
+* **Wheel** — a static pin (no rotation), a faster spin with a long ease-out.
+* **Mid-bet locking** — Limbo's and Dice's bottom rows lock while a bet runs
+  (`.ui-stats-locked` on the row, `.ui-stats-field` on each field); steppers
+  dim instead of disappearing.
 
 ### Board rules (frontend)
 

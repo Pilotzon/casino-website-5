@@ -12,6 +12,10 @@
  *   §6  the "bypass disabled games/pages" permission in the UI
  *   §7  filled icons everywhere, the green currency mark, the mobile bottom
  *       nav (white bold labels) and the navbar balance box + today panel
+ *   §8  Round 10: the shared win popup, the history pills, Limbo's digit
+ *       slots, rows that lock mid-bet (Limbo / Dice / steppers), the Mines
+ *       end-of-round board, Blackjack (deal order, totals, push outline) and
+ *       the multi-flip Coin Flip round
  *
  * Run:  npm run test:ui        (from frontend/)
  * ==========================================================================*/
@@ -24,7 +28,7 @@ import { ToastProvider, useToast } from '../../src/context/ToastContext.jsx';
 import { ActiveBetProvider } from '../../src/context/ActiveBetContext.jsx';
 import { __toasts as stubToasts } from '../stubs/toastContext.jsx';
 import { __auth } from '../stubs/authContext.jsx';
-import { __site as __siteStatus, __dash } from '../stubs/gamesApi.js';
+import { __site as __siteStatus, __dash, __api } from '../stubs/gamesApi.js';
 import { refreshSiteStatus } from '../../src/hooks/useSiteStatus.js';
 
 const here = typeof __TEST_DIR__ === 'string' ? __TEST_DIR__ : process.cwd();
@@ -558,11 +562,12 @@ async function main() {
       unmountAll();
     }
 
-    // --- 7e: every other sidebar icon is white
+    // --- 7e: sidebar icons are white — except Blackjack's coloured action icons (Round 10)
     const bj = readCss('src/components/games/blackjack.module.css');
-    ok(/\.actionHit \.actionIcon,\s*\.actionStand \.actionIcon,\s*\.actionSplit \.actionIcon,\s*\.actionDouble \.actionIcon\s*\{\s*filter:\s*brightness\(0\) invert\(1\)/.test(bj)
-      && !/\.action(Hit|Stand|Split|Double)\s+\.actionIcon\s*\{[^}]*hue-rotate/.test(bj),
-      'Blackjack: Hit / Stand / Split / Double icons are all white (card-suit art keeps its colours)');
+    ok(/hue-rotate\(360deg\)/.test(firstRule(bj, '.actionHit .actionIcon'))
+      && /hue-rotate\(265deg\)/.test(firstRule(bj, '.actionStand .actionIcon'))
+      && /\.actionSplit \.actionIcon,\s*\.actionDouble \.actionIcon\s*\{\s*filter:\s*brightness\(0\) invert\(1\)/.test(bj),
+      'Blackjack: Hit is orange, Stand purple, Split / Double white (the old coloured icons are back)');
     ok(/filter:\s*brightness\(0\) invert\(1\)/.test(firstRule(readCss('src/components/games/RPS.module.css'), '.choiceSmallIcon')),
       'RPS: the rock / paper / scissors marks are white');
     const flipCss = readCss('src/components/games/flip.module.css');
@@ -711,6 +716,307 @@ async function main() {
     }
     __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
     __dash.today = null;
+  }
+
+
+  /* ------------------------------------------------------------ §8 Round 10 */
+  console.log('\n=== 8. Round 10: win popup, history pills, locked rows, Mines, Blackjack, Flip ===');
+  {
+    const setVal = (el, v) => {
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value').set.call(el, String(v));
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const btnIn = (host, re) => [...host.querySelectorAll('button')].find((b) => re.test(b.textContent.trim()));
+    const mountGame = (Game, name) => mount(
+      React.createElement(ToastProvider, null,
+        React.createElement(ActiveBetProvider, null,
+          React.createElement(Game, { gameRow: { name, display_name: name, is_enabled: 1, is_mobile_enabled: 1 } })))
+    );
+    const g8 = readCss('src/styles/global.css');
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
+
+    // --- 8a: the shared win popup
+    const { default: WinPopup, formatPopupMultiplier } = await import('../../src/components/common/WinPopup.jsx');
+    {
+      const host = mount(React.createElement(WinPopup, { multiplier: 3.964, amount: 12.5 }));
+      await sleep(20);
+      const pop = host.querySelector('[data-win-popup]');
+      ok(pop?.dataset.winPopup === 'win' && pop.classList.contains('ui-win-popup'), 'win popup: the shared overlay, tone "win"');
+      const kids = pop ? [...pop.children].map((c) => c.className).join('|') : '';
+      ok(kids === 'ui-win-popup-multiplier|ui-win-popup-divider|ui-win-popup-amount', 'multiplier on top, the divider, then the amount', kids);
+      ok(pop?.querySelector('.ui-win-popup-multiplier').textContent === '3.96×', 'the multiplier reads 3.96×');
+      ok(pop?.querySelector('.ui-win-popup-amount span').textContent === '12.50' && !!pop.querySelector('.ui-win-popup-amount svg.currency-icon'),
+        'the amount won + the green currency mark');
+      unmountAll();
+      const h2 = mount(React.createElement(React.Fragment, null,
+        React.createElement(WinPopup, { multiplier: 1, amount: 5, tone: 'push' }),
+        React.createElement(WinPopup, { multiplier: 0, amount: 5, tone: 'lose', amountPrefix: '-' })));
+      await sleep(20);
+      const [push, lose] = h2.querySelectorAll('[data-win-popup]');
+      ok(push?.classList.contains('ui-win-popup--push') && lose?.classList.contains('ui-win-popup--lose'), 'push / lose tones (Blackjack)');
+      ok(lose?.querySelector('.ui-win-popup-multiplier').textContent === '0.00×' && lose.querySelector('.ui-win-popup-amount span').textContent === '-5.00',
+        'a loss reads 0.00× / -5.00');
+      ok(formatPopupMultiplier(NaN) === '0.00×' && formatPopupMultiplier(2) === '2.00×', 'formatPopupMultiplier guards bad input');
+      unmountAll();
+      const pr = firstRule(g8, '.ui-win-popup');
+      ok(/background:\s*var\(--color-win-popup-bg\)/.test(pr) && /border:\s*3px solid var\(--color-win-popup-border\)/.test(pr),
+        'popup: #1A3242 fill, thicker (3px) green border');
+      ok(/--color-win-popup-bg:\s*#1A3242/i.test(g8) && /--color-win-popup-divider:\s*#415B69/i.test(g8)
+        && /background:\s*var\(--color-win-popup-divider\)/.test(firstRule(g8, '.ui-win-popup-divider')), 'tokens: #1A3242 fill, #415B69 divider');
+      const games12 = ['Blackjack', 'Dice', 'Flip', 'Keno', 'Limbo', 'Mines', 'RPS', 'Roulette', 'RussianRoulette', 'Snakes', 'Tower', 'Wheel'];
+      const stale = games12.filter((n) => { const t = readCss(`src/components/games/${n}.jsx`); return !/<WinPopup\b/.test(t) || /YOU WON/.test(t); });
+      ok(stale.length === 0, 'all 12 games with a win show the shared popup (no "YOU WON" markup left)', stale.join(', '));
+    }
+
+    // --- 8b: history pills — one component, Crash's system
+    const { default: HistoryPills } = await import('../../src/components/common/HistoryPills.jsx');
+    {
+      const host = mount(React.createElement(HistoryPills, { items: [{ key: 'b', label: '2.00×', won: true }, { key: 'a', label: '0.50×', won: false }] }));
+      await sleep(20);
+      const pills = [...host.querySelectorAll('[data-history-pills] .css-histPill')];
+      ok(pills.map((x) => x.textContent).join(' ') === '2.00× 0.50×' && pills[0].classList.contains('css-histGreen') && pills[1].classList.contains('css-histGray'),
+        'history pills: newest first, green = won, gray = lost');
+      unmountAll();
+      ok(/direction:\s*rtl/.test(firstRule(readCss('src/components/common/historyPills.module.css'), '.historyScroll')),
+        'the scroller itself runs right-to-left (newest pinned right; older rounds scroll)');
+      const users = ['Crash', 'Wheel', 'Dice', 'Limbo'].filter((n) => /import HistoryPills from/.test(readCss(`src/components/games/${n}.jsx`)));
+      ok(users.length === 4, 'Crash, Wheel, Dice and Limbo share the one pill row', users.join(','));
+    }
+
+    // --- 8c: a disabled stepper stays (dimmed) instead of vanishing
+    const { default: Stepper } = await import('../../src/components/common/Stepper.jsx');
+    {
+      const host = mount(React.createElement(Stepper, { value: '1', onChange: () => {}, disabled: true }));
+      await sleep(20);
+      const b = [...host.querySelectorAll('.ui-stepper button')];
+      ok(!!host.querySelector('.ui-stepper--disabled') && b.length === 2 && b.every((x) => x.disabled), 'a disabled stepper stays put, dimmed and inert');
+      unmountAll();
+    }
+
+    // --- 8d: Limbo — digit slots, locked row, pills, popup
+    {
+      __api.limbo = { success: true, result: { multiplier: 1234.56, won: true, payout: 2, balance: 101 }, round: { round_uuid: 'limbo-u1' } };
+      __api.delay.limbo = 150;
+      const { default: Limbo } = await import('../../src/components/games/Limbo.jsx');
+      const host = mountGame(Limbo, 'limbo');
+      await sleep(80);
+      setVal(host.querySelector('input[type=number]'), '1');
+      await sleep(30);
+      btnIn(host, /^Bet$/).click();
+      await sleep(50);
+      const row = host.querySelector('.ui-stats-locked');
+      ok(!!row && [...row.querySelectorAll('input')].every((i) => i.disabled), 'Limbo: the bottom row locks (inputs disabled) mid-bet');
+      ok(await waitFor(() => !!host.querySelector('[data-limbo-number="1234.56×"]'), 3000), 'the result counts up to 1234.56×');
+      const digits = host.querySelectorAll('[data-limbo-number] .css-slotDigit').length;
+      ok(digits === 6, 'one fixed-width slot per digit (6 for 1234.56)', String(digits));
+      ok(await waitFor(() => !host.querySelector('.ui-stats-locked'), 1500), 'the row unlocks once the round is over');
+      ok(/1234\.56×/.test(host.querySelector('[data-history-pills]')?.textContent || ''), 'the round lands in the top history pills');
+      ok(/2\.00×/.test(host.querySelector('[data-win-popup="win"]')?.textContent || ''), 'the win popup shows the multiplier won (the target)');
+      const lc = firstRule(readCss('src/components/games/limbo.module.css'), '.slotDigit');
+      ok(/width:\s*1ch/.test(lc) && /tabular-nums/.test(lc), 'digit slots: 1ch wide, tabular figures');
+      __api.delay.limbo = 0;
+      unmountAll();
+    }
+
+    // --- 8e: Dice — the row locks mid-bet, the hexagon lands green, pills
+    {
+      __api.dice = { success: true, result: { roll: 73.5, won: true, payout: 1.98, multiplier: 1.98, balance: 100.98 }, round: { round_uuid: 'dice-u1' } };
+      __api.delay.dice = 200;
+      const { default: Dice } = await import('../../src/components/games/Dice.jsx');
+      const host = mountGame(Dice, 'dice');
+      await sleep(80);
+      setVal(host.querySelector('input[type=number]'), '1');
+      await sleep(30);
+      btnIn(host, /^Bet$/).click();
+      await sleep(50);
+      const panel = host.querySelector('.ui-stats-locked');
+      ok(!!panel && [...panel.querySelectorAll('input')].every((i) => i.disabled), 'Dice: the bottom row locks (inputs disabled) mid-bet');
+      ok(!!panel && [...panel.querySelectorAll('.ui-stepper button')].length > 0 && [...panel.querySelectorAll('.ui-stepper button')].every((b) => b.disabled),
+        'its steppers stay visible but disabled');
+      ok(host.querySelector('[data-dice-cube]')?.dataset.tone === 'moving', 'the hexagon is in its "moving" (gray) state');
+      ok(await waitFor(() => host.querySelector('[data-dice-cube]')?.dataset.tone === 'win', 3000), 'it lands green on a win');
+      ok(await waitFor(() => !host.querySelector('.ui-stats-locked'), 1500), 'and the row unlocks');
+      ok(/73\.50/.test(host.querySelector('[data-history-pills]')?.textContent || ''), 'the roll lands in the top history pills');
+      __api.delay.dice = 0;
+      unmountAll();
+    }
+
+    // --- 8f: Mines — a mine opens the whole board; unopened tiles are dimmed
+    {
+      __api.minesStart = { success: true, gameState: { roundId: 5, currentMultiplier: 1, revealedCells: [], balanceAfterBet: 99 } };
+      __api.minesReveal = { success: true, hitMine: true, minePositions: [0, 3, 7] };
+      const { default: Mines } = await import('../../src/components/games/Mines.jsx');
+      const host = mountGame(Mines, 'mines');
+      await sleep(80);
+      setVal(host.querySelector('input[type=number]'), '1');
+      await sleep(30);
+      btnIn(host, /^Bet$/).click();
+      ok(await waitFor(() => { const t = host.querySelector('[data-cell]'); return t && !t.disabled; }, 1500), 'Mines: the round opens');
+      host.querySelectorAll('[data-cell]')[0].click();
+      await sleep(30);
+      ok(host.querySelectorAll('[data-cell]')[0].dataset.cell === 'pending', 'the pressed tile lifts first (pending)');
+      ok(await waitFor(() => host.querySelectorAll('[data-cell="mine"]').length === 3, 2000), 'hitting a mine reveals the whole board (all 3 mines)');
+      const tiles = [...host.querySelectorAll('[data-cell]')];
+      ok(tiles.filter((t) => t.dataset.cell === 'gem').length === 22, 'and every gem');
+      ok(!tiles[0].classList.contains('css-tileDim') && tiles.slice(1).every((t) => t.classList.contains('css-tileDim')),
+        'the pressed tile stays full strength, the rest are dimmed');
+      ok(/opacity:\s*0\.7/.test(firstRule(readCss('src/components/games/mines.module.css'), '.tileRevealed.tileDim .hole')), 'dimmed = 0.7 opacity');
+      unmountAll();
+    }
+
+    // --- 8g: Blackjack — totals, deal order, hole card, push outline
+    {
+      const { default: Blackjack, handTotalLabel } = await import('../../src/components/games/Blackjack.jsx');
+      const C = (r) => ({ r, s: 'spades' });
+      ok(handTotalLabel([C('A'), C('6')]) === '7, 17', 'Blackjack: A+6 shows both totals: "7, 17"');
+      ok(handTotalLabel([C('A'), C('6')], true) === '17', 'a finished soft hand shows its best total');
+      ok(handTotalLabel([C('A'), C('K')]) === '21', 'a soft 21 is just "21"');
+      ok(handTotalLabel([C('A'), C('A')]) === '2, 12', 'A+A: "2, 12"');
+      ok(handTotalLabel([C('A'), C('6'), C('K')]) === '17', 'the ace counts 1 once 11 would bust');
+      ok(handTotalLabel([C('K'), C('Q'), C('5')]) === '25', 'a bust shows the plain total');
+      ok(handTotalLabel([{ hidden: true }, C('9')]) === '9' && handTotalLabel([]) === null, 'face-down cards do not count; no cards -> no label');
+
+      const card = (r, s) => ({ r, s });
+      const base = { roundId: 'bj1', activeHandIndex: 0, handBets: [1] };
+      const bodies = [
+        { success: true, gameState: { ...base, status: 'active', dealerHand: [card('5', 'hearts'), { hidden: true }], playerHands: [[card('A', 'clubs'), card('6', 'diamonds')]], handOutcomes: [], payout: 0, balance: 99 } },
+        { success: true, gameState: { ...base, status: 'finished', dealerHand: [card('5', 'hearts'), card('K', 'clubs'), card('2', 'spades')], playerHands: [[card('A', 'clubs'), card('6', 'diamonds')]], handOutcomes: ['push'], payout: 1, balance: 100 } },
+      ];
+      // (`global` is shadowed by a CSS string in main() — use globalThis)
+      const prevFetch = globalThis.fetch;
+      globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => bodies.shift() });
+      const host = mountGame(Blackjack, 'blackjack');
+      await sleep(60);
+      const order = [];
+      const mo = new MutationObserver((ms) => ms.forEach((m) => {
+        if (m.attributeName === 'data-face' && m.target.dataset.face === 'up') order.push(m.target.dataset.bjCard);
+      }));
+      mo.observe(host, { subtree: true, attributes: true, attributeFilter: ['data-face'] });
+      setVal(host.querySelector('input[type=number]'), '1');
+      await sleep(30);
+      btnIn(host, /^Bet$/).click();
+      await sleep(80);
+      const faces = () => [...host.querySelectorAll('[data-bj-card]')].map((c) => `${c.dataset.bjCard}:${c.dataset.face}`).join(' ');
+      ok(faces() === '5h:down hidden:down Ac:down 6d:down', 'every card leaves the deck face-down', faces());
+      ok(btnIn(host, /^Hit/).disabled && btnIn(host, /^Stand/).disabled, 'no actions while the cards are still being dealt');
+      ok(await waitFor(() => host.querySelector('[data-bj-total="hand-0"]')?.textContent === '7, 17', 2500), 'the player total counts up to "7, 17" as the cards turn');
+      ok(order.join(' ') === 'Ac 5h 6d', 'cards turn in deal order: player, dealer, player (the hole card stays down)', order.join(' '));
+      ok(host.querySelector('[data-bj-total="dealer"]')?.textContent === '5', 'the dealer total counts only his face-up card');
+      ok(await waitFor(() => !btnIn(host, /^Stand/).disabled, 1500), 'actions unlock once the deal is done');
+      btnIn(host, /^Stand/).click();
+      ok(await waitFor(() => !!host.querySelector('[data-win-popup]'), 4000), 'standing settles the round');
+      ok(order.slice(3).join(' ') === 'Kc 2s', 'the hole card turns over in place, then the dealer draws', order.join(' '));
+      ok(host.querySelector('[data-bj-total="dealer"]')?.textContent === '17', 'dealer: 17');
+      const pill = host.querySelector('[data-bj-total="hand-0"]');
+      ok(pill?.textContent === '17' && pill.dataset.outline === 'push' && pill.classList.contains('css-totalPillPush'),
+        'a push: the finished soft hand reads 17 and its pill is outlined orange');
+      ok(host.querySelectorAll('.css-cardOutlinePush').length === 2, "the player's cards are outlined orange too");
+      const pop = host.querySelector('[data-win-popup]');
+      ok(pop?.dataset.winPopup === 'push' && /1\.00×/.test(pop.textContent), 'the result is the shared popup: push tone, 1.00×');
+      mo.disconnect();
+      globalThis.fetch = prevFetch;
+      unmountAll();
+      const bjCss = readCss('src/components/games/blackjack.module.css');
+      const pillRule = firstRule(bjCss, '.totalPillPlayer');
+      ok(/--pill-bg:\s*#364E5C/i.test(bjCss) && /background:\s*var\(--pill-bg\)/.test(pillRule) && /font-weight:\s*700/.test(pillRule)
+        && /box-shadow:\s*var\(--pill-shadow\)/.test(pillRule), 'total pill: #364E5C fill, bold, drop shadow');
+      ok(/var\(--accent-orange\)/.test(firstRule(bjCss, '.cardOutlinePush')) && /var\(--accent-orange\)/.test(firstRule(bjCss, '.totalPillPush')),
+        'push outlines use the orange accent');
+    }
+
+    // --- 8h: Coin Flip — call after Bet, keep flipping on wins, history per round
+    {
+      const R = (o) => ({ roundId: 7, betAmount: 1, inProgress: true, wins: 0, currentMultiplier: 1, nextMultiplier: 1.98, flips: [], canCashout: false, canFlip: true, maxFlips: 20, ...o });
+      __api.flipActive = { success: true, result: null };
+      __api.flipStart = { success: true, result: { ...R(), balance: 99 } };
+      const { default: Flip } = await import('../../src/components/games/Flip.jsx');
+      let host = mountGame(Flip, 'flip');
+      await sleep(80);
+      const b = (n) => btnIn(host, new RegExp(`^${n}`));
+      const clip = () => host.querySelector('[data-flip-clip]')?.dataset.flipClip;
+      const slots = () => [...host.querySelectorAll('[data-flip-slot]')].map((x) => x.dataset.flipSlot).join(',');
+      const land = () => [...host.querySelectorAll('video')].find((v) => v.className.includes('coinVideoActive'))?.dispatchEvent(new Event('ended'));
+      ok(b('Heads').disabled && b('Tails').disabled && b('Random Pick').disabled, 'Flip: Heads / Tails / Random Pick wait for a bet');
+      setVal(host.querySelector('input[type=number]'), '1');
+      await sleep(30);
+      b('Bet').click();
+      ok(await waitFor(() => !b('Heads').disabled), 'after Bet the player calls it');
+      ok(clip() === 'h2h', 'the coin waits on the first frame of its next flip');
+      ok(b('Cashout')?.disabled === true && host.querySelector('input[type=number]').disabled, 'Cashout replaces Bet (locked until a win); the stake is locked');
+
+      __api.flipChoose = { success: true, result: { ...R({ wins: 1, currentMultiplier: 1.98, nextMultiplier: 3.96, canCashout: true, flips: [{ side: 'heads', outcome: 'heads', won: true }] }), won: true, lost: false, side: 'heads', outcome: 'heads' } };
+      b('Heads').click();
+      await sleep(60);
+      ok(b('Heads').disabled && slots() === '', 'while the coin is in the air: no calls, the history waits for the landing');
+      ok(clip() === 'h2h', 'heads -> heads plays');
+      land();
+      ok(await waitFor(() => !b('Heads').disabled), 'a win keeps the round open');
+      ok(slots() === 'heads-won', 'the flip is in the history bar', slots());
+      ok(!b('Cashout').disabled && /3\.96×/.test(host.querySelector('[data-flip-next]')?.textContent || ''), 'Cashout unlocks; the next call pays 3.96× (doubled)');
+
+      __api.flipChoose = { success: true, result: { ...R({ inProgress: false, currentMultiplier: 0, wins: 1, canCashout: false, canFlip: false, flips: [{ side: 'heads', outcome: 'heads', won: true }, { side: 'tails', outcome: 'heads', won: false }] }), won: false, lost: true, side: 'tails', outcome: 'heads' } };
+      b('Tails').click();
+      await sleep(60);
+      land();
+      ok(await waitFor(() => !!b('Bet')), 'a lost call ends the round');
+      ok(slots() === 'heads-won,heads-lost', 'both flips stay listed, the lost one marked', slots());
+
+      __api.flipStart = { success: true, result: { ...R({ roundId: 8 }), balance: 98 } };
+      b('Bet').click();
+      ok(await waitFor(() => !b('Heads').disabled), 'next round');
+      ok(slots() === '', 'the history bar starts over with every round');
+      __api.flipChoose = { success: true, result: { ...R({ roundId: 8, wins: 1, currentMultiplier: 1.98, nextMultiplier: 3.96, canCashout: true, flips: [{ side: 'tails', outcome: 'tails', won: true }] }), won: true, lost: false, side: 'tails', outcome: 'tails' } };
+      b('Tails').click();
+      await sleep(60);
+      ok(clip() === 'h2t', 'from heads a tails result plays heads -> tails');
+      land();
+      ok(await waitFor(() => b('Cashout') && !b('Cashout').disabled), 'won the call');
+      ok(clip() === 't2t', 'the coin now waits on the tails first frame');
+      __api.flipCashout = { success: true, result: { roundId: 8, inProgress: false, status: 'cashed_out', wins: 1, multiplier: 1.98, payout: 1.98, profit: 0.98, balance: 100.98 } };
+      b('Cashout').click();
+      ok(await waitFor(() => !!host.querySelector('[data-win-popup="win"]')), 'Cashout shows the win popup');
+      ok(/1\.98×/.test(host.querySelector('.ui-win-popup-multiplier')?.textContent || '') && host.querySelector('.ui-win-popup-amount span')?.textContent === '1.98',
+        '1.98× over 1.98 won');
+      ok(!!b('Bet'), 'and the round is closed');
+      unmountAll();
+
+      __api.flipActive = { success: true, result: R({ roundId: 9, betAmount: 3, wins: 2, currentMultiplier: 3.96, nextMultiplier: 7.92, canCashout: true, flips: [{ side: 'heads', outcome: 'heads', won: true }, { side: 'tails', outcome: 'tails', won: true }] }) };
+      host = mountGame(Flip, 'flip');
+      ok(await waitFor(() => !!b('Cashout')), 'an open round comes back after a reload');
+      ok(host.querySelector('input[type=number]').value === '3' && slots() === 'heads-won,tails-won' && /7\.92×/.test(host.querySelector('[data-flip-next]')?.textContent || ''),
+        'with its stake, its flips and the next multiplier');
+      ok(clip() === 't2t', 'the coin waits on the side it last landed on');
+      unmountAll();
+
+      let activeCalls = 0;
+      __api.flipActive = () => (activeCalls++ === 0 ? { success: true, result: null } : { success: true, result: R({ roundId: 10, betAmount: 2 }) });
+      __api.flipStart = { __error: Object.assign(new Error('409'), { response: { status: 409, data: { success: false, code: 'FLIP_ROUND_OPEN', message: 'Finish your current flip round first' } } }) };
+      host = mountGame(Flip, 'flip');
+      await sleep(80);
+      setVal(host.querySelector('input[type=number]'), '1');
+      await sleep(30);
+      b('Bet').click();
+      ok(await waitFor(() => !!b('Cashout')), 'Bet while a round is open elsewhere (409) loads that round');
+      ok(host.querySelector('input[type=number]').value === '2', 'with its own stake');
+      unmountAll();
+      ok(/background:\s*var\(--color-text-muted\)/.test(firstRule(readCss('src/components/games/flip.module.css'), '.sideBtn:disabled .dotHeads,\n.sideBtn:disabled .dotTails')),
+        'outside a round the side buttons read as disabled (text + marker muted)');
+    }
+
+    // --- 8i: Wheel + the navbar
+    {
+      const wheel = readCss('src/components/games/Wheel.jsx');
+      const wcss = readCss('src/components/games/wheel.module.css');
+      ok(!/animation|transition/.test(firstRule(wcss, '.pointerWrap')) && !/animation|transition/.test(firstRule(wcss, '.pointerSvg')),
+        'Wheel: the pointer has no animation or rotation');
+      ok(/viewBox="0 0 28 50"/.test(wheel) && /#d9415b/i.test(wheel), 'a taller 28×50 pointer with the darker inner circle');
+      ok(/SPIN_EASE\s*=\s*"cubic-bezier\(0\.15,\s*0\.75,\s*0\.2,\s*1\)"/.test(wheel), 'a faster spin with a long ease-out');
+      ok(/<HistoryPills\b/.test(wheel) && !/resultLine/.test(wheel), 'the result line is gone; results are top pills');
+      const nav = readCss('src/components/layout/navigation.module.css');
+      ok(/grid-template-columns:\s*1fr auto 1fr/.test(nav), 'navbar: a 1fr | auto | 1fr grid keeps the balance box dead-centre');
+    }
+    __api.flipActive = null;
+    __api.flipStart = null;
   }
 
   console.log(`\n──────────── ${pass} passed, ${fail} failed ────────────\n`);

@@ -20,11 +20,42 @@ import gem2Mp3 from "../../assets/mines/Gem-2.mp3";
 import gem3Mp3 from "../../assets/mines/Gem-3.mp3";
 import mineMp3 from "../../assets/mines/Mine.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 
 const GRID_SIZE = 5;
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
 
 const format8 = (n) => Number(n || 0).toFixed(2); // 2 decimals everywhere
+
+/* Tile reveal choreography (ms) — keep in sync with mines.module.css.
+   Click: the cover lifts to 1.03, collapses to 0 around its exact centre,
+   then the gem / mine scales up out of the hole. */
+const COVER_LIFT_MS = 150; // cover 1 -> 1.03 (held while the server answers)
+const ICON_LAG_MS = 160; // icon starts as the cover (190ms) is nearly gone
+const BOARD_REVEAL_GAP_MS = 280; // end of round: the rest of the board follows…
+const BOARD_RIPPLE_MS = 45; // …rippling out from the last pick, per tile of distance
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Every still-hidden tile turns into a gem or a mine (mines = server list). */
+function revealWholeBoard(prev, mines) {
+  const set = new Set(mines);
+  return prev.map((st, i) => (st !== "hidden" ? st : set.has(i) ? "mine" : "gem"));
+}
+
+/** Start delay for every still-hidden tile: a ripple out from `origin`
+    (a grid index, or the board centre when null). */
+function rippleDelays(prev, origin) {
+  const ox = origin == null ? (GRID_SIZE - 1) / 2 : origin % GRID_SIZE;
+  const oy = origin == null ? (GRID_SIZE - 1) / 2 : Math.floor(origin / GRID_SIZE);
+  const out = {};
+  prev.forEach((st, i) => {
+    if (st !== "hidden" || i === origin) return;
+    const d = Math.hypot((i % GRID_SIZE) - ox, Math.floor(i / GRID_SIZE) - oy);
+    out[i] = Math.round((origin == null ? 60 : BOARD_REVEAL_GAP_MS) + d * BOARD_RIPPLE_MS);
+  });
+  return out;
+}
 
 function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
@@ -78,8 +109,13 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [minePositions, setMinePositions] = useState(null);
   const [currentMultiplier, setCurrentMultiplier] = useState(1.0);
 
-  const [clickedCell, setClickedCell] = useState(null);
+  const [pendingCell, setPendingCell] = useState(null); // clicked, waiting for the server (cover lifted)
+  const [picked, setPicked] = useState(() => new Set()); // tiles the player opened this round
+  const [revealDelays, setRevealDelays] = useState({}); // end-of-round board reveal (ripple)
+  const [boardKey, setBoardKey] = useState(0); // new round -> the covers drop back in
   const animRef = useRef(0);
+  const soundTimersRef = useRef([]);
+  useEffect(() => () => soundTimersRef.current.forEach(clearTimeout), []);
 
   // ✅ track whether round ended by loss (hit mine)
   const [didLose, setDidLose] = useState(false);
@@ -126,7 +162,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setCurrentMultiplier(1.0);
     setRoundId(null);
     setInProgress(false);
-    setClickedCell(null);
+    setPendingCell(null);
+    setPicked(new Set());
+    setRevealDelays({});
+    setBoardKey((k) => k + 1);
     setDidLose(false);
 
     setShowWinPopup(false);
@@ -210,56 +249,58 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     sfx.play("gem1", { volume: 1 });
   };
 
+  // play a sound in sync with the icon popping out of the hole
+  const soundAtIcon = (fn, myAnim) => {
+    soundTimersRef.current.push(
+      setTimeout(() => {
+        if (animRef.current === myAnim) fn();
+      }, ICON_LAG_MS)
+    );
+  };
+
   const reveal = async (idx) => {
     if (!canReveal) return;
     if (cells[idx] !== "hidden") return;
     if (!roundId) return;
 
     setIsBusy(true);
-    setClickedCell(idx);
+    setPendingCell(idx); // the cover lifts to 1.03 while we wait
     const myAnim = ++animRef.current;
+    const clickedAt = performance.now();
 
     try {
       const res = await gamesAPI.revealMinesCell({ roundId, cellIndex: idx });
       const data = res.data;
 
-      // click returns to place then icon pops
-      await new Promise((r) => setTimeout(r, 90));
+      // always let the lift finish before the cover collapses
+      const held = performance.now() - clickedAt;
+      if (held < COVER_LIFT_MS) await sleep(COVER_LIFT_MS - held);
       if (animRef.current !== myAnim) return;
 
-      if (data.hitMine) {
-        // ✅ mine sound
-        sfx.play("mine", { volume: 1 });
+      setPendingCell(null);
+      setPicked((prev) => new Set(prev).add(idx));
 
-        // reset streak/buff on mine
+      if (data.hitMine) {
+        soundAtIcon(() => sfx.play("mine", { volume: 1 }), myAnim);
         resetGemSoundState();
 
+        // the clicked mine opens first, then the WHOLE board follows —
+        // rippling out from it (tiles the player did not open are dimmed)
+        const mines = Array.isArray(data.minePositions) ? data.minePositions : [];
+        setRevealDelays(rippleDelays(cells, idx));
         setCells((prev) => {
           const next = [...prev];
           next[idx] = "mine";
-          return next;
+          return revealWholeBoard(next, mines);
         });
-
-        if (Array.isArray(data.minePositions)) {
-          setMinePositions(data.minePositions);
-          setCells((prev) => {
-            const next = [...prev];
-            for (const m of data.minePositions) {
-              if (next[m] === "hidden") next[m] = "mine";
-            }
-            return next;
-          });
-        } else {
-          setMinePositions([]);
-        }
-
+        setMinePositions(mines);
         setInProgress(false);
         setDidLose(true);
         return;
       }
 
-      // ✅ confirmed gem -> play the correct gem sound
-      playGemSound();
+      // confirmed gem -> the matching gem sound as it pops
+      soundAtIcon(playGemSound, myAnim);
 
       setCells((prev) => {
         const next = [...prev];
@@ -270,12 +311,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       setRevealedCells(data.revealedCells || []);
       setCurrentMultiplier(Number(data.currentMultiplier) || 1.0);
     } catch (e) {
+      if (animRef.current === myAnim) setPendingCell(null);
       toast.error(e.response?.data?.message || "Reveal failed");
     } finally {
       setIsBusy(false);
-      setTimeout(() => {
-        if (animRef.current === myAnim) setClickedCell(null);
-      }, 220);
     }
   };
 
@@ -288,16 +327,11 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       const res = await gamesAPI.cashoutMines({ roundId });
       const data = res.data;
 
-      setMinePositions(data.minePositions || []);
-      if (Array.isArray(data.minePositions)) {
-        setCells((prev) => {
-          const next = [...prev];
-          for (const m of data.minePositions) {
-            if (next[m] === "hidden") next[m] = "mine";
-          }
-          return next;
-        });
-      }
+      // cashing out opens the whole board too (unopened tiles dimmed)
+      const mines = Array.isArray(data.minePositions) ? data.minePositions : [];
+      setMinePositions(mines);
+      setRevealDelays(rippleDelays(cells, null));
+      setCells((prev) => revealWholeBoard(prev, mines));
 
       setCurrentMultiplier(Number(data.multiplier) || currentMultiplier);
       setInProgress(false);
@@ -443,32 +477,44 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <>
         {/* ✅ Win popup (Limbo-like) */}
         {showWinPopup && !didLose && lastCashoutPayout > 0 && (
-          <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{format8(lastCashoutPayout)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={currentMultiplier} amount={lastCashoutPayout} className={styles.winPopup} />
         )}
 
-        <div className={`${styles.grid} ${didLose ? styles.gridLost : ""}`}>
+        {/* Each tile: the hole (with the gem / mine) under a #2F4553 cover.
+            Opening a tile lifts the cover to 1.03, collapses it to 0 around
+            its centre and scales the icon up out of the hole. When the round
+            ends the rest of the board opens the same way; tiles the player
+            did not open stay at 70% opacity. */}
+        <div key={boardKey} className={styles.grid} data-board-state={ended ? (didLose ? "lost" : "cashed") : "live"}>
           {Array.from({ length: CELL_COUNT }, (_, i) => {
             const st = cells[i];
             const isRevealed = st === "gem" || st === "mine";
-            const pop = i === clickedCell && isRevealed;
+            const isPending = i === pendingCell && !isRevealed;
+            const byBoard = isRevealed && !picked.has(i); // opened by the end-of-round reveal
+            const delay = byBoard ? revealDelays[i] || 0 : 0;
 
             return (
               <button
                 key={i}
                 type="button"
-                className={`${styles.tile} ${isRevealed ? styles.tileRevealed : ""}`}
+                className={[
+                  styles.tile,
+                  isPending ? styles.tilePending : "",
+                  isRevealed ? styles.tileRevealed : "",
+                  byBoard ? styles.tileAuto : "",
+                  byBoard && ended ? styles.tileDim : "",
+                ].join(" ")}
+                style={delay ? { "--reveal-delay": `${delay}ms` } : undefined}
                 onClick={() => reveal(i)}
-                disabled={!canReveal || isRevealed}
+                disabled={!canReveal || isRevealed || isPending}
+                aria-label={isRevealed ? (st === "gem" ? "Gem" : "Mine") : "Hidden tile"}
+                data-cell={isPending ? "pending" : st}
               >
-                {st === "gem" && (
-                  <img className={`${styles.icon} ${pop ? styles.pop : ""}`} src={gemImg} alt="" />
-                )}
-                {st === "mine" && (
-                  <img className={`${styles.icon} ${pop ? styles.pop : ""}`} src={mineImg} alt="" />
-                )}
+                <span className={styles.hole} aria-hidden="true">
+                  {st === "gem" && <img className={styles.icon} src={gemImg} alt="" draggable="false" />}
+                  {st === "mine" && <img className={styles.icon} src={mineImg} alt="" draggable="false" />}
+                </span>
+                <span className={styles.cover} aria-hidden="true" />
               </button>
             );
           })}

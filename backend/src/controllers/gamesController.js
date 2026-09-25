@@ -41,6 +41,13 @@ async function requireGameEnabledOrBypass(req, res, gameName) {
   return game;
 }
 
+// What each game's history pill shows (the value is formatted by the client)
+const HISTORY_VALUE = {
+  dice: (outcome) => outcome.roll, // where the result landed (0–100)
+  limbo: (outcome) => outcome.resultMultiplier, // the multiplier that came up
+  wheel: (outcome, row) => outcome.multiplier ?? row.multiplier, // the landed segment
+};
+
 class GamesController {
   static async getGames(req, res) {
     try {
@@ -96,6 +103,110 @@ class GamesController {
     } catch (error) {
       console.error("Flip error:", error);
       res.status(500).json({ success: false, message: error.message || "Game error" });
+    }
+  }
+
+  // =======================
+  // Coin Flip — multi-flip round (bet first, then call heads / tails)
+  // =======================
+  static _flipError(res, error, label) {
+    const msg = error?.message || "Game error";
+    if (error?.code === "FLIP_ROUND_OPEN") {
+      return res.status(409).json({ success: false, code: error.code, message: msg });
+    }
+    // player-side mistakes (stale round, nothing to cash out …) are 400s
+    if (/^(Invalid|Round (not found|already finished)|Access denied|Nothing to cash out|Maximum flips|Insufficient balance)/.test(msg)) {
+      return res.status(400).json({ success: false, message: msg });
+    }
+    console.error(label, error);
+    return res.status(500).json({ success: false, message: msg });
+  }
+
+  static async startFlip(req, res) {
+    try {
+      const game = await requireGameEnabledOrBypass(req, res, "flip");
+      if (!game) return;
+
+      const betAmount = Number(req.body.betAmount);
+      const validation = validateBetAmount(betAmount);
+      if (!validation.valid) return res.status(400).json({ success: false, message: validation.message });
+
+      res.json(await GameEngine.startFlip(req.user.id, betAmount));
+    } catch (error) {
+      GamesController._flipError(res, error, "Flip start error:");
+    }
+  }
+
+  static async chooseFlip(req, res) {
+    try {
+      const game = await requireGameEnabledOrBypass(req, res, "flip");
+      if (!game) return;
+
+      const { roundId, side } = req.body;
+      if (!roundId) return res.status(400).json({ success: false, message: "Missing roundId" });
+      if (!["heads", "tails"].includes(String(side || "").toLowerCase())) {
+        return res.status(400).json({ success: false, message: "Invalid side selection" });
+      }
+
+      res.json(await GameEngine.chooseFlip(req.user.id, roundId, side));
+    } catch (error) {
+      GamesController._flipError(res, error, "Flip choose error:");
+    }
+  }
+
+  static async cashoutFlip(req, res) {
+    try {
+      const game = await requireGameEnabledOrBypass(req, res, "flip");
+      if (!game) return;
+
+      const { roundId } = req.body;
+      if (!roundId) return res.status(400).json({ success: false, message: "Missing roundId" });
+
+      res.json(await GameEngine.cashoutFlip(req.user.id, roundId));
+    } catch (error) {
+      GamesController._flipError(res, error, "Flip cashout error:");
+    }
+  }
+
+  static async activeFlip(req, res) {
+    try {
+      res.json(GameEngine.activeFlip(req.user.id));
+    } catch (error) {
+      console.error("Flip active error:", error);
+      res.status(500).json({ success: false, message: "Failed to load the flip round" });
+    }
+  }
+
+  /**
+   * GET /games/:gameName/history — the player's latest rounds of one game for
+   * the history pills above the board (same shape as Crash's pills:
+   * { roundId, value, won, at }, newest first). Guests get an empty list.
+   */
+  static async getGameHistory(req, res) {
+    try {
+      const { gameName } = req.params;
+      const valueOf = HISTORY_VALUE[gameName];
+      if (!valueOf) return res.status(404).json({ success: false, message: "No history for this game" });
+      if (!req.user) return res.json({ success: true, data: [] });
+
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+      const data = Round.getUserGameRounds(req.user.id, gameName, limit)
+        .map((row) => {
+          const value = Number(valueOf(row.outcome || {}, row));
+          if (!Number.isFinite(value)) return null;
+          return {
+            roundId: row.round_uuid,
+            value,
+            won: Number(row.payout_amount) > 0,
+            at: row.created_at,
+          };
+        })
+        .filter(Boolean);
+
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error("Get game history error:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch history" });
     }
   }
 

@@ -36,6 +36,7 @@ import loseDragonMp3 from "../../assets/tower/LoseDragon.mp3";
 import loseFireMp3 from "../../assets/tower/LoseFire.mp3";
 import eggMp3 from "../../assets/tower/Egg.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 
 const DIFFS = ["easy", "medium", "hard"];
 const DEFAULT_ROWS = 9;
@@ -576,10 +577,7 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             overflow:hidden and would clip it), always dead-centred
             as a true overlay. */}
         {status === "cashed_out" && lastCashoutPayout != null && (
-          <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{format8(lastCashoutPayout)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={currentMultiplier} amount={lastCashoutPayout} className={styles.winPopup} />
         )}
 
         <div

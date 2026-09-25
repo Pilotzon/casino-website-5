@@ -418,18 +418,23 @@ async function main() {
     ok(/\.chartWrap\s*\{[^}]*grid-template-rows:\s*minmax\(clamp\(/.test(mobile),
       'chart gets an explicit height on phones (it does not collapse)');
     ok(/\.chartWrap\s*\{[^}]*width:\s*100%/.test(mobile), 'chart fills the stage width (centred)');
-    ok(/\.historyScroll\s*\{[^}]*overflow-x:\s*auto/.test(mobile), 'history pills scroll horizontally');
-    ok(/scrollbar-width:\s*thin/.test(mobile), 'the pill scroller shows a thin scrollbar');
-    ok(/\.historyPills\s*\{[^}]*direction:\s*rtl/.test(mobile),
-      'pills keep the newest round at the right while scrolling');
+    // the pill row is the shared component now (Crash, Wheel, Dice, Limbo)
+    const pillsCss = readFileSync(resolve(here, '../../src/components/common/historyPills.module.css'), 'utf8');
+    const pillsMobile = pillsCss.slice(pillsCss.indexOf('@media (max-width: 900px)'));
+    ok(/\.historyScroll\s*\{[^}]*overflow-x:\s*auto/.test(pillsMobile), 'history pills scroll horizontally');
+    ok(/scrollbar-width:\s*thin/.test(pillsMobile), 'the pill scroller shows a thin scrollbar');
+    ok(/\.historyScroll\s*\{[^}]*direction:\s*rtl/.test(pillsCss),
+      'pills keep the newest round at the right while scrolling (right-to-left scroller)');
     ok(/\.yTickBox\s*\{[^}]*font-size:\s*18px/.test(mobile), 'Y tick labels are bigger on phones');
     ok(/\.xTick\s*\{[^}]*font-size:\s*17px/.test(mobile), 'X tick labels are bigger on phones');
     ok(/\.xTotalTop\s*\{[^}]*font-size:\s*18px/.test(mobile), 'the top clock is bigger on phones');
     ok(/\.centerMult\s*\{[^}]*15vw/.test(mobile), 'multiplier scales up on phones');
     ok(/\.statusBox\s*\{[^}]*font-size:\s*23px/.test(mobile), 'status box text is bigger on phones');
     ok(/\.yAxisSpine\s*\{[^}]*width:\s*7px/.test(mobile), 'spine stays thicker than the labels');
-    const jsx = readFileSync(resolve(here, '../../src/components/games/Crash.jsx'), 'utf8');
+    const jsx = readFileSync(resolve(here, '../../src/components/common/HistoryPills.jsx'), 'utf8');
     ok(/historyScroll[\s\S]{0,200}historyPills/.test(jsx), 'pills live inside the scroller element');
+    const crashJsx = readFileSync(resolve(here, '../../src/components/games/Crash.jsx'), 'utf8');
+    ok(/<HistoryPills/.test(crashJsx), 'Crash renders the shared history pills row');
   }
 
   /* ------------------------------------------------------------------ §9 */

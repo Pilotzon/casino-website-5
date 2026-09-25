@@ -17,6 +17,7 @@ import kenoGemMp3 from "../../assets/keno/gem.mp3";
 import kenoTileMp3 from "../../assets/keno/tile.mp3";
 import kenoTileSelectMp3 from "../../assets/keno/tileselect.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
+import WinPopup from "../common/WinPopup";
 import { IconDiceFour } from "../common/Icons";
 
 const NUMBERS = Array.from({ length: 40 }, (_, i) => i + 1);
@@ -170,6 +171,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMultiplier, setWinMultiplier] = useState(0);
 
   // desktop hover
   const [hoverHit, setHoverHit] = useState(null);
@@ -368,6 +370,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
 
       if (payout > 0) {
         setWinAmount(payout);
+        setWinMultiplier(Number(r.multiplier) > 0 ? Number(r.multiplier) : bet > 0 ? payout / bet : 0);
         setShowWinPopup(true);
         setTimeout(() => {
           if (animRef.current === my) setShowWinPopup(false);
@@ -521,10 +524,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
         {/* Win popup — direct child of the stage so it is always dead
             centred over the board as a true overlay (no layout shift). */}
         {showWinPopup && winAmount > 0 && (
-          <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{format8(winAmount)}<CurrencyIcon /></div>
-          </div>
+          <WinPopup multiplier={winMultiplier} amount={winAmount} className={styles.winPopup} />
         )}
 
         <div className={styles.boardWrap}>

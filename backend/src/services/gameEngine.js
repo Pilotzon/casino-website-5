@@ -32,6 +32,12 @@ const {
 // Probability(M >= X) approx = 1 / X^POWER (for this chosen formula)
 const LIMBO_POWER = 2.2; // try 2.2–3.0. Higher = rarer big multipliers.
 
+// ---- Coin Flip (multi-flip round) ----
+// First correct call pays 1.98x (same as a single flip), every further
+// correct call doubles it: 1.98, 3.96, 7.92, 15.84 …
+const FLIP_BASE_MULTIPLIER = 1.98;
+const FLIP_MAX_FLIPS = 20; // after 20 correct calls the only move is Cashout
+
 // -----------------------------
 // Blackjack card normalization
 // RNG.generateDeck() returns: { suit, value }
@@ -161,6 +167,190 @@ static async processFlip(userId, betAmount, selectedSide) {
     User.updateBalance(userId, bet, "Flip bet refunded due to error");
     throw error;
   }
+}
+
+  // ---------------------------------------------------------------------
+  // Coin Flip — multi-flip round (bet FIRST, then call the coin)
+  //  - startFlip:   deduct the bet and open the round (no side chosen yet)
+  //  - chooseFlip:  flip once for the called side. A correct call doubles the
+  //                 multiplier (1.98x, 3.96x, 7.92x …) and the round stays
+  //                 open; a wrong call ends it with nothing paid.
+  //  - cashoutFlip: pay bet × current multiplier and close the round.
+  //  - activeFlip:  the player's open round, so a reload can resume it.
+  // One open flip round per player at a time.
+  // ---------------------------------------------------------------------
+static _flipMultiplier(wins) {
+  const n = Number(wins) || 0;
+  if (n <= 0) return 1.0;
+  return formatNumber(FLIP_BASE_MULTIPLIER * Math.pow(2, n - 1), 8);
+}
+
+static _flipPublic(round) {
+  const gs = round.game_state || {};
+  const wins = Number(gs.wins || 0);
+  return {
+    roundId: round.id,
+    betAmount: Number(round.bet_amount),
+    inProgress: Boolean(gs.inProgress),
+    wins,
+    currentMultiplier: GameEngine._flipMultiplier(wins),
+    nextMultiplier: GameEngine._flipMultiplier(wins + 1),
+    flips: (gs.flips || []).map((f) => ({ side: f.side, outcome: f.outcome, won: f.won })),
+    canCashout: Boolean(gs.inProgress) && wins > 0,
+    canFlip: Boolean(gs.inProgress) && wins < FLIP_MAX_FLIPS,
+    maxFlips: FLIP_MAX_FLIPS,
+  };
+}
+
+static _loadFlipRound(userId, roundId) {
+  const rid = Number(roundId);
+  if (!Number.isInteger(rid) || rid <= 0) throw new Error("Invalid roundId");
+  const round = Round.findById(rid);
+  if (!round) throw new Error("Round not found");
+  if (round.user_id !== userId) throw new Error("Access denied");
+  if (round.game_name !== "flip") throw new Error("Invalid round game");
+  if (!round.game_state?.inProgress) throw new Error("Round already finished");
+  return round;
+}
+
+static findOpenFlipRound(userId) {
+  const round = Round.findLatestUserGameRound(userId, "flip");
+  return round && round.game_state?.inProgress ? round : null;
+}
+
+static async startFlip(userId, betAmount) {
+  const game = Game.findByName("flip");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
+
+  const bet = Number(betAmount);
+  if (!Number.isFinite(bet) || bet <= 0) throw new Error("Invalid bet amount");
+
+  if (GameEngine.findOpenFlipRound(userId)) {
+    const err = new Error("Finish your current flip round first");
+    err.code = "FLIP_ROUND_OPEN";
+    throw err;
+  }
+
+  const balanceAfterBet = User.updateBalance(userId, -bet, "Flip bet placed");
+
+  try {
+    const round = Round.create({
+      userId,
+      gameId: game.id,
+      betAmount: bet,
+      payoutAmount: 0,
+      multiplier: 0,
+      outcome: { status: "in_progress", wins: 0, currentMultiplier: 1, flips: [], won: false },
+      gameState: { seed: RNG.generateSeed(), inProgress: true, wins: 0, flips: [] },
+    });
+
+    return {
+      success: true,
+      result: { ...GameEngine._flipPublic(round), balance: balanceAfterBet },
+    };
+  } catch (error) {
+    User.updateBalance(userId, bet, "Flip bet refunded due to error");
+    throw error;
+  }
+}
+
+static async chooseFlip(userId, roundId, side) {
+  const game = Game.findByName("flip");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
+
+  const called = String(side || "").toLowerCase();
+  if (!["heads", "tails"].includes(called)) throw new Error("Invalid side selection");
+
+  const round = GameEngine._loadFlipRound(userId, roundId);
+  const gs = round.game_state || {};
+  const wins = Number(gs.wins || 0);
+  if (wins >= FLIP_MAX_FLIPS) throw new Error("Maximum flips reached — cash out");
+
+  const rolled = RNG.randomBool() ? "heads" : "tails";
+  let won = rolled === called;
+  // same win-frequency policy as a single flip (never skims a payout)
+  if (won && RNG.randomFloat() > WIN_DAMPENER) won = false;
+  // the coin the player SEES always agrees with the verdict
+  const outcome = won ? called : called === "heads" ? "tails" : "heads";
+
+  const flips = [...(gs.flips || []), { side: called, outcome, won, at: Date.now() }];
+  const publicFlips = flips.map((f) => ({ side: f.side, outcome: f.outcome, won: f.won }));
+
+  if (!won) {
+    const reached = GameEngine._flipMultiplier(wins);
+    Round.updateGameState(round.id, { ...gs, inProgress: false, flips, endedAt: Date.now() });
+    const ended = Round.updatePayout(round.id, 0, 0, {
+      status: "lost", wins, currentMultiplier: 0, reachedMultiplier: reached, flips: publicFlips, won: false,
+    });
+    return {
+      success: true,
+      result: {
+        ...GameEngine._flipPublic(ended),
+        lost: true,
+        won: false,
+        side: called,
+        outcome,
+        reachedMultiplier: reached,
+        currentMultiplier: 0,
+      },
+    };
+  }
+
+  const newWins = wins + 1;
+  const newMultiplier = GameEngine._flipMultiplier(newWins);
+  const updated = Round.updateGameState(round.id, { ...gs, wins: newWins, flips });
+  Round.updateOutcome(round.id, {
+    status: "in_progress", wins: newWins, currentMultiplier: newMultiplier, flips: publicFlips, won: false,
+  });
+
+  return {
+    success: true,
+    result: { ...GameEngine._flipPublic(updated), lost: false, won: true, side: called, outcome },
+  };
+}
+
+static async cashoutFlip(userId, roundId) {
+  const game = Game.findByName("flip");
+  if (!game || isGameBlocked(game)) throw new Error("Game is disabled");
+
+  const round = GameEngine._loadFlipRound(userId, roundId);
+  const gs = round.game_state || {};
+  const wins = Number(gs.wins || 0);
+  if (wins <= 0) throw new Error("Nothing to cash out yet");
+
+  const bet = Number(round.bet_amount);
+  const multiplier = GameEngine._flipMultiplier(wins);
+  const payout = formatNumber(bet * multiplier, 8);
+
+  const finalBalance = User.updateBalance(userId, payout, "Flip cashout payout");
+  const flips = gs.flips || [];
+  Round.updateGameState(round.id, { ...gs, inProgress: false, cashedOutAt: Date.now() });
+  Round.updatePayout(round.id, payout, multiplier, {
+    status: "cashed_out",
+    wins,
+    currentMultiplier: multiplier,
+    flips: flips.map((f) => ({ side: f.side, outcome: f.outcome, won: f.won })),
+    won: true,
+  });
+
+  return {
+    success: true,
+    result: {
+      roundId: round.id,
+      inProgress: false,
+      status: "cashed_out",
+      wins,
+      multiplier,
+      payout,
+      profit: formatNumber(payout - bet, 8),
+      balance: finalBalance,
+    },
+  };
+}
+
+static activeFlip(userId) {
+  const round = GameEngine.findOpenFlipRound(userId);
+  return { success: true, result: round ? GameEngine._flipPublic(round) : null };
 }
 
   /**
