@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import Button from "../components/common/Button";
+import CurrencyIcon from "../components/common/CurrencyIcon";
+import { IconGamepad, IconBasketball, IconSearch, IconTrendUp, IconCaretRight } from "../components/common/Icons";
 import styles from "./Home.module.css";
 
 import heroBanner from "../assets/hero-banner.jpg";
@@ -161,7 +163,8 @@ function Home() {
                 <div className={styles.heroBalancePill}>
                   <span className={styles.heroBalanceLabel}>Your balance</span>
                   <span className={styles.heroBalanceValue}>
-                    {Number(user?.balance ?? 0).toFixed(2)} <span className={styles.heroCurrency}>$</span>
+                    {Number(user?.balance ?? 0).toFixed(2)}
+                    <CurrencyIcon className={styles.heroCurrency} />
                   </span>
                 </div>
                 <div className={styles.heroActions}>
@@ -255,13 +258,7 @@ function Home() {
           >
             <span className={styles.statLeft}>
               <span className={styles.statIcon} aria-hidden="true">
-                {/* game controller */}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2.5" y="8" width="19" height="9" rx="4.5" />
-                  <path d="M7 11.5v3M5.5 13h3" />
-                  <circle cx="15.2" cy="12.2" r="0.9" fill="currentColor" stroke="none" />
-                  <circle cx="17.8" cy="13.8" r="0.9" fill="currentColor" stroke="none" />
-                </svg>
+                <IconGamepad />
               </span>
               <span className={styles.statLabel}>Casino</span>
             </span>
@@ -284,12 +281,7 @@ function Home() {
           >
             <span className={styles.statLeft}>
               <span className={styles.statIcon} aria-hidden="true">
-                {/* basketball */}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="8.5" />
-                  <path d="M12 3.5c2.8 3.2 2.8 13.8 0 17M3.5 12c3.2-2.8 13.8-2.8 17 0" />
-                  <path d="M5.6 6.4c3.8 2 9 5.2 12.8 11.2M18.4 6.4C14.6 8.4 9.4 11.6 5.6 17.6" />
-                </svg>
+                <IconBasketball />
               </span>
               <span className={styles.statLabel}>Sports</span>
             </span>
@@ -305,10 +297,7 @@ function Home() {
         <div className={styles.searchWrap}>
           <label className={styles.searchBar} htmlFor="home-search">
             <span className={styles.searchIcon} aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="6.5" />
-                <path d="M15.5 15.5L19 19" />
-              </svg>
+              <IconSearch />
             </span>
             <input
               id="home-search"
@@ -328,16 +317,11 @@ function Home() {
         <section className={styles.trending} aria-label="Trending Games">
           <button type="button" className={styles.trendingHeader} onClick={() => navigate("/games")}>
             <span className={styles.trendingIcon} aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 17L9 11L13 15L21 7" />
-                <path d="M14 7H21V14" />
-              </svg>
+              <IconTrendUp />
             </span>
             <h2 className={styles.trendingTitle}>Trending Games</h2>
             <span className={styles.trendingChevron} aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 6l6 6-6 6" />
-              </svg>
+              <IconCaretRight />
             </span>
           </button>
 

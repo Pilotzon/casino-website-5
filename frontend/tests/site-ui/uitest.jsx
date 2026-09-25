@@ -10,19 +10,21 @@
  *       full sidebar width inside the new wrapper)
  *   §5  the app-wide "Scroll up" pill (bottom right, tooltip, mobile offset)
  *   §6  the "bypass disabled games/pages" permission in the UI
+ *   §7  filled icons everywhere, the green currency mark, the mobile bottom
+ *       nav (white bold labels) and the navbar balance box + today panel
  *
  * Run:  npm run test:ui        (from frontend/)
  * ==========================================================================*/
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { resolve, join, relative } from 'node:path';
 
 import { ToastProvider, useToast } from '../../src/context/ToastContext.jsx';
 import { ActiveBetProvider } from '../../src/context/ActiveBetContext.jsx';
 import { __toasts as stubToasts } from '../stubs/toastContext.jsx';
 import { __auth } from '../stubs/authContext.jsx';
-import { __site as __siteStatus } from '../stubs/gamesApi.js';
+import { __site as __siteStatus, __dash } from '../stubs/gamesApi.js';
 import { refreshSiteStatus } from '../../src/hooks/useSiteStatus.js';
 
 const here = typeof __TEST_DIR__ === 'string' ? __TEST_DIR__ : process.cwd();
@@ -170,8 +172,10 @@ async function main() {
       'the page toggle button is labelled too');
     const labels = (jsx.match(/styles\.btnText/g) || []).length;
     ok(labels >= 3, 'every row button wraps its text in the hideable span', String(labels));
-    ok(/M12 3\.5v8/.test(jsx), 'a power icon was added to the enable/disable buttons');
-    ok(/x1="4" y1="4" x2="20" y2="20"/.test(jsx), 'the phone icon gets a slash when mobile is on');
+    ok((jsx.match(/<IconPower size=\{16\} \/>/g) || []).length >= 2,
+      'a (filled) power icon is on the enable/disable buttons');
+    ok(/g\.is_mobile_enabled !== 0 \? <IconDeviceMobileSlash size=\{16\} \/> : <IconDeviceMobile size=\{16\} \/>/.test(jsx),
+      'the phone icon gets a slash when mobile is on');
 
     // nothing else in the panel may reintroduce a sideways scrollbar
     const phoneCss = css.slice(css.indexOf('@media (max-width: 640px)'));
@@ -361,7 +365,8 @@ async function main() {
     const jsx = readCss('src/components/common/BackToTop.jsx');
     ok(/data-tip="Scroll up"/.test(jsx) && /aria-label="Scroll up"/.test(jsx),
       'the label is "Scroll up" (tooltip + screen readers)');
-    ok(/d="M12 19V5"/.test(jsx) && /d="M5 12l7-7 7 7"/.test(jsx), 'the icon is an arrow pointing up');
+    ok(/<IconArrowUp \/>/.test(jsx) && /IconArrowUp = createIcon\("IconArrowUp", "[^"]+"\); \/\/ arrow-up-bold/.test(readCss('src/components/common/Icons.jsx')),
+      'the icon is a solid (bold, filled-path) arrow pointing up');
     ok(/SHOW_AFTER = 300/.test(jsx) && /window\.scrollY > SHOW_AFTER/.test(jsx),
       'it only appears once the user actually scrolls down');
     ok(/window\.addEventListener\("scroll"/.test(jsx) && /removeEventListener\("scroll"/.test(jsx),
@@ -460,6 +465,252 @@ async function main() {
     const auth = readCss('../backend/src/middleware/auth.js');
     ok(/runWithGameAccess\(canBypassUser\(user\)/.test(auth),
       'authenticateToken opens the scope for the whole request');
+  }
+
+
+  /* ------------------------ §7 filled icons, currency mark, nav + balance */
+  console.log('\n=== 7. filled icons, the currency mark, bottom nav + balance box ===');
+  {
+    const SRC = resolve(here, '../../src');
+    const rel = (p) => relative(SRC, p);
+    // dead code that nothing imports (see README) is not part of the live UI
+    const DEAD = /[/\\](autobet|stocks)[/\\]|components[/\\]dashboard[/\\]|Poker/;
+    const walk = (dir) => readdirSync(dir).flatMap((n) => {
+      const p = join(dir, n);
+      return statSync(p).isDirectory() ? walk(p) : [p];
+    });
+    const files = walk(SRC).filter((p) => !DEAD.test(p));
+    const jsxFiles = files.filter((p) => /\.jsx?$/.test(p));
+    const cssFiles = files.filter((p) => /\.css$/.test(p));
+    const read = (p) => readFileSync(p, 'utf8');
+    const global = readCss('src/styles/global.css');
+
+    // --- 7a: no outlined icon survives anywhere in the live UI
+    const outlined = jsxFiles.filter((p) => {
+      const t = read(p);
+      return /fill="none"\s+stroke="currentColor"/.test(t)
+        || /<(path|line|polyline|rect|circle)\b[^>]*\bstroke="currentColor"/.test(t)
+        || /<svg\b[^>]*\bstrokeWidth=/.test(t);
+    });
+    ok(outlined.length === 0, 'no outlined (stroke-drawn) icon is left in any component', outlined.map(rel).join(', '));
+    const forced = cssFiles.filter((p) => /svg\s*\{[^}]*(fill:\s*none|stroke:\s*currentColor)/.test(read(p)));
+    ok(forced.length === 0, 'no stylesheet forces fill:none / stroke on icon svgs', forced.map(rel).join(', '));
+    const strokedUris = cssFiles.filter((p) => /data:image\/svg\+xml[^")]*stroke=/.test(read(p)));
+    ok(strokedUris.length === 0, 'CSS data-URI icons (select carets, maintenance badge) are filled too', strokedUris.map(rel).join(', '));
+
+    // --- 7b: the shared icon set: every icon is a solid currentColor shape
+    const iconsSrc = readCss('src/components/common/Icons.jsx');
+    ok(!/stroke/i.test(iconsSrc.replace(/\/\*[\s\S]*?\*\//g, '')), 'the icon module contains no strokes at all');
+    ok(/Phosphor Icons/.test(iconsSrc) && /MIT License/.test(iconsSrc), 'the icon source + licence are credited');
+    const Icons = await import('../../src/components/common/Icons.jsx');
+    const names = Object.keys(Icons).filter((k) => /^Icon[A-Z]/.test(k));
+    ok(names.length >= 50, 'the set covers the whole site', String(names.length));
+    {
+      const host = mount(React.createElement('div', null, names.map((n) => React.createElement(Icons[n], { key: n }))));
+      await sleep(60);
+      const svgs = [...host.querySelectorAll('svg')];
+      const bad = svgs.filter((svg) => svg.getAttribute('fill') !== 'currentColor'
+        || svg.querySelectorAll('path').length !== 1
+        || !(svg.querySelector('path')?.getAttribute('d') || '').length
+        || svg.querySelector('[stroke]'));
+      ok(svgs.length === names.length && bad.length === 0, 'every icon renders ONE filled currentColor path',
+        bad.map((b) => b.getAttribute('data-icon')).join(','));
+      ok(svgs.every((svg) => svg.getAttribute('aria-hidden') === 'true'), 'icons are decorative by default (aria-hidden)');
+      unmountAll();
+    }
+
+    // --- 7c: the currency mark: green disc with the "$" cut out
+    const { default: CurrencyIcon, CURRENCY_COLOR } = await import('../../src/components/common/CurrencyIcon.jsx');
+    {
+      const host = mount(React.createElement('div', null,
+        React.createElement(CurrencyIcon),
+        React.createElement(CurrencyIcon, { size: 20, className: 'extra' })));
+      await sleep(40);
+      const [a, b] = host.querySelectorAll('svg');
+      const path = a?.querySelector('path');
+      ok(a?.classList.contains('currency-icon') && a?.getAttribute('viewBox') === '0 0 24 24', 'CurrencyIcon renders the 24x24 mark');
+      ok(CURRENCY_COLOR.toUpperCase() === '#25E801' && path?.getAttribute('fill')?.toUpperCase() === '#25E801', 'it is #25E801 green');
+      ok(path?.getAttribute('fill-rule') === 'evenodd' && (path?.getAttribute('d').match(/Z/g) || []).length === 2,
+        'the "$" is a HOLE in the disc (two contours, even-odd), not paint on top');
+      ok(b?.classList.contains('extra') && b?.style.width === '20px' && b?.style.height === '20px', 'size + className props work');
+      unmountAll();
+    }
+    ok(/--color-currency:\s*#25E801/i.test(global) && /\.currency-icon path\s*\{\s*fill:\s*var\(--color-currency\)/.test(global),
+      'one token drives the colour of every currency mark');
+
+    // --- 7d: no "$" glyph is used as the currency icon any more
+    const moneyFiles = jsxFiles.filter((p) => /[/\\](games|layout)[/\\]|pages[/\\](Home|Dashboard|Admin)\.jsx$/.test(p));
+    const glyphs = moneyFiles.filter((p) => { const t = read(p); return />\s*\$\s*<\//.test(t) || /\}\s+\$<\//.test(t); });
+    ok(glyphs.length === 0, 'no "$" text glyph stands in for the currency icon', glyphs.map(rel).join(', '));
+    {
+      __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
+      const { default: Dice } = await import('../../src/components/games/Dice.jsx');
+      const host = mount(
+        React.createElement(ToastProvider, null,
+          React.createElement(ActiveBetProvider, null,
+            React.createElement(Dice, { gameRow: { name: 'dice', display_name: 'Dice', is_enabled: 1, is_mobile_enabled: 1 } })))
+      );
+      await sleep(160);
+      const coins = host.querySelectorAll('svg.currency-icon');
+      ok(coins.length >= 2, 'the game sidebar shows the green mark (bet amount + profit)', String(coins.length));
+      const bare = [...host.querySelectorAll('span, div')].filter((el) => !el.children.length && el.textContent.trim() === '$');
+      ok(bare.length === 0, 'and no bare "$" is left in it', String(bare.length));
+      unmountAll();
+    }
+
+    // --- 7e: every other sidebar icon is white
+    const bj = readCss('src/components/games/blackjack.module.css');
+    ok(/\.actionHit \.actionIcon,\s*\.actionStand \.actionIcon,\s*\.actionSplit \.actionIcon,\s*\.actionDouble \.actionIcon\s*\{\s*filter:\s*brightness\(0\) invert\(1\)/.test(bj)
+      && !/\.action(Hit|Stand|Split|Double)\s+\.actionIcon\s*\{[^}]*hue-rotate/.test(bj),
+      'Blackjack: Hit / Stand / Split / Double icons are all white (card-suit art keeps its colours)');
+    ok(/filter:\s*brightness\(0\) invert\(1\)/.test(firstRule(readCss('src/components/games/RPS.module.css'), '.choiceSmallIcon')),
+      'RPS: the rock / paper / scissors marks are white');
+    const flipCss = readCss('src/components/games/flip.module.css');
+    ok(/background:\s*var\(--color-text-primary\)/.test(firstRule(flipCss, '.dotHeads'))
+      && /background:\s*var\(--color-text-primary\)/.test(firstRule(flipCss, '.dotTails')), 'Flip: the heads / tails markers are white');
+    ok(/\.multSuffix\s*\{\s*composes:\s*sidebar-input-suffix from global/.test(readCss('src/components/games/crash.module.css'))
+      && /color:\s*var\(--color-text-primary\)/.test(firstRule(global, '.sidebar-input-suffix')), "Crash: the × suffix is plain white");
+    ok(!/--bitcoin|--accent-warning|color:/.test(firstRule(global, '.sidebar-currency-icon')), 'the sidebar currency slot is no longer orange');
+
+    // --- 7f: mobile bottom nav — labels always white + bold, only icons change
+    const bn = readCss('src/components/layout/BottomNav.module.css');
+    const label = firstRule(bn, '.label');
+    ok(/color:\s*var\(--color-text-primary\)/.test(label), 'bottom-nav labels are always white');
+    ok(/font-weight:\s*700/.test(label) && /-webkit-text-stroke:\s*0\.25px currentColor/.test(label), 'and bold (heaviest face + hairline)');
+    ok(!/\.(tabActive|tab:hover|tab:active)[^{]*\.label/.test(bn), 'no tab state re-colours the label');
+    ok(/color:\s*var\(--color-text-secondary\)/.test(firstRule(bn, '.tab'))
+      && /color:\s*var\(--color-text-primary\)/.test(firstRule(bn, '.tabActive')), 'the icon goes secondary -> white on the active tab');
+    ok(!/fill:\s*none/.test(bn) && !/(^|[^-])stroke:/.test(bn.replace(/-webkit-text-stroke[^;]*;/g, '')), 'no outline styling on the tab icons');
+    const { MemoryRouter, useLocation } = await import('react-router-dom');
+    {
+      const { default: BottomNav } = await import('../../src/components/layout/BottomNav.jsx');
+      const host = mount(React.createElement(MemoryRouter, { initialEntries: ['/games/dice'] }, React.createElement(BottomNav)));
+      await sleep(100);
+      const tabs = [...host.querySelectorAll('nav button')];
+      ok(tabs.length === 4, 'a player sees Home, Casino, Dashboard, Custom Bets', String(tabs.length));
+      const active = tabs.filter((b) => b.getAttribute('aria-current') === 'page');
+      ok(active.length === 1 && /Casino/.test(active[0].textContent), 'Casino is active on a game route');
+      ok(tabs.every((b) => b.querySelector('svg[fill="currentColor"][data-icon]') && !b.querySelector('[stroke]')), 'every tab icon is filled');
+      const labelClasses = new Set(tabs.map((b) => b.lastElementChild?.className));
+      ok(labelClasses.size === 1, 'active and inactive labels share one class (same white, bold look)', [...labelClasses].join('|'));
+      unmountAll();
+    }
+
+    // --- 7g: navbar balance box
+    const navSrc = readCss('src/components/layout/Navigation.jsx');
+    ok(/<BalanceBox \/>/.test(navSrc) && !/styles\.balanceLabel/.test(navSrc), 'the navbar renders the new balance box (readonly field gone)');
+    const bcss = readCss('src/components/layout/balanceBox.module.css');
+    const boxRule = firstRule(bcss, '.box');
+    ok(/border:\s*none/.test(boxRule) && /box-shadow:\s*none/.test(boxRule), 'the box has no border and no shadow');
+    ok(/border-radius:\s*var\(--radius-md\)/.test(boxRule), 'its corners are slightly rounded (8px)');
+    ok(/background:\s*var\(--color-balance-box-bg\)/.test(firstRule(bcss, '.balanceBtn'))
+      && /--color-balance-box-bg:\s*#102230/i.test(global), 'the amount side is #102230');
+    ok(/background:\s*var\(--color-balance-wallet-bg\)/.test(firstRule(bcss, '.walletBtn'))
+      && /--color-balance-wallet-bg:\s*#2874E1/i.test(global), 'the wallet side is #2874E1');
+    const minW = Number((/min-width:\s*(\d+)px/.exec(firstRule(bcss, '.balanceBtn')) || [])[1]);
+    const walletW = Number((/width:\s*(\d+)px/.exec(firstRule(bcss, '.walletBtn')) || [])[1]);
+    const share = minW / (minW + walletW);
+    ok(share >= 0.6 && share <= 0.72, 'the amount side takes ~60-70% of the box', share.toFixed(2));
+    ok(/@media \(max-width: 768px\)/.test(bcss) && /@media \(max-width: 380px\)/.test(bcss) && /@media \(max-width: 480px\)/.test(bcss),
+      'it has phone breakpoints (and a full-width panel on small phones)');
+
+    const { default: BalanceBox } = await import('../../src/components/layout/BalanceBox.jsx');
+    let where = '';
+    function Where() { where = useLocation().pathname; return null; }
+    const sqlAgo = (ms) => new Date(Date.now() - ms).toISOString().slice(0, 19).replace('T', ' ');
+    const TODAY = {
+      since: new Date().toISOString(), bets: 6, wagered: 9.5, payout: 12, profit: 2.5,
+      recent: [
+        { id: 6, game_name: 'limbo', game_display_name: 'Limbo', bet_amount: 2, payout_amount: 0, profit: -2, multiplier: 0, created_at: sqlAgo(120000) },
+        { id: 5, game_name: 'dice', game_display_name: 'Dice', bet_amount: 1.5, payout_amount: 3, profit: 1.5, multiplier: 2, created_at: sqlAgo(3 * 3600000) },
+        { id: 4, game_name: 'mines', game_display_name: 'Mines', bet_amount: 1, payout_amount: 1, profit: 0, multiplier: 1, created_at: sqlAgo(10000) },
+      ],
+    };
+    const mountBox = () => mount(React.createElement(MemoryRouter, { initialEntries: ['/games/dice'] },
+      React.createElement(BalanceBox), React.createElement(Where)));
+    const q = (host, id) => host.querySelector(`[data-testid="${id}"]`);
+
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 1234.5 };
+    __dash.calls.length = 0;
+    __dash.fail = false;
+    __dash.today = TODAY;
+    {
+      const host = mountBox();
+      await sleep(80);
+      const toggle = q(host, 'balance-toggle');
+      ok(!!toggle && /1,234\.50/.test(toggle.textContent), 'the amount side shows the balance', toggle?.textContent);
+      const order = [...(toggle?.children || [])].map((el) => el.getAttribute('data-icon') || el.querySelector('svg')?.getAttribute('data-icon') || 'amount');
+      ok(order.join('>') === 'amount>CurrencyIcon>IconCaretDown', 'amount, then the currency mark, then the small dropdown caret', order.join('>'));
+      const wallet = q(host, 'balance-wallet');
+      ok(!!wallet?.querySelector('svg[data-icon="IconWallet"]'), 'the right part is a wallet button');
+      ok(!q(host, 'balance-panel') && toggle.getAttribute('aria-expanded') === 'false', 'the panel starts closed');
+      ok(__dash.calls.length === 0, 'nothing is fetched until it is opened');
+
+      toggle.click();
+      ok(await waitFor(() => !!q(host, 'balance-recent'), 2000), "opening it loads today's activity");
+      ok(toggle.getAttribute('aria-expanded') === 'true', 'the toggle reports it is open');
+      const mid = new Date(); mid.setHours(0, 0, 0, 0);
+      ok(__dash.calls.length === 1 && __dash.calls[0]?.since === mid.toISOString(),
+        '"today" starts at the LOCAL midnight', JSON.stringify(__dash.calls));
+      const panel = q(host, 'balance-panel');
+      ok(/\+2\.50/.test(q(host, 'balance-profit')?.textContent), "today's profit, signed", q(host, 'balance-profit')?.textContent);
+      ok(/9\.50/.test(q(host, 'balance-wagered')?.textContent) && /6 bets/.test(q(host, 'balance-wagered')?.textContent),
+        "today's wagered amount (and bet count)", q(host, 'balance-wagered')?.textContent);
+      const rows = [...panel.querySelectorAll('[data-testid="balance-recent"] li')];
+      ok(rows.length === 3, 'the 3 most recent bets are listed', String(rows.length));
+      ok(/Limbo/.test(rows[0]?.textContent) && /\u22122\.00/.test(rows[0]?.textContent) && /0\.00×/.test(rows[0]?.textContent)
+        && /2m ago/.test(rows[0]?.textContent) && /Bet 2\.00/.test(rows[0]?.textContent),
+        'each row: game, result, multiplier, time, stake', rows[0]?.textContent);
+      ok(/\+1\.50/.test(rows[1]?.textContent) && /3h ago/.test(rows[1]?.textContent), 'wins read as +, older ones in hours', rows[1]?.textContent);
+      ok(/just now/.test(rows[2]?.textContent), 'and a moment ago reads "just now"', rows[2]?.textContent);
+      ok(panel.querySelectorAll('svg.currency-icon').length >= 5, 'amounts carry the green currency mark');
+      ok(!panel.querySelector('input'), 'no readonly-input look: the panel has no inputs at all');
+
+      panel.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+      await sleep(60);
+      ok(!!q(host, 'balance-panel'), 'pressing inside the panel keeps it open');
+      document.body.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+      ok(await waitFor(() => !q(host, 'balance-panel'), 1000), 'pressing outside closes it');
+
+      toggle.click();
+      ok(await waitFor(() => __dash.calls.length === 2, 1000), 'reopening fetches fresh numbers');
+      document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      ok(await waitFor(() => !q(host, 'balance-panel'), 1000), 'Escape closes it');
+
+      toggle.click();
+      await waitFor(() => !!q(host, 'balance-panel'), 1000);
+      wallet.click();
+      ok(await waitFor(() => where === '/dashboard', 1000), 'the wallet button opens the Dashboard', where);
+      ok(await waitFor(() => !q(host, 'balance-panel'), 1000), 'and navigating away closes the panel');
+      unmountAll();
+    }
+    {
+      // failure -> message + Retry; retry recovers
+      __dash.fail = true;
+      const host = mountBox();
+      await sleep(60);
+      q(host, 'balance-toggle').click();
+      ok(await waitFor(() => /Stats are down/.test(q(host, 'balance-panel')?.textContent || ''), 1500), 'a failed load says so');
+      const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Retry');
+      ok(!!retry, 'and offers Retry');
+      __dash.fail = false;
+      retry?.click();
+      ok(await waitFor(() => !!q(host, 'balance-recent'), 1500), 'Retry loads the stats');
+      unmountAll();
+    }
+    {
+      // a new player: zeros + a friendly empty state
+      __dash.today = { since: TODAY.since, bets: 0, wagered: 0, payout: 0, profit: 0, recent: [] };
+      const host = mountBox();
+      await sleep(60);
+      q(host, 'balance-toggle').click();
+      ok(await waitFor(() => /No bets yet/.test(q(host, 'balance-panel')?.textContent || ''), 1500), 'no bets -> an empty state, not a blank list');
+      ok(/0\.00/.test(q(host, 'balance-profit')?.textContent) && !/[+\u2212]/.test(q(host, 'balance-profit')?.textContent),
+        'zero profit is unsigned', q(host, 'balance-profit')?.textContent);
+      unmountAll();
+    }
+    __auth.user = { id: 1, username: 'tester', role: 'user', balance: 100 };
+    __dash.today = null;
   }
 
   console.log(`\n──────────── ${pass} passed, ${fail} failed ────────────\n`);

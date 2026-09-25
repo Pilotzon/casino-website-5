@@ -90,9 +90,11 @@
   place-items: center;
   align-self: stretch;
   background: transparent;
-  font-weight: 800;
-  font-size: 14px;
-  color: var(--bitcoin);
+}
+
+/* the currency mark inside the chip (CurrencyIcon) */
+.btcIcon {
+  composes: sidebar-currency-icon from global;
 }
 
 .splitButtons {

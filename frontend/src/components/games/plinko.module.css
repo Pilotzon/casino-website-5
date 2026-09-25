@@ -315,10 +315,12 @@
   composes: ui-modal-item-value from global;
 }
 
+/* the currency mark after the amount (CurrencyIcon); the item row's
+   10px gap is a touch wide for a unit, so pull it in to 6px */
 .bucketModalBtc {
-  color: var(--bitcoin);
-  font-weight: 700;
-  font-size: 14px;
+  width: 16px;
+  height: 16px;
+  margin-left: -4px;
 }
 
 .bucketModalBtnPrimary {

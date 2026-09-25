@@ -44,6 +44,7 @@ import FlipSound from "../../assets/rps/Flip.mp3";
 import ChooseSound from "../../assets/rps/Choose.wav";
 import WinMidRoundSound from "../../assets/rps/winMidRound.mp3";
 import DrawStateSound from "../../assets/rps/drawState.wav";
+import CurrencyIcon from "../common/CurrencyIcon";
 
 const FLIP_MS = 650;
 const SLIDE_MS = 380;
@@ -410,7 +411,7 @@ export default function RPS({ gameRow }) {
             <div className={styles.inputWrapper}>
               <input type="number" placeholder="0.00" value={betAmount} onChange={(e) => setBetAmount(e.target.value)}
                 step="0.01" disabled={inProgress || isRevealing} />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)} disabled={isLocked || inProgress || isRevealing}>½</button>
@@ -454,7 +455,7 @@ export default function RPS({ gameRow }) {
           </div>
           <div className={`${styles.readonlyMoney} ${styles.profitInput}`}>
             <input type="text" value={format2(inProgress ? bet * currentMultiplier : 0)} readOnly />
-            <span className={styles.btcIcon}>$</span>
+            <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
       </div>

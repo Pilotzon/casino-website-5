@@ -16,6 +16,8 @@ import useGameAudio from "../../hooks/useGameAudio";
 import dragMp3 from "../../assets/dice/Drag.mp3";
 import winMp3 from "../../assets/dice/Win.mp3";
 import roundMp3 from "../../assets/dice/Round.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconArrowClockwise } from "../common/Icons";
 
 function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
@@ -314,7 +316,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 onChange={(e) => setBetAmount(e.target.value)}
                 step="0.00000001"
               />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)} disabled={isLocked || isRolling}>
@@ -344,7 +346,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
           <div className={styles.readonlyInput}>
             <input type="text" value={profit.toFixed(2)} readOnly />
-            <span className={styles.btcIcon}>$</span>
+            <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
       </div>
@@ -358,7 +360,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {showWinPopup && (
           <div className={styles.winPopup}>
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)} $</div>
+            <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}
 
@@ -457,9 +459,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             <div className={`${styles.statInput} ${styles.editable}`}>
               <input type="number" value={targetNumber} onChange={handleTargetInputChange} />
               <button className={styles.swapBtn} onClick={toggleMode} type="button">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-                </svg>
+                <IconArrowClockwise />
               </button>
               <Stepper value={targetNumber} onChange={(v) => handleTargetInputChange({ target: { value: v } })} step={1} min={TARGET_MIN} max={TARGET_MAX} decimals={0} />
             </div>

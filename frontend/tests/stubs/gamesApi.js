@@ -39,6 +39,21 @@ export const gamesAPI = {
   crashStop: () => respond('stop'),
 };
 
+/* ---- dashboard: only the navbar balance box's `today` summary ----
+   `__dash.today` is the payload, `__dash.fail` makes the call reject, and
+   every call's params are recorded in `__dash.calls`. */
+export const __dash = { today: null, fail: false, calls: [] };
+
+export const dashboardAPI = {
+  getToday: (params) => {
+    __dash.calls.push(params);
+    if (__dash.fail) {
+      return Promise.reject(Object.assign(new Error('boom'), { response: { data: { message: 'Stats are down' } } }));
+    }
+    return Promise.resolve({ data: { success: true, data: __dash.today } });
+  },
+};
+
 /* ---- the axios-like default export used by plain modules (useSiteStatus …) */
 export const __site = {
   status: { signup_enabled: true, maintenance_mode: false },

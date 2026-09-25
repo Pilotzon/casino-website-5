@@ -26,6 +26,8 @@ import chip500 from "../../assets/roulette/Chip500.png";
 import chip1000 from "../../assets/roulette/Chip1000.png";
 import chip5000 from "../../assets/roulette/Chip5000.png";
 import chip10000 from "../../assets/roulette/Chip10000.png";
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconCaretLeft, IconCaretRight, IconUndo, IconX } from "../common/Icons";
 
 // ============================================================
 // Constants
@@ -725,9 +727,7 @@ export default function Roulette({ gameRow }) {
           </div>
           <div className={styles.chipSelector}>
             <button type="button" className={`${styles.chipNav} ${styles.chipNavLeft}`} onClick={() => shiftChip(-1)} disabled={spinning} aria-label="Previous chip">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M14.5 6.5L9 12l5.5 5.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconCaretLeft size={16} />
               </button>
             <div
               key={chipIndex}
@@ -749,9 +749,7 @@ export default function Roulette({ gameRow }) {
               })}
             </div>
             <button type="button" className={`${styles.chipNav} ${styles.chipNavRight}`} onClick={() => shiftChip(1)} disabled={spinning} aria-label="Next chip">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M9.5 6.5L15 12l-5.5 5.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconCaretRight size={16} />
               </button>
           </div>
             <BetError message={betLockedError} />
@@ -766,7 +764,7 @@ export default function Roulette({ gameRow }) {
           <div className={styles.betInputRow}>
             <div className={styles.betInputLike}>
               {totalBet.toFixed(2)}
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
             <div className={styles.splitButtons}>
               <button type="button" disabled>½</button>
@@ -794,7 +792,7 @@ export default function Roulette({ gameRow }) {
         {showWinPopup && (
           <div className={styles.winPopup}>
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(lastPayout).toFixed(2)} $</div>
+            <div className={styles.winPopupAmount}>{Number(lastPayout).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}
 
@@ -922,16 +920,11 @@ export default function Roulette({ gameRow }) {
 
             <div className={styles.tableFooter}>
               <button type="button" className={styles.undoBtn} onClick={undoBet} disabled={spinning}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M8 5L4 9l4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M4 9h9.5a5.5 5.5 0 1 1 0 11H8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <IconUndo size={15} />
                 Undo
               </button>
               <button type="button" className={styles.clearBtn} onClick={clearBets} disabled={spinning}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-                </svg>
+                <IconX size={14} />
                 Clear
               </button>
             </div>

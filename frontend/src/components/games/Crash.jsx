@@ -11,6 +11,8 @@ import BetError from "../common/BetError";
 import useGameAudio from "../../hooks/useGameAudio";
 import crashWinMp3 from "../../assets/crash/Win.mp3";
 import styles from './crash.module.css';
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconArticle } from "../common/Icons";
 
 /**
  * ===========================================================================
@@ -969,7 +971,7 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 step="0.00000001"
                 disabled={isLive || busy}
               />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)} disabled={isLocked || isLive}>½</button>
@@ -994,7 +996,7 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 step="0.01"
                 disabled={isLive || busy}
               />
-              <span className={styles.btcIcon}>×</span>
+              <span className={styles.multSuffix}>×</span>
             </div>
             <Stepper
               value={autoCashout}
@@ -1030,7 +1032,7 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
           <div className={styles.readonlyInput}>
             <input type="text" value={`${(profitValue > 0 ? profitValue : 0).toFixed(2)}`} readOnly />
-            <span className={styles.btcIcon}>$</span>
+            <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
       </div>
@@ -1056,10 +1058,7 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 </div>
               </div>
               <button className={styles.historyIcon} type="button" aria-label="My bets">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <path d="M7 8h10M7 12h6M7 16h8" />
-                </svg>
+                <IconArticle size={18} />
               </button>
               <span className={styles.historyYou}>‹ You</span>
             </div>

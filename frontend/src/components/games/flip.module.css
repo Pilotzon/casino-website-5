@@ -142,17 +142,19 @@
   color: var(--color-text-primary);
 }
 
+/* side markers: white like every other sidebar icon (only the currency
+   mark is coloured) — the round vs diamond shape tells them apart */
 .dotHeads {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #c58d0e;
+  background: var(--color-text-primary);
 }
 
 .dotTails {
   width: 12px;
   height: 12px;
-  background: #3b82f6;
+  background: var(--color-text-primary);
   transform: rotate(45deg);
 }
 

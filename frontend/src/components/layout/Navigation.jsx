@@ -7,6 +7,18 @@ import Modal from "../common/Modal";
 import api from "../../services/api";
 import useSiteStatus from "../../hooks/useSiteStatus";
 import HazardBadge from "../common/HazardBadge";
+import CurrencyIcon from "../common/CurrencyIcon";
+import {
+  IconDiceFive,
+  IconTicket,
+  IconDashboard,
+  IconShieldCheck,
+  IconX,
+  IconLock,
+  IconUserPlus,
+  IconWarning,
+} from "../common/Icons";
+import BalanceBox from "./BalanceBox";
 import styles from "./navigation.module.css";
 
 function Navigation() {
@@ -224,13 +236,7 @@ function Navigation() {
           <div className={styles.actions}>
             {isAuthenticated ? (
               <>
-                <div className={styles.balance}>
-                  <span className={styles.balanceLabel}>Balance</span>
-                  <span className={styles.balanceAmount}>
-                    {Number(user?.balance ?? 0).toFixed(2) || "0.00"}
-                  </span>
-                  <span className={styles.balanceCurrency}>$</span>
-                </div>
+                <BalanceBox />
 
                 <div className={styles.user}>
                   <span className={styles.username}>{user?.username}</span>
@@ -286,9 +292,7 @@ function Navigation() {
               aria-label="Close menu"
               tabIndex={mobileOpen ? 0 : -1}
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 6l12 12M18 6 6 18" />
-              </svg>
+              <IconX />
             </button>
           </div>
 
@@ -305,7 +309,7 @@ function Navigation() {
                 <span className={styles.drawerBalanceLabel}>Balance</span>
                 <span className={styles.drawerBalanceValue}>
                   {Number(user?.balance ?? 0).toFixed(2)}
-                  <span className={styles.drawerBalanceCurrency}>$</span>
+                  <CurrencyIcon className={styles.drawerBalanceCurrency} />
                 </span>
               </div>
             </div>
@@ -391,13 +395,7 @@ function Navigation() {
         isOpen={loginModalOpen}
         onClose={closeLoginModal}
         title="Login"
-        icon={
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="4" y="10.5" width="16" height="9.5" rx="2" />
-            <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
-            <circle cx="12" cy="15.2" r="1.4" fill="currentColor" stroke="none" />
-          </svg>
-        }
+        icon={<IconLock />}
         footer={
           <>
             Not signed up?{' '}
@@ -449,13 +447,7 @@ function Navigation() {
         isOpen={registerModalOpen}
         onClose={closeRegisterModal}
         title="Create Account"
-        icon={
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="10" cy="8" r="3.4" />
-            <path d="M4 19.5c.8-3.2 3.2-4.8 6-4.8 1 0 2 .2 2.8.6" />
-            <path d="M17.5 14.5v6M14.5 17.5h6" />
-          </svg>
-        }
+        icon={<IconUserPlus />}
         footer={
           <>
             Already have an account?{' '}
@@ -526,12 +518,7 @@ function Navigation() {
         isOpen={signupLockOpen}
         onClose={() => setSignupLockOpen(false)}
         title="Sign-up Disabled"
-        icon={
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.3 3.9L1.8 18.3A2 2 0 0 0 3.5 21.3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-            <path d="M12 9v4M12 17h.01" />
-          </svg>
-        }
+        icon={<IconWarning />}
         description="New registrations are currently disabled by the administrators. Please try again later."
       />
     </>
@@ -557,37 +544,12 @@ export function LogoMark({ className }) {
   );
 }
 
-/* Small stroke icons for the mobile drawer */
+/* Filled icons (common/Icons.jsx) for the mobile drawer */
 const NAV_ICONS = {
-  games: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="4" />
-      <circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-
-  custom_bets: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M2 9V6a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v3a3 3 0 0 0 0 6v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3a3 3 0 0 0 0-6z" />
-      <path d="M14 5v2M14 11v2M14 17v2" />
-    </svg>
-  ),
-  dashboard: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="9" rx="1.5" />
-      <rect x="14" y="3" width="7" height="5" rx="1.5" />
-      <rect x="14" y="12" width="7" height="9" rx="1.5" />
-      <rect x="3" y="16" width="7" height="5" rx="1.5" />
-    </svg>
-  ),
-  admin: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3l8 3v6c0 4.8-3.4 8.2-8 9-4.6-.8-8-4.2-8-9V6z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  ),
+  games: <IconDiceFive />,
+  custom_bets: <IconTicket />,
+  dashboard: <IconDashboard />,
+  admin: <IconShieldCheck />,
 };
 
 export default Navigation;

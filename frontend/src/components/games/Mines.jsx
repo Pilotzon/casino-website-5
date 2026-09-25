@@ -19,6 +19,7 @@ import gem1Mp3 from "../../assets/mines/Gem.mp3";
 import gem2Mp3 from "../../assets/mines/Gem-2.mp3";
 import gem3Mp3 from "../../assets/mines/Gem-3.mp3";
 import mineMp3 from "../../assets/mines/Mine.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
 
 const GRID_SIZE = 5;
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
@@ -359,7 +360,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
               />
             </div>
 
-            <div className={styles.coinChip}>$</div>
+            <div className={styles.coinChip}><CurrencyIcon className={styles.coinIcon} /></div>
 
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)} disabled={isLocked || isBusy || inProgress}>
@@ -430,7 +431,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
           <div className={`${styles.readonlyInput} ${styles.profitInput}`}>
             <input value={format8(profit)} readOnly />
-            <div className={styles.coinChipSmall}>$</div>
+            <CurrencyIcon className={styles.coinChipSmall} />
           </div>
         </div>
       </div>
@@ -444,7 +445,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {showWinPopup && !didLose && lastCashoutPayout > 0 && (
           <div className={styles.winPopup} role="status" aria-live="polite">
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{format8(lastCashoutPayout)} $</div>
+            <div className={styles.winPopupAmount}>{format8(lastCashoutPayout)}<CurrencyIcon /></div>
           </div>
         )}
 

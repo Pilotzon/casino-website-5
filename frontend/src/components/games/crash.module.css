@@ -40,6 +40,8 @@
 .inputGroup { composes: sidebar-input-group from global; }
 .inputWrapper { composes: sidebar-input-wrapper from global; }
 .btcIcon { composes: sidebar-currency-icon from global; }
+/* the "×" suffix of Auto Cashout — plain white text, not a currency mark */
+.multSuffix { composes: sidebar-input-suffix from global; }
 .splitButtons { composes: sidebar-split-buttons from global; }
 .divider { composes: sidebar-divider from global; }
 .readonlyInput { composes: sidebar-readonly-input from global; }

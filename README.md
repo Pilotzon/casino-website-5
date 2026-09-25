@@ -37,10 +37,12 @@ Crash is a **solo** game (no multiplayer feed) and the backend owns every rule:
   instead of losing the bet.
 * After a round ends there is a **1 s cooldown** before the next bet
   (`retryInMs` is returned with a 429).
-* `npm run test:crash` (in `backend/`) runs the 63-check engine smoke test
+* `npm run test:crash` (in `backend/`) runs the 79-check engine smoke test
   against a throw-away database; `npm run test:http` boots the real server on a
-  spare port and drives the same endpoints over HTTP (22 checks, also against a
-  throw-away database). `npm test` runs both.
+  spare port and drives the same endpoints over HTTP (33 checks, also against a
+  throw-away database — including `GET /api/dashboard/today`);
+  `npm run test:keno` checks the Keno payout tables (147 checks). `npm test`
+  runs all three.
 
 ### Toasts
 
@@ -81,14 +83,15 @@ column headers, each row becomes a two-line card (name/key, then status + the
 action buttons) and the row buttons turn **icon-only** — 44 × 44 tiles with
 24 px icons, so the power / phone glyphs stay readable — while keeping their
 `aria-label` and `title`, so the meaning survives the missing text.
-* `npm run test:board` (in `frontend/`) runs the 92-check DOM test of the Crash
+* `npm run test:board` (in `frontend/`) runs the 96-check DOM test of the Crash
   board in jsdom (see `frontend/tests/crash-board/`) — it drives the real
   component (polling, cash-out, render pump) against a scripted server and
   measures what the board actually renders.
-* `npm run test:ui` (in `frontend/`) runs the 183-check site UI suite
+* `npm run test:ui` (in `frontend/`) runs the 248-check site UI suite
   (`frontend/tests/site-ui/`): the toast kinds, the games-page filter row, the
   admin panel's phone layout, the bet-button hazard badge on **every** game, the
-  Scroll-up pill and the bypass permission in the UI.
+  Scroll-up pill, the bypass permission in the UI, the filled icon set, the
+  currency mark, the mobile bottom bar and the balance box with its Today panel.
 * `npm test` runs both frontend suites.
 
 ### Scroll up
@@ -100,6 +103,38 @@ top when clicked, and on a mouse-driven PC shows the same white tooltip as the
 icon buttons in the toolbar under the game box ("Scroll up"). On phones it
 floats above the fixed bottom navigation bar, and pages must not ship a second
 back-to-top button of their own.
+
+### Icons, the currency mark and the balance box
+
+* **Icons** — every UI icon comes from `components/common/Icons.jsx`: solid
+  ("filled") [Phosphor](https://phosphoricons.com) glyphs (MIT), one
+  `<path fill="currentColor">` each, so an icon follows the colour of its text
+  and is sized with the `size` prop or from CSS. Pure line glyphs (×, +, −,
+  carets, arrows, search, menu) use Phosphor's *bold* weight — their fill weight
+  keeps a hairline shaft that reads as an outline at UI sizes. Add new icons
+  there (the file header says how) instead of inlining `<svg>` markup. Drawings
+  that are artwork rather than icons (the Crash chart, the Snakes board) keep
+  their strokes.
+* **Currency mark** — wherever an amount carries the currency symbol as an icon
+  (bet inputs, profit fields, chips, win popups, balances) use
+  `components/common/CurrencyIcon.jsx`: a `#25E801` disc with the `$` **cut
+  out** — a real hole, so the background shows through. The colour is the
+  `--color-currency` token in `global.css`; `.sidebar-currency-icon` /
+  `.sidebar-input-suffix` place it inside the game sidebars' inputs. Plain-text
+  amounts ("$0.00" labels, toast messages) still use the `$` character.
+* **Mobile bottom bar** — the labels are always white and bold; only the icon
+  colour marks the active tab.
+* **Balance box** (top bar, `components/layout/BalanceBox.jsx`) — no border, no
+  shadow, two parts. The left one (`--color-balance-box-bg`, `#102230`) shows
+  the balance, the currency mark and a chevron that opens a **Today** panel:
+  today's profit, today's wagered amount (with the bet count) and the three most
+  recent bets. The right one (`--color-balance-wallet-bg`, `#2874E1`) is a
+  wallet button that opens the Dashboard. The panel refetches every time it
+  opens (and when the balance changes while it is open) from
+  `GET /api/dashboard/today?since=<ISO>`, where `since` is the browser's **local**
+  midnight, so "today" is the player's own day; an unparseable value, one in the
+  future or one more than 26 h old falls back to the server's UTC midnight. It
+  counts casino rounds only, not custom bets.
 
 ### Board rules (frontend)
 

@@ -6,6 +6,16 @@ import styles from "./admin.module.css";
 import Modal from "../components/common/Modal";
 import HazardBadge from "../components/common/HazardBadge";
 import Stepper from "../components/common/Stepper";
+import CurrencyIcon from "../components/common/CurrencyIcon";
+import {
+  IconCaretDown,
+  IconCaretRight,
+  IconPower,
+  IconDeviceMobile,
+  IconDeviceMobileSlash,
+  IconWarning,
+  IconTrash,
+} from "../components/common/Icons";
 
 function isFutureDate(value) {
   if (!value) return false;
@@ -28,9 +38,7 @@ function Sub({ id, title, hint, openId, onToggle, children, danger }) {
       <button type="button" className={styles.subHead} onClick={() => onToggle(id)} aria-expanded={open}>
         <span className={styles.subTitle}>{title}</span>
         <span className={styles.subHint}>{hint}</span>
-        <svg className={styles.subChevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+        <IconCaretDown className={styles.subChevron} />
       </button>
       {/* animated height: grid-template-rows 0fr -> 1fr */}
       <div className={styles.subCollapse} aria-hidden={!open}>
@@ -48,9 +56,7 @@ function SubSub({ id, title, openId, onToggle, children }) {
   return (
     <div className={`${styles.subsub} ${open ? styles.subsubOpen : ""}`}>
       <button type="button" className={styles.subsubHead} onClick={() => onToggle(id)} aria-expanded={open}>
-        <svg className={styles.subsubChevron} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M9 6l6 6-6 6" />
-        </svg>
+        <IconCaretRight className={styles.subsubChevron} />
         <span className={styles.subsubTitle}>{title}</span>
       </button>
       <div className={styles.subCollapse} aria-hidden={!open}>
@@ -805,10 +811,7 @@ function Admin() {
                         aria-label={g.is_enabled ? "Disable game" : "Enable game"}
                         title={g.is_enabled ? "Disable game" : "Enable game"}
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
-                          <path d="M12 3.5v8" />
-                          <path d="M7.1 6.6a7.5 7.5 0 1 0 9.8 0" />
-                        </svg>
+                        <IconPower size={16} />
                         <span className={styles.btnText}>{g.is_enabled ? "Disable" : "Enable"}</span>
                       </button>
 
@@ -819,11 +822,8 @@ function Admin() {
                         aria-label={g.is_mobile_enabled !== 0 ? "Disable mobile" : "Enable mobile"}
                         title={g.is_mobile_enabled !== 0 ? "Disable mobile" : "Enable mobile"}
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
-                          <rect x="6" y="2" width="12" height="20" rx="2" ry="2" />
-                          <line x1="12" y1="18" x2="12.01" y2="18" />
-                          {g.is_mobile_enabled !== 0 && <line x1="4" y1="4" x2="20" y2="20" />}
-                        </svg>
+                        {/* action icon: phone-off while mobile is on (tap disables), phone while off */}
+                        {g.is_mobile_enabled !== 0 ? <IconDeviceMobileSlash size={16} /> : <IconDeviceMobile size={16} />}
                         <span className={styles.btnText}>
                           {g.is_mobile_enabled !== 0 ? "Disable Mobile" : "Enable Mobile"}
                         </span>
@@ -868,10 +868,7 @@ function Admin() {
                           aria-label={p.is_enabled ? "Disable page" : "Enable page"}
                           title={adminLocked ? "Admins cannot modify Admin Panel page" : (p.is_enabled ? "Disable page" : "Enable page")}
                         >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
-                            <path d="M12 3.5v8" />
-                            <path d="M7.1 6.6a7.5 7.5 0 1 0 9.8 0" />
-                          </svg>
+                          <IconPower size={16} />
                           <span className={styles.btnText}>{p.is_enabled ? "Disable" : "Enable"}</span>
                         </button>
                       </div>
@@ -967,7 +964,7 @@ function Admin() {
                       <div className={styles.mutedSmall}>{u.email}</div>
                     </div>
                     <div className={styles.userBal}>
-                      {Number(u.balance).toFixed(2)} <span className={styles.btc}>$</span>
+                      {Number(u.balance).toFixed(2)} <CurrencyIcon className={styles.btc} />
                     </div>
                   </button>
                 ))}
@@ -1032,7 +1029,7 @@ function Admin() {
 
                         <div className={styles.detailBalance}>
                           Balance: {Number(selectedUser.balance).toFixed(2)}{" "}
-                          <span className={styles.btc}>$</span>
+                          <CurrencyIcon className={styles.btc} />
                         </div>
 
                         <Sub id="account" title="Account" hint="Role & activation" openId={openSub} onToggle={toggleSub}>
@@ -1423,12 +1420,7 @@ function Admin() {
           isOpen={showNotAllowedModal}
           onClose={() => setShowNotAllowedModal(false)}
           title="Not Allowed"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.3 3.9L1.8 18.3A2 2 0 0 0 3.5 21.3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-              <path d="M12 9v4M12 17h.01" />
-            </svg>
-          }
+          icon={<IconWarning />}
           description="You are not allowed to do that. This action requires a permission your account does not have — ask the owner to grant it."
         />
 
@@ -1436,12 +1428,7 @@ function Admin() {
           isOpen={showDeleteModal && !!selectedUser}
           onClose={() => setShowDeleteModal(false)}
           title="Delete User"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 7h16M10 11v6M14 11v6" />
-              <path d="M6 7l1 13h10l1-13M9 7V4h6v3" />
-            </svg>
-          }
+          icon={<IconTrash />}
           description={
             selectedUser
               ? `This will permanently delete ${selectedUser.username} (#${selectedUser.id}). This action cannot be undone.`

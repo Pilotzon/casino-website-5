@@ -21,6 +21,7 @@ import t2t from "../../assets/flip/flipping_tails-to-tails.mp4";
 // ✅ Flip sounds
 import flipRoundMp3 from "../../assets/flip/Flip.mp3";
 import flipWinMp3 from "../../assets/flip/Win.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
 
 function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
@@ -318,7 +319,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 onChange={(e) => setBetAmount(e.target.value)}
                 step="0.00000001"
               />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)} disabled={isLocked || isBusy}>
@@ -383,7 +384,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
           <div className={`${styles.readonlyInput} ${styles.profitInput}`}>
             <input type="text" value={profit.toFixed(2)} readOnly />
-            <span className={styles.btcIcon}>$</span>
+            <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
       </div>
@@ -397,7 +398,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {showWinPopup && (
           <div className={styles.winPopup} role="status" aria-live="polite">
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)} $</div>
+            <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}
 

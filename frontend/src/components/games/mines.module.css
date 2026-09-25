@@ -97,14 +97,16 @@
 /* Mines coin chip inside the bet input — a plain icon slot at the right
    end of the text area (no separator; the input reads as one field) */
 .coinChip {
-  color: var(--bitcoin);
-  font-weight: 800;
-  font-size: 14px;
   padding: 0 12px 0 4px;
   display: grid;
   place-items: center;
   align-self: stretch;
   background: transparent;
+}
+
+/* the currency mark inside the bet input (CurrencyIcon) */
+.coinIcon {
+  composes: sidebar-currency-icon from global;
 }
 
 .splitButtons {
@@ -140,16 +142,14 @@
 
 
 .coinChipSmall {
-  /* plain $ glyph — identical to the bet input and to every other game
-     (was a filled round coin badge, the only one of its kind) */
+  /* the currency mark (CurrencyIcon) in the Total Profit field — same
+     16px size as in the bet input and in every other game */
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--bitcoin);
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1;
+  width: 16px;
+  height: 16px;
 }
 
 /* ========================================= */

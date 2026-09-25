@@ -19,6 +19,8 @@ import revealedSound from "../../assets/snakes/Revealed.mp3";
 import cashoutSound from "../../assets/snakes/Cashout.mp3";
 import betSound from "../../assets/Bet.mp3";
 import multUpSound from "../../assets/snakes/MultUp.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconDiceTwo } from "../common/Icons";
 
 const DIFFS = [
   { value: "easy", label: "Easy" },
@@ -958,7 +960,7 @@ export default function Snakes({ gameRow }) {
                 min="0"
                 disabled={isLocked || isBusy || (status === "in_progress" && !landedOnSnake && !hasWon)}
               />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
 
             <div className={styles.splitButtons}>
@@ -1103,7 +1105,7 @@ export default function Snakes({ gameRow }) {
                         readOnly
                         value={fmt2(hoverInfo.profit)}
                       />
-                      <span className={styles.wheelHoverSuffix}>$</span>
+                      <span className={styles.wheelHoverSuffix}><CurrencyIcon /></span>
                     </div>
                   </div>
                   <div className={styles.wheelHoverBox}>
@@ -1126,13 +1128,7 @@ export default function Snakes({ gameRow }) {
               isOpen={mobileModalOpen && isMobile && !!hoverInfo}
               onClose={() => setMobileModalOpen(false)}
               title="Tile details"
-              icon={
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="4" y="4" width="16" height="16" rx="3.5" />
-                  <circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none" />
-                  <circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none" />
-                </svg>
-              }
+              icon={<IconDiceTwo />}
               description="What happens when the dice land here."
               >
               {hoverInfo && (

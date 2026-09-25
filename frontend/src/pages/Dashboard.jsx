@@ -13,6 +13,16 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import CurrencyIcon from "../components/common/CurrencyIcon";
+import {
+  IconChartLineUp,
+  IconDiceFive,
+  IconStack,
+  IconTrophy as TrophyIcon,
+  IconPulse,
+  IconCaretDown,
+  IconWarningCircle,
+} from "../components/common/Icons";
 import styles from "./Dashboard.module.css";
 
 // posters for Performance by Game thumbs
@@ -122,24 +132,13 @@ function EmptyState({ icon, title, text, actionLabel, onAction, secondary }) {
   );
 }
 
-const IconChart = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 16l4-4 4 3 5-7" /></svg>
-);
-const IconDice = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none" /><circle cx="15.5" cy="8.5" r="1.5" fill="currentColor" stroke="none" /><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor" stroke="none" /><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor" stroke="none" /></svg>
-);
-const IconLayers = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l9 4.5-9 4.5L3 7.5 12 3z" /><path d="M3 12l9 4.5L21 12" /><path d="M3 16l9 4.5L21 16" /></svg>
-);
-const IconTrophy = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12v4a6 6 0 0 1-6 6 6 6 0 0 1-6-6V3z" /><path d="M6 7H4a4 4 0 0 0 4 4" /><path d="M18 7h2a4 4 0 0 1-4 4" /><path d="M12 13v5" /><path d="M8 21h8" /></svg>
-);
-const IconActivity = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12H18l-3 8-4-16-3 8H2" /></svg>
-);
-const ChevronIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M6 9l6 6 6-6" /></svg>
-);
+/* Filled icons (components/common/Icons.jsx) */
+const IconChart = <IconChartLineUp />;
+const IconDice = <IconDiceFive />;
+const IconLayers = <IconStack />;
+const IconTrophy = <TrophyIcon />;
+const IconActivity = <IconPulse />;
+const ChevronIcon = <IconCaretDown size={18} />;
 
 function Panel({ id, title, collapsed, onToggle, headerAction, children }) {
   const isCollapsed = collapsed[id];
@@ -359,7 +358,7 @@ export default function Dashboard() {
             </div>
             <div className={styles.heroBalanceBlock}>
               <div className={styles.heroBalanceLabel}>Balance</div>
-              <div className={styles.heroBalanceValue}>{balance.toFixed(2)} <span className={styles.cur}>$</span></div>
+              <div className={styles.heroBalanceValue}>{balance.toFixed(2)}<CurrencyIcon className={styles.cur} /></div>
               <div style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-secondary)" }}>
                 {totalBetsCount ? `${fmtNum(totalBetsCount)} bets placed` : "No bets yet"}
               </div>
@@ -388,7 +387,7 @@ export default function Dashboard() {
         {error && (
           <div className={styles.error} role="alert">
             <span className="ui-page-error-icon" aria-hidden>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v5" /><path d="M12 16h.01" /></svg>
+              <IconWarningCircle />
             </span>
             <span><span className="ui-page-error-title">Couldn’t load dashboard.</span><span className="ui-page-error-message">{error}</span></span>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
+import { IconArrowClockwise } from "./Icons";
 import { useActiveBets } from "../../context/ActiveBetContext";
 import styles from "./RefreshGuard.module.css";
 
@@ -63,12 +64,7 @@ export default function RefreshGuard() {
       title="Refreshing the page will not save"
       size="md"
       bodyClassName={styles.body}
-      icon={
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1" />
-          <path d="M20.5 4v5h-5" />
-        </svg>
-      }
+      icon={<IconArrowClockwise />}
       description="You are still in a round. Refreshing will not save your progress and can leave you without a result."
       footer={<span className={styles.footer}>Press Esc or choose an option below.</span>}
     >

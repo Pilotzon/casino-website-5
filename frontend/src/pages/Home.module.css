@@ -121,11 +121,15 @@
   font-size: var(--font-size-control);
   font-weight: 900;
   color: var(--color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
+/* CurrencyIcon (green disc, "$" cut out) */
 .heroCurrency {
-  color: var(--accent-warning);
-  font-weight: 900;
+  width: 16px;
+  height: 16px;
 }
 
 .heroActions {

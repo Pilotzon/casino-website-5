@@ -108,7 +108,7 @@
   composes: ui-action-button from global;
 }
 
-/* Action icon (SVG images inside buttons) */
+/* Action icon (filled SVG images inside buttons) */
 .actionIcon {
   width: 18px;
   height: 18px;
@@ -118,24 +118,11 @@
   transition: filter 0.15s;
 }
 
-/* ── Hit: #ff9d00 ── */
-.actionHit .actionIcon {
-  filter:
-    brightness(0) saturate(100%) invert(67%) sepia(72%) saturate(1500%) hue-rotate(360deg) brightness(102%) contrast(104%);
-}
-
-/* ── Stand: #9000ff ── */
-.actionStand .actionIcon {
-  filter:
-    brightness(0) saturate(100%) invert(18%) sepia(95%) saturate(5000%) hue-rotate(265deg) brightness(105%) contrast(115%);
-}
-
-/* ── Split: #fff ── */
-.actionSplit .actionIcon {
-  filter: brightness(0) invert(1);
-}
-
-/* ── Double: #fff ── */
+/* Hit, Stand, Split and Double are all WHITE — in the sidebar only the
+   currency mark is coloured */
+.actionHit .actionIcon,
+.actionStand .actionIcon,
+.actionSplit .actionIcon,
 .actionDouble .actionIcon {
   filter: brightness(0) invert(1);
 }

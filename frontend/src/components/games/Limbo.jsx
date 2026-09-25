@@ -15,6 +15,7 @@ import useGameAudio from "../../hooks/useGameAudio";
 // ✅ Limbo sounds
 import limboWinMp3 from "../../assets/limbo/Win.mp3";
 import limboRoundMp3 from "../../assets/limbo/Round.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
 
 function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const { user, isAuthenticated, updateBalance, openLoginModal } = useAuth();
@@ -196,7 +197,7 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 step="0.00000001"
                 disabled={isPlaying}
               />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
 
             <div className={styles.splitButtons}>
@@ -227,7 +228,7 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
           <div className={styles.readonlyInput}>
             <input type="text" value={profit.toFixed(2)} readOnly />
-            <span className={styles.btcIcon}>$</span>
+            <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
       </div>
@@ -247,7 +248,7 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {result?.won && (
           <div className={styles.winPopup}>
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(result.payout).toFixed(2)} $</div>
+            <div className={styles.winPopupAmount}>{Number(result.payout).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}
 

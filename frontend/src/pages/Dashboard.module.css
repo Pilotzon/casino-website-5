@@ -110,11 +110,15 @@
   line-height: 1;
   color: #ffffff;
   letter-spacing: -0.6px;
+  display: flex;
+  align-items: center;
 }
 
+/* CurrencyIcon (green disc, "$" cut out), scaled to the big figure */
 .heroBalanceValue .cur {
-  color: #ffffff;
-  margin-left: 3px;
+  width: 0.72em;
+  height: 0.72em;
+  margin-left: 10px;
 }
 
 /* ===== TIMEFRAME ===== */

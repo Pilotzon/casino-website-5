@@ -23,6 +23,7 @@ import playerGreen from "../../assets/russian-roulette/PlayerGreen.png";
 import playerBlue from "../../assets/russian-roulette/PlayerBlue.png";
 import playerPurple from "../../assets/russian-roulette/PlayerPurple.png";
 import playerYellow from "../../assets/russian-roulette/PlayerYellow.png";
+import CurrencyIcon from "../common/CurrencyIcon";
 
 const PLAYERS = 5;
 const USER_INDEX = 2;
@@ -586,7 +587,7 @@ export default function RussianRoulette({ gameRow }) {
                 step="0.00000001"
                 disabled={isLocked || busy}
               />
-              <span className={limboStyles.btcIcon}>$</span>
+              <CurrencyIcon className={limboStyles.btcIcon} />
             </div>
             <div className={limboStyles.splitButtons}>
               <button onClick={() => adjustBet(setBetLand, 0.5, betLand)} disabled={isLocked || busy}>
@@ -626,7 +627,7 @@ export default function RussianRoulette({ gameRow }) {
                 step="0.00000001"
                 disabled={showShotBetDisabled || busy}
               />
-              <span className={limboStyles.btcIcon}>$</span>
+              <CurrencyIcon className={limboStyles.btcIcon} />
             </div>
             <div className={limboStyles.splitButtons}>
               <button
@@ -689,7 +690,7 @@ export default function RussianRoulette({ gameRow }) {
         {winPopup && (
           <div className={styles.winPopup} role="status" aria-live="polite">
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{Number(winPopup.amount).toFixed(2)} $</div>
+            <div className={styles.winPopupAmount}>{Number(winPopup.amount).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}
 

@@ -62,6 +62,68 @@ class DashboardController {
   }
 
   /**
+   * Today's casino activity for the navbar balance box: profit, wagered and
+   * the 3 latest bets. `?since=` is the player's LOCAL midnight as an ISO
+   * string, so "today" follows their timezone rather than the server's.
+   * Same data as the dashboard (rounds table, same formulas), just small.
+   */
+  static async getTodaySummary(req, res) {
+    try {
+      const since = DashboardController.resolveDayStart(req.query.since);
+      const totals = Round.getUserTotalsSince(req.user.id, since.sql);
+      const latest = Round.getUserLatestRounds(req.user.id, 3);
+      // REAL sums drift (0.1 + 0.2): trim to the 8 decimals amounts use
+      const clean = (n) => Math.round(Number(n || 0) * 1e8) / 1e8;
+
+      res.json({
+        success: true,
+        data: {
+          since: since.iso,
+          bets: totals.bets,
+          wagered: clean(totals.wagered),
+          payout: clean(totals.payout),
+          profit: clean(totals.profit),
+          recent: latest.map((r) => ({
+            id: r.id,
+            round_uuid: r.round_uuid,
+            game_name: r.game_name,
+            game_display_name: r.game_display_name,
+            bet_amount: clean(r.bet_amount),
+            payout_amount: clean(r.payout_amount),
+            profit: clean(r.payout_amount - r.bet_amount),
+            multiplier: r.multiplier == null ? null : Number(r.multiplier),
+            created_at: r.created_at,
+          })),
+        },
+      });
+    } catch (error) {
+      console.error('Get today summary error:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch today's activity"
+      });
+    }
+  }
+
+  /**
+   * Start of "today" as { iso, sql } — sql is UTC 'YYYY-MM-DD HH:MM:SS', the
+   * format rounds.created_at uses. The client's local midnight is accepted
+   * when it is a real instant within the last 26 hours (a local midnight is
+   * never more than 24h back; +2h for clock skew) and not in the future;
+   * anything else falls back to the server's UTC midnight.
+   */
+  static resolveDayStart(raw) {
+    const now = Date.now();
+    let t = typeof raw === 'string' && raw.length <= 40 ? Date.parse(raw) : NaN;
+    if (!Number.isFinite(t) || t > now + 5 * 60 * 1000 || t < now - 26 * 3600 * 1000) {
+      const d = new Date(now);
+      t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+    const iso = new Date(t).toISOString();
+    return { iso, sql: iso.slice(0, 19).replace('T', ' ') };
+  }
+
+  /**
    * Get platform-wide statistics (admin/owner)
    */
   static async getPlatformStats(req, res) {

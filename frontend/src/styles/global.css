@@ -263,6 +263,14 @@
   --accent-red: #FB7984;
   --bitcoin: #fca311;
 
+  /* The currency mark (CurrencyIcon: green disc, "$" cut out) — the ONE
+     colour every "$" icon on the site uses. */
+  --color-currency: #25E801;
+
+  /* Navbar balance box: amount side + wallet button side */
+  --color-balance-box-bg: #102230;
+  --color-balance-wallet-bg: #2874E1;
+
   /* =========================================================
      Legacy aliases — pre-overhaul token names mapped onto the
      steel blue palette so existing stylesheets inherit the new
@@ -734,8 +742,33 @@ input[type="number"] {
   font-feature-settings: "salt" on;
 }
 
+/* ---- Currency mark (components/common/CurrencyIcon.jsx) ----
+   1em square by default so it follows the text it sits next to; the
+   fill comes from the token (the "$" itself is a hole in the disc). */
+.currency-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.14em;
+}
+
+.currency-icon path {
+  fill: var(--color-currency);
+}
+
+/* the mark inside sidebar inputs (Bet Amount, Total Profit, …) */
 .sidebar-currency-icon {
-  color: var(--bitcoin);
+  margin-right: 0;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+/* non-currency suffixes that sit in the same slot (e.g. Crash's "×"):
+   plain white text, never coloured */
+.sidebar-input-suffix {
+  color: var(--color-text-primary);
   margin-right: 0;
   font-weight: 700;
   font-size: 16px;
@@ -1075,7 +1108,7 @@ textarea::placeholder {
   font-size: var(--font-size-control);
   font-weight: 700;
   font-feature-settings: "salt" on;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M2.21 0.79L5.5 4.09L8.79 0.79Q8.93 0.65 9.12 0.58Q9.3 0.5 9.5 0.5Q9.7 0.5 9.88 0.58Q10.07 0.65 10.21 0.79Q10.35 0.93 10.42 1.12Q10.5 1.3 10.5 1.5Q10.5 1.7 10.42 1.88Q10.35 2.07 10.21 2.21L6.21 6.21Q6.07 6.35 5.88 6.42Q5.7 6.5 5.5 6.5Q5.3 6.5 5.12 6.42Q4.93 6.35 4.79 6.21L0.79 2.21Q0.65 2.07 0.58 1.88Q0.5 1.7 0.5 1.5Q0.5 1.3 0.58 1.12Q0.65 0.93 0.79 0.79Q0.93 0.65 1.12 0.58Q1.3 0.5 1.5 0.5Q1.7 0.5 1.88 0.58Q2.07 0.65 2.21 0.79Z' fill='white'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
 }
@@ -1132,6 +1165,11 @@ textarea::placeholder {
   font-weight: 900;
   font-size: 18px;
   color: var(--color-text-primary);
+  /* amount + currency mark (CurrencyIcon, 1em) as one centred row */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 /* ---- Inline bet error (below the bet amount input) ----
@@ -1614,6 +1652,12 @@ textarea::placeholder {
   align-items: center;
 }
 
+/* a currency mark in the suffix slot: same 16px as in the sidebar inputs */
+.ui-hover-suffix .currency-icon {
+  width: 16px;
+  height: 16px;
+}
+
 @media (max-width: 600px) {
   .ui-hover-boxes {
     gap: 8px;
@@ -1741,7 +1785,7 @@ html[data-maintenance="on"] .sidebar-bet-button::after {
   transform: translate(50%, -50%);
   border-radius: 6px;
   background-color: #2a3541;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9f00' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 3.9L1.8 18.3A2 2 0 0 0 3.5 21.3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/%3E%3Cpath d='M12 9v4M12 17h.01'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z' fill='%23ff9f00'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 14px 14px;

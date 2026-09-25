@@ -130,10 +130,12 @@
 }
 
 /* recolor only — zero layout shift */
+/* Rock / Paper / Scissors marks on the sidebar buttons: white (only the
+   currency mark is coloured in the sidebar) */
 .choiceSmallIcon {
   width: 14px;
   height: 14px;
-  opacity: 0.9;
+  filter: brightness(0) invert(1);
 }
 
 

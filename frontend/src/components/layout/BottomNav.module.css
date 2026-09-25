@@ -20,6 +20,8 @@
   padding: 0 4px;
 }
 
+/* Only the ICON follows the tab state (secondary -> white when active);
+   the label is always white — see .label */
 .tab {
   flex: 1 1 0;
   display: flex;
@@ -72,21 +74,25 @@
   display: grid;
   place-items: center;
   color: currentColor;
+  transition: color 120ms ease;
 }
 
+/* filled icons (common/Icons.jsx): solid currentColor shapes, no strokes */
 .icon svg {
   width: 22px;
   height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  display: block;
+  fill: currentColor;
 }
 
+/* Label: ALWAYS white and bold, in every state — only the icon above it
+   changes colour. proxima-nova's heaviest loaded face is 700, so a hairline
+   stroke in the text colour adds the extra weight on top of it. */
 .label {
   font-size: 11px;
   font-weight: 700;
+  -webkit-text-stroke: 0.25px currentColor;
+  color: var(--color-text-primary);
   letter-spacing: 0.2px;
   line-height: 1;
   white-space: nowrap;

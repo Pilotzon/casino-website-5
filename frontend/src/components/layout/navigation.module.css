@@ -190,41 +190,8 @@
   align-items: center;
 }
 
-.balance {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  height: var(--sidebar-input-height);
-  padding: 0 var(--space-md);
-  /* same gap as username ↔ logout */
-  /* readonly-input look (same recipe as the sidebar fields), not a pill */
-  background: var(--color-bg-input);
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  margin-right: var(--space-sm);
-  /* clear air between the pill and the username beside it */
-  /* balance display pill — fill + radius only, no border */
-}
-
-.balanceLabel {
-  font-size: var(--font-size-control);
-  font-weight: 700;
-  color: var(--color-text-secondary);
-}
-
-.balanceAmount {
-  font-family: var(--font-primary);
-  font-size: var(--font-size-control);
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.balanceCurrency {
-  font-size: var(--font-size-control);
-  font-weight: 700;
-  color: var(--accent-warning);
-}
+/* the balance lives in its own component now: BalanceBox.jsx +
+   balanceBox.module.css (amount side + wallet button, today's panel) */
 
 .user {
   display: flex;
@@ -329,10 +296,7 @@
 .drawerClose svg {
   width: 20px;
   height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
+  fill: currentColor; /* filled icon set (common/Icons.jsx) */
 }
 
 .drawerClose:hover {
@@ -424,9 +388,10 @@
   gap: 6px;
 }
 
+/* CurrencyIcon (green disc, "$" cut out) */
 .drawerBalanceCurrency {
-  color: var(--accent-warning);
-  font-weight: 900;
+  width: 16px;
+  height: 16px;
 }
 
 /* Navigation list */
@@ -507,11 +472,7 @@
 .drawerIcon svg {
   width: 18px;
   height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: currentColor; /* filled icon set (common/Icons.jsx) */
 }
 
 .drawerLink:hover .drawerIcon {
@@ -664,15 +625,6 @@
   }
 }
 
-@media (max-width: 1024px) {
-  .links {
-    display: none;
-  }
-
-  .balanceLabel {
-    display: none;
-  }
-}
 
 @media (max-width: 1024px) {
   .container {
@@ -694,14 +646,6 @@
     display: none;
   }
 
-  .balance {
-    padding: 6px 12px;
-  }
-
-  .balanceAmount {
-    font-size: 14px;
-  }
-
   .authBtn {
     min-width: 0;
   }
@@ -720,20 +664,6 @@
     width: calc(100% - 2 * var(--space-lg));
     padding: 0;
     gap: var(--space-md);
-  }
-
-  .balance {
-    padding: 6px 10px;
-  }
-
-  .balanceAmount {
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 380px) {
-  .balanceAmount {
-    font-size: 12px;
   }
 }
 

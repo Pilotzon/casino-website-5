@@ -1,6 +1,7 @@
 import { useState } from "react";
 import HazardBadge from "./HazardBadge";
 import Modal from "./Modal";
+import { IconWarning } from "./Icons";
 import useSiteStatus from "../../hooks/useSiteStatus";
 
 /**
@@ -17,12 +18,7 @@ import useSiteStatus from "../../hooks/useSiteStatus";
  * mouse event, so a badge rendered inside it could never be clicked. Render it
  * next to the button inside a `ui-bet-wrap` element (position: relative).
  */
-const HAZARD_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.3 3.9L1.8 18.3A2 2 0 0 0 3.5 21.3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-    <path d="M12 9v4M12 17h.01" />
-  </svg>
-);
+const HAZARD_ICON = <IconWarning />;
 
 const MAINTENANCE_TITLE = "Maintenance";
 const MAINTENANCE_DESC =

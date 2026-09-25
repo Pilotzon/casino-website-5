@@ -16,6 +16,8 @@ import gemSvg from "../../assets/keno/gem.svg";
 import kenoGemMp3 from "../../assets/keno/gem.mp3";
 import kenoTileMp3 from "../../assets/keno/tile.mp3";
 import kenoTileSelectMp3 from "../../assets/keno/tileselect.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconDiceFour } from "../common/Icons";
 
 const NUMBERS = Array.from({ length: 40 }, (_, i) => i + 1);
 
@@ -462,7 +464,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
             </div>
 
             <div className={styles.coinChip}>
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
 
             <div className={styles.splitButtons}>
@@ -521,7 +523,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
         {showWinPopup && winAmount > 0 && (
           <div className={styles.winPopup} role="status" aria-live="polite">
             <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>{format8(winAmount)} $</div>
+            <div className={styles.winPopupAmount}>{format8(winAmount)}<CurrencyIcon /></div>
           </div>
         )}
 
@@ -530,15 +532,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
             isOpen={rowModalOpen && !!rowModalInfo}
             onClose={() => setRowModalOpen(false)}
             title="Hits"
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <rect x="4" y="4" width="16" height="16" rx="3" />
-                <circle cx="9" cy="9" r="1.1" fill="currentColor" stroke="none" />
-                <circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none" />
-                <circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none" />
-                <circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none" />
-              </svg>
-            }
+            icon={<IconDiceFour />}
             description="Payout for this number of hits."
           >
             {rowModalInfo && (

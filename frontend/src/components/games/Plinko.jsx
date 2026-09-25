@@ -14,6 +14,8 @@ import useGameAudio from "../../hooks/useGameAudio";
 
 // ✅ Plinko win sound
 import plinkoWinMp3 from "../../assets/plinko/Win.mp3";
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconCaretDoubleDown } from "../common/Icons";
 
 function stepIsRight(step) {
   if (typeof step === "string") return step.toLowerCase() === "right";
@@ -689,7 +691,7 @@ function Plinko({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 onChange={(e) => setBetAmount(e.target.value)}
                 step="0.00000001"
                               />
-              <span className={styles.btcIcon}>$</span>
+              <CurrencyIcon className={styles.btcIcon} />
             </div>
 
             <div className={styles.splitButtons}>
@@ -823,7 +825,7 @@ function Plinko({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                             readOnly
                             value={format8(hoverInfo ? hoverInfo.profit : 0)}
                           />
-                          <span className={styles.bucketHoverSuffix}>$</span>
+                          <span className={styles.bucketHoverSuffix}><CurrencyIcon /></span>
                         </div>
                       </div>
                       <div className={styles.bucketHoverBox}>
@@ -916,12 +918,7 @@ function Plinko({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           isOpen={modalOpen && !!modalInfo}
           onClose={() => setModalOpen(false)}
           title="Bucket"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 4l7 8 7-8" />
-              <path d="M7 12.5L12 18l5-5.5" opacity="0.55" />
-            </svg>
-          }
+          icon={<IconCaretDoubleDown />}
           description="Payout when the ball lands here."
         >
           {modalInfo && (
@@ -937,7 +934,7 @@ function Plinko({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                   <div className={styles.bucketModalItemLabel}>Profit on Win</div>
                   <div className={styles.bucketModalItemValue}>
                     {format8(modalInfo.profit)}
-                    <span className={styles.bucketModalBtc}>$</span>
+                    <CurrencyIcon className={styles.bucketModalBtc} />
                   </div>
                 </div>
 

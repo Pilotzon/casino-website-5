@@ -150,6 +150,54 @@ class Round {
     `).all(userId, limit, offset);
   }
 
+  /**
+   * Casino totals for one user since a UTC timestamp ('YYYY-MM-DD HH:MM:SS',
+   * the same format CURRENT_TIMESTAMP writes into rounds.created_at, so the
+   * comparison is a plain string compare). Same formulas as getUserStats:
+   * wagered = SUM(bet_amount), profit = SUM(payout_amount - bet_amount).
+   */
+  static getUserTotalsSince(userId, since) {
+    const row = db.prepare(`
+      SELECT
+        COUNT(*) as bets,
+        COALESCE(SUM(bet_amount), 0) as wagered,
+        COALESCE(SUM(payout_amount), 0) as payout,
+        COALESCE(SUM(payout_amount - bet_amount), 0) as profit
+      FROM rounds
+      WHERE user_id = ? AND created_at >= ?
+    `).get(userId, since);
+
+    return {
+      bets: row.bets || 0,
+      wagered: row.wagered || 0,
+      payout: row.payout || 0,
+      profit: row.profit || 0,
+    };
+  }
+
+  /**
+   * The user's latest rounds, newest first. Rounds created within the same
+   * second tie on created_at, so the id breaks the tie (insertion order).
+   */
+  static getUserLatestRounds(userId, limit = 3) {
+    return db.prepare(`
+      SELECT
+        r.id,
+        r.round_uuid,
+        r.bet_amount,
+        r.payout_amount,
+        r.multiplier,
+        r.created_at,
+        g.name as game_name,
+        g.display_name as game_display_name
+      FROM rounds r
+      JOIN games g ON r.game_id = g.id
+      WHERE r.user_id = ?
+      ORDER BY r.created_at DESC, r.id DESC
+      LIMIT ?
+    `).all(userId, limit);
+  }
+
   static getRecentRounds(limit = 100) {
     return db.prepare(`
       SELECT

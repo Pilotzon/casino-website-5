@@ -1,5 +1,13 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  IconCheckCircle,
+  IconXCircle,
+  IconInfo as IconInfoFilled,
+  IconWarning as IconWarningFilled,
+  IconTrendDownCircle,
+  IconX as IconClose,
+} from "../components/common/Icons";
 import "./toast.css";
 
 const ToastContext = createContext(null);
@@ -13,86 +21,19 @@ export const useToast = () => {
 const DEFAULT_DURATION = 3000;
 const LEAVE_MS = 220;
 
-/* ===== SVG ICONS ===== */
-const IconCheck = () => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
-    <path
-      d="M20 6L9 17l-5-5"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+/* ===== ICONS — the shared filled set (common/Icons.jsx) =====
+   Status icons are solid discs/triangles with the glyph knocked out. */
+const ICON_SIZE = 26;
+const IconCheck = () => <IconCheckCircle size={ICON_SIZE} />;
+const IconCross = () => <IconXCircle size={ICON_SIZE} />;
+const IconInfo = () => <IconInfoFilled size={ICON_SIZE} />;
+const IconWarning = () => <IconWarningFilled size={ICON_SIZE} />;
 
-const IconCross = () => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
-    <path
-      d="M6 6l12 12M18 6L6 18"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-    />
-  </svg>
-);
+/* Loss: a falling chart line (in a disc, like the others) — reads as "the
+   round went against you", which is NOT an error (nothing failed). */
+const IconTrendDown = () => <IconTrendDownCircle size={ICON_SIZE} />;
 
-const IconInfo = () => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
-    <path
-      d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"
-      stroke="currentColor"
-      strokeWidth="2.2"
-    />
-    <path d="M12 10.5v6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-    <path d="M12 7.4h.01" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-  </svg>
-);
-
-const IconWarning = () => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
-    <path
-      d="M12 3.2l9.2 16a2 2 0 0 1-1.74 3H4.54a2 2 0 0 1-1.74-3l9.2-16a2 2 0 0 1 3.48 0Z"
-      fill="currentColor"
-      opacity="0.95"
-    />
-    <path d="M12 8v6" stroke="#0b1820" strokeWidth="2.2" strokeLinecap="round" />
-    <path d="M12 17.6h.01" stroke="#0b1820" strokeWidth="4" strokeLinecap="round" />
-  </svg>
-);
-
-/* Loss: a chart line falling — reads as "the round went against you", which is
-   NOT an error (nothing failed). */
-const IconTrendDown = () => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
-    <path
-      d="M3 7.5l5.2 5.2 3.4-3.4 3.6 3.6"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M15.2 12.9h3.6v-3.6"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path d="M3 19.5h18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-  </svg>
-);
-
-const IconX = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path
-      d="M6 6l12 12M18 6L6 18"
-      stroke="currentColor"
-      strokeWidth="2.25"
-      strokeLinecap="round"
-    />
-  </svg>
-);
+const IconX = () => <IconClose size={20} />;
 
 const iconByType = {
   success: <IconCheck />,

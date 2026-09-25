@@ -180,6 +180,8 @@ export const customBetsAPI = {
 
 export const dashboardAPI = {
   getUserDashboard: (params) => api.get("/dashboard", { params }),
+  // navbar balance box: { since, bets, wagered, payout, profit, recent[3] }
+  getToday: (params) => api.get("/dashboard/today", { params }),
   getStatsByTimeframe: (timeframe) => api.get(`/dashboard/stats/${timeframe}`),
   getLeaderboard: (params) => api.get("/dashboard/leaderboard", { params }),
   getRecentActivity: (params) => api.get("/dashboard/activity/recent", { params }),

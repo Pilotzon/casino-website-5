@@ -32,6 +32,7 @@ import loseWav from "../../assets/blackjack/Lose.wav";
 import flipMp3 from "../../assets/blackjack/Flip.mp3";
 
 import useGameAudio from "../../hooks/useGameAudio";
+import CurrencyIcon from "../common/CurrencyIcon";
 
 const BJ_START_URL = "/api/games/blackjack/start";
 const BJ_ACTION_URL = "/api/games/blackjack/action";
@@ -560,7 +561,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
               />
             </div>
 
-            <span className={styles.btcIcon}>$</span>
+            <CurrencyIcon className={styles.btcIcon} />
 
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)}>½</button>
@@ -625,9 +626,9 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
             </div>
 
             {ui.resultStatus === "win" || ui.resultStatus === "push" ? (
-              <div className={styles.resultPopupAmount}>{Number(ui.resultPayout || 0).toFixed(2)} $</div>
+              <div className={styles.resultPopupAmount}>{Number(ui.resultPayout || 0).toFixed(2)}<CurrencyIcon /></div>
             ) : (
-              <div className={styles.resultPopupAmountMuted}>-{sum(ui.handBets).toFixed(2)} $</div>
+              <div className={styles.resultPopupAmountMuted}>-{sum(ui.handBets).toFixed(2)}<CurrencyIcon /></div>
             )}
           </div>
         )}

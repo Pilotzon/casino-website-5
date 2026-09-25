@@ -9,6 +9,16 @@ import ChanceGraph from "../Components/ChanceGraph";
 import SlotRollingNumber from "../Components/SlotRollingNumber";
 import DepositToastStack from "../Components/DepositToastStack";
 
+import {
+  IconGavel,
+  IconCaretDown,
+  IconHeart,
+  IconReply,
+  IconShieldWarning,
+  IconShare,
+  IconBookmark,
+  IconCode,
+} from "../../common/Icons";
 import styles from "./Bet.module.css";
 
 function fmtEndsBadge(end_at) {
@@ -92,49 +102,22 @@ function calcAvgPriceCents(optionTotal, poolTotal) {
   return Math.max(1, Math.min(99, cents));
 }
 
+/* Filled icons (common/Icons.jsx) */
 function MenuItemIcon(props) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 18 18" aria-hidden="true" focusable="false" {...props}>
-      <line x1="1.75" y1="15.75" x2="8.25" y2="15.75" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-      <line x1="2.757" y1="8.914" x2="9.414" y2="2.257" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-      <line x1="6.336" y1="12.493" x2="2.257" y2="8.414" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-      <line x1="12.493" y1="5.336" x2="5.836" y2="11.993" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-      <line x1="8.914" y1="1.757" x2="12.993" y2="5.836" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-      <path d="M8.163,9.665l4.664,4.667c.552,.552,1.448,.552,2,0s.552-1.448,0-2l-4.667-4.665" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  );
+  return <IconGavel size={14} {...props} />;
 }
 
 function PastCaretIcon(props) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="12px" height="12px" viewBox="0 0 12 12" aria-hidden="true" focusable="false" {...props}>
-      <polyline points="1.75 4.25 6 8.5 10.25 4.25" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  );
+  return <IconCaretDown size={12} {...props} />;
 }
 
-function HeartOutlineIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M20.8 4.6c-2.2-2-5.6-1.8-7.6.6L12 6.4l-1.2-1.2c-2-2.4-5.4-2.6-7.6-.6-2.4 2.2-2.4 5.8-.2 8.2L12 21l9-8.2c2.2-2.4 2.2-6-.2-8.2z" />
-    </svg>
-  );
-}
-
-function HeartFilledIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 21s-7-4.534-9.33-8.44C.85 9.4 2.28 6.5 5.2 5.44 7.02 4.78 9.06 5.3 10.5 6.7L12 8.2l1.5-1.5c1.44-1.4 3.48-1.92 5.3-1.26 2.92 1.06 4.35 3.96 2.53 7.12C19 16.466 12 21 12 21z" />
-    </svg>
-  );
+/* one solid heart for both states — .likeActive turns it red when liked */
+function HeartIcon() {
+  return <IconHeart size={16} />;
 }
 
 function ReplyIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M10 9V5l-7 7 7 7v-4c7 0 11 2 14 7-1-9-6-13-14-13z" />
-    </svg>
-  );
+  return <IconReply size={16} />;
 }
 
 function DotsIcon() {
@@ -148,11 +131,7 @@ function DotsIcon() {
 }
 
 function ShieldIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M12 2l8 4v6c0 5-3 9-8 10-5-1-8-5-8-10V6l8-4z" />
-    </svg>
-  );
+  return <IconShieldWarning size={16} />;
 }
 
 // --- time parsing fixes ---
@@ -918,7 +897,7 @@ export default function Bet() {
                   disabled={commentSaving}
                   aria-label="Like"
                 >
-                  {r.viewer_liked ? <HeartFilledIcon /> : <HeartOutlineIcon />}
+                  <HeartIcon />
                   <span className={styles.iconCount}>{Number(r.like_count || 0)}</span>
                 </button>
               </div>
@@ -997,7 +976,7 @@ export default function Bet() {
                   disabled={commentSaving}
                   aria-label="Like"
                 >
-                  {c.viewer_liked ? <HeartFilledIcon /> : <HeartOutlineIcon />}
+                  <HeartIcon />
                   <span className={styles.iconCount}>{Number(c.like_count || 0)}</span>
                 </button>
 
@@ -1159,14 +1138,10 @@ export default function Bet() {
           <div className={styles.floatTitle}>{loading ? "Loading…" : market?.title || "Market"}</div>
           <div className={styles.floatActions}>
             <button className={styles.floatIconBtn} type="button" title="Share" aria-label="Share">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 17L17 7" /><path d="M7 7h10v10" />
-              </svg>
+              <IconShare size={16} />
             </button>
             <button className={styles.floatIconBtn} type="button" title="Bookmark" aria-label="Bookmark">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              </svg>
+              <IconBookmark size={16} />
             </button>
           </div>
         </div>
@@ -1534,19 +1509,13 @@ export default function Bet() {
               <button className={styles.mDetailBack} type="button" onClick={() => setMobileDetailOpen(false)} aria-label="Back">‹</button>
               <div className={styles.mDetailTopActions}>
                 <button className={styles.mDetailTopBtn} type="button" aria-label="Code">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-                  </svg>
+                  <IconCode size={16} />
                 </button>
                 <button className={styles.mDetailTopBtn} type="button" aria-label="Bookmark">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                  </svg>
+                  <IconBookmark size={16} />
                 </button>
                 <button className={styles.mDetailTopBtn} type="button" aria-label="Share">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 17L17 7" /><path d="M7 7h10v10" />
-                  </svg>
+                  <IconShare size={16} />
                 </button>
               </div>
             </div>

@@ -1,3 +1,5 @@
+import { IconPlus, IconMinus } from "./Icons";
+
 /* Vertical +/− stepper — sits flush on the RIGHT edge of a numeric input
    group (same fill/hover/press as the sidebar ½ / 2× split buttons, but
    narrower). Rounded only on the outer-right corners.
@@ -16,10 +18,10 @@ export default function Stepper({ value, onChange, step = 1, min, max, decimals,
   return (
     <div className="ui-stepper" aria-hidden="false">
       <button type="button" onClick={() => bump(1)} aria-label="Increase" tabIndex={-1}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 6v12M6 12h12" /></svg>
+        <IconPlus />
       </button>
       <button type="button" onClick={() => bump(-1)} aria-label="Decrease" tabIndex={-1}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 12h12" /></svg>
+        <IconMinus />
       </button>
     </div>
   );

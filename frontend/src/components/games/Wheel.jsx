@@ -8,6 +8,8 @@ import { gamesAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./wheel.module.css";
 import Modal from "../common/Modal";
+import CurrencyIcon from "../common/CurrencyIcon";
+import { IconChartPieSlice } from "../common/Icons";
 
 const RISK_LEVELS = ["low", "medium", "high"];
 const SEGMENT_OPTIONS = [10, 20, 30, 40, 50];
@@ -402,7 +404,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
             </div>
 
 
-            <div className={styles.btcChip} title="BTC" aria-hidden="true">$</div>
+            <div className={styles.btcChip} aria-hidden="true"><CurrencyIcon className={styles.btcIcon} /></div>
 
             <div className={styles.splitButtons}>
               <button onClick={() => adjustBet(0.5)} disabled={isLocked || spinning}>½</button>
@@ -541,7 +543,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
                       readOnly
                       value={formatMoney(activeInfo ? activeInfo.profit : 0)}
                     />
-                    <span className={styles.hoverSuffix}>$</span>
+                    <span className={styles.hoverSuffix}><CurrencyIcon /></span>
                   </div>
                 </div>
                 <div className={styles.hoverBox}>
@@ -592,13 +594,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
               setCellModalMultiplier(null);
             }}
             title="Multiplier"
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="8.5" />
-                <path d="M12 3.5V12l6 6" />
-                <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
-              </svg>
-            }
+            icon={<IconChartPieSlice />}
             description="This segment's payout for your bet."
           >
             {activeInfo && (

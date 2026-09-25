@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./BackToTop.module.css";
+import { IconArrowUp } from "./Icons";
 
 /**
  * "Scroll up" pill, bottom-right of every page (mounted app-wide in App.jsx).
@@ -48,10 +49,7 @@ function BackToTop() {
       title="Scroll up"
       data-tip="Scroll up"
     >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 19V5" />
-        <path d="M5 12l7-7 7 7" />
-      </svg>
+      <IconArrowUp />
     </button>
   );
 }

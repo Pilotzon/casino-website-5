@@ -10,6 +10,10 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 // Get user dashboard
 router.get('/', authenticateToken, DashboardController.getUserDashboard);
 
+// Today's profit / wagered + the 3 latest bets (navbar balance box).
+// ?since=<ISO local midnight> so "today" follows the player's timezone.
+router.get('/today', authenticateToken, DashboardController.getTodaySummary);
+
 // Get statistics by timeframe
 router.get('/stats/:timeframe', authenticateToken, DashboardController.getStatsByTimeframe);
 

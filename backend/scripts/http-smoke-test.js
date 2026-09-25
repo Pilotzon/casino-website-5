@@ -12,6 +12,8 @@
  *       owner grants it   → the same player bets normally
  *       owner revokes it  → 403 again
  *   • the per-game mobile switch (blocked for mobile clients, bypassable)
+ *   • GET /api/dashboard/today (navbar balance box): auth, local-midnight
+ *     window, totals that match the rounds, the 3 latest bets, fallbacks
  *
  * ⚠️  It always runs on its own tempdir database and its own port, so it can
  * never touch the real casino.db. Never point DATA_DIR at the live data.
@@ -213,6 +215,66 @@ async function req(method, url, { body, token, headers } = {}) {
         `${onDesktop.status} ${JSON.stringify(onDesktop.json)?.slice(0, 140)}`);
       await req("POST", "/api/games/crash/stop", { token: pToken });
       await req("POST", `/api/admin/games/${adminCrash.id}/mobile-status`, { token, body: { isMobileEnabled: true } });
+    }
+
+    /* ------------------- navbar balance box: GET /api/dashboard/today --- */
+    {
+      const reg2 = await req("POST", "/api/auth/register", {
+        body: { email: `today${suffix}@example.com`, password: "PlayerPass123!", username: `today${suffix}` },
+      });
+      const tToken = reg2.json?.data?.token || reg2.json?.token;
+      ok(!!tToken, "a second fresh player for the today-summary checks");
+
+      const noAuth = await req("GET", "/api/dashboard/today");
+      ok(noAuth.status === 401, "today's summary needs a login", String(noAuth.status));
+
+      const mid = new Date();
+      mid.setHours(0, 0, 0, 0);
+      const since = encodeURIComponent(mid.toISOString());
+      const empty = await req("GET", `/api/dashboard/today?since=${since}`, { token: tToken });
+      const e = empty.json?.data || {};
+      ok(empty.status === 200 && e.bets === 0 && e.wagered === 0 && e.profit === 0
+        && Array.isArray(e.recent) && e.recent.length === 0,
+        "a new player's day starts at zero", JSON.stringify(empty.json)?.slice(0, 160));
+      ok(e.since === mid.toISOString(), "the day starts at the player's LOCAL midnight", e.since);
+
+      const bets = [];
+      for (const amt of [1, 2, 3, 4]) {
+        const r = await req("POST", "/api/games/dice/play", {
+          token: tToken, body: { betAmount: amt, targetNumber: 50.5, rollUnder: false },
+        });
+        bets.push(r.json?.round);
+      }
+      ok(bets.every((b) => b && b.id), "four dice bets went through", JSON.stringify(bets.map((b) => b && b.id)));
+
+      const after = await req("GET", `/api/dashboard/today?since=${since}`, { token: tToken });
+      const d = after.json?.data || {};
+      const wagered = bets.reduce((sum, b) => sum + Number(b?.bet_amount || 0), 0);
+      const payout = bets.reduce((sum, b) => sum + Number(b?.payout_amount || 0), 0);
+      ok(d.bets === 4 && Math.abs(d.wagered - wagered) < 1e-9, "wagered = the sum of today's stakes",
+        `${d.bets} ${d.wagered} vs ${wagered}`);
+      ok(Math.abs(d.payout - payout) < 1e-9 && Math.abs(d.profit - (payout - wagered)) < 1e-9,
+        "profit = payout - wagered", `${d.profit} vs ${payout - wagered}`);
+      const expectIds = [bets[3], bets[2], bets[1]].map((b) => b?.id).join();
+      ok(Array.isArray(d.recent) && d.recent.length === 3 && d.recent.map((r) => r.id).join() === expectIds,
+        "the 3 latest bets come newest first (same-second ties broken by id)", JSON.stringify(d.recent?.map((r) => r.id)));
+      const top = d.recent?.[0] || {};
+      ok(top.game_display_name === "Dice" && Number.isFinite(top.multiplier) && typeof top.created_at === "string"
+        && Math.abs(top.profit - (top.payout_amount - top.bet_amount)) < 1e-9,
+        "each bet carries game, stake, result, multiplier and time", JSON.stringify(top).slice(0, 200));
+
+      const utcMid = new Date();
+      utcMid.setUTCHours(0, 0, 0, 0);
+      const junk = await req("GET", "/api/dashboard/today?since=not-a-date", { token: tToken });
+      const future = await req("GET", "/api/dashboard/today?since=2999-01-01T00:00:00Z", { token: tToken });
+      const ancient = await req("GET", "/api/dashboard/today?since=2001-01-01T00:00:00Z", { token: tToken });
+      ok([junk, future, ancient].every((r) => r.json?.data?.since === utcMid.toISOString()),
+        "a missing / junk / out-of-range `since` falls back to the server's UTC midnight",
+        [junk, future, ancient].map((r) => r.json?.data?.since).join(" "));
+
+      const other = await req("GET", `/api/dashboard/today?since=${since}`, { token: pToken });
+      ok(other.status === 200 && !(other.json?.data?.recent || []).some((r) => bets.some((b) => b?.id === r.id)),
+        "a player only ever sees their own bets");
     }
   } catch (e) {
     ok(false, "the smoke run finished without throwing", String(e && e.stack));
