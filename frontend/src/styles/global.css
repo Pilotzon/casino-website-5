@@ -590,6 +590,17 @@ input[type="number"] {
 @media (max-width: 900px) {
   .game-shell .ui-bet-wrap {
     order: -1;
+    /* Even breathing room on all four sides: the sidebar's own padding is
+       10px top/left/right, so the 20px flex gap below the wrap is pulled
+       back to 10 — the button then sits in exactly 10px on every side. */
+    margin-bottom: -10px;
+  }
+
+  /* The base -8px top margin compensated the 20px flex gap above the
+     button in its old mid-sidebar slot; now that the button is first it
+     would just eat the sidebar's top padding, so it is neutralised. */
+  .game-shell .ui-bet-wrap > button {
+    margin-top: 0;
   }
 
   .game-shell .sidebar-mode-toggle {
