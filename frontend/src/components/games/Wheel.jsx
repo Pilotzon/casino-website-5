@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import usePillSlide from "../../hooks/usePillSlide";
 import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -48,6 +49,8 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
   const [spinning, setSpinning] = useState(false);
   // Round history for the top pills (newest first, capped)
   const [history, setHistory] = useState([]);
+  // Pill row slides in from the right as one motion on every addition
+  const { pillsRef, slideKey, slideFrom } = usePillSlide(history.length);
   const [error, setError] = useState("");
 
   const [rotation, setRotation] = useState(0);
@@ -358,7 +361,12 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
               Crash (row-reverse puts the first pill at the right). */}
           <div className={styles.historyRow}>
             <div className={styles.historyScroll}>
-              <div className={styles.historyPills}>
+              <div
+                  key={slideKey}
+                  ref={pillsRef}
+                  className={styles.historyPills}
+                  style={slideFrom ? { "--pill-slide-from": `${slideFrom}px` } : undefined}
+                >
                 {history.length === 0 ? (
                   <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
                     0.00×

@@ -259,49 +259,60 @@
   opacity: 1;
 }
 
-/* Revealed: a static #0A1724 hole sitting on the "ground" — plain style,
-   not part of the click animation. No border. */
+/* Revealed: a static #0A1724 hole at the tile's original position — plain
+   style, not part of the click animation. No border, and crucially no
+   translate: the click must NOT drop the tile below its rest position
+   (a drop happens on hover-exit only). */
 .tileRevealed {
   background-color: var(--mines-tile-hole);
-  transform: translateY(var(--mines-base-height));
+  transform: none;
   cursor: default;
 }
 
 /* Active (Click): REVEALED TILE (Mines/Gems)
-   Forced scale(1) to stop the global button zoom.
+   Forced scale(1) to stop the global button zoom — no translate, so
+   pressing an already-revealed tile never drops it either.
 */
 .tileRevealed:active {
-  transform: translateY(var(--mines-base-height)) scale(1);
+  transform: scale(1);
   transition: none;
 }
 
-/* Click, two stages: the whole face (fill + shadow) first pops UP to
-   1.05 (ease-in), then collapses to 0 (ease-out) with the fade riding
-   only on the second stage. */
+/* Click: the whole face (fill + shadow) rises to a 1.05 apex at 35%, then
+   collapses to 0 — one continuous motion densely sampled along a smooth
+   curve under a single linear timing, so there is no joint where the
+   up-phase hands off to the down-phase. The fade rides the descent only. */
 .tileRevealed .cover {
-  animation: minesTileOut 450ms forwards;
+  animation: minesTileOut 450ms linear forwards;
 }
 
 @keyframes minesTileOut {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-    animation-timing-function: ease-in;
-  }
-
-  40% {
-    transform: scale(1.05);
-    opacity: 1;
-    animation-timing-function: ease-out;
-  }
-
-  100% {
-    transform: scale(0);
-    opacity: 0;
-  }
+  0% { transform: scale(1); opacity: 1; }
+  5% { transform: scale(1.001); opacity: 1; }
+  10% { transform: scale(1.007); opacity: 1; }
+  15% { transform: scale(1.018); opacity: 1; }
+  20% { transform: scale(1.032); opacity: 1; }
+  25% { transform: scale(1.043); opacity: 1; }
+  30% { transform: scale(1.049); opacity: 1; }
+  35% { transform: scale(1.05); opacity: 1; }
+  40% { transform: scale(1.046); opacity: 1; }
+  45% { transform: scale(1.02); opacity: 0.917; }
+  50% { transform: scale(0.961); opacity: 0.833; }
+  55% { transform: scale(0.868); opacity: 0.75; }
+  60% { transform: scale(0.744); opacity: 0.667; }
+  65% { transform: scale(0.6); opacity: 0.583; }
+  70% { transform: scale(0.449); opacity: 0.5; }
+  75% { transform: scale(0.306); opacity: 0.417; }
+  80% { transform: scale(0.182); opacity: 0.333; }
+  85% { transform: scale(0.089); opacity: 0.25; }
+  90% { transform: scale(0.03); opacity: 0.167; }
+  95% { transform: scale(0.004); opacity: 0.083; }
+  100% { transform: scale(0); opacity: 0; }
 }
 
-/* Icon / Gem / Mine — zoom-in reveal while the cover collapses */
+/* Icon / Gem / Mine — zoom-in reveal starting ~80% through the cover's
+   scale-down phase (apex 35% → end: 157ms + 0.8 × 293ms ≈ 392ms in).
+   `both` keeps the icon parked at scale 0 until its delayed start. */
 .icon {
   width: 60%;
   height: 60%;
@@ -309,7 +320,7 @@
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
-  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) 392ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {

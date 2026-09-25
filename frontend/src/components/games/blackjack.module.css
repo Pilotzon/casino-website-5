@@ -180,7 +180,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: clamp(260px, 72vw, 320px);
-  height: 193px;
+  height: 201px;
 }
 
 .fanTop {
@@ -188,7 +188,7 @@
   left: 0;
   top: 18px;
   width: 100%;
-  height: 173px;
+  height: 181px;
 }
 
 .playerArea {
@@ -197,7 +197,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(760px, 95%);
-  height: 236px;
+  height: 244px;
 }
 
 .handsRow {
@@ -211,7 +211,7 @@
 
 .handWrap {
   width: clamp(260px, 72vw, 320px);
-  height: 204px;
+  height: 212px;
   position: relative;
   border-radius: 12px;
   padding: 6px;
@@ -222,7 +222,7 @@
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 183px;
+  height: 191px;
 }
 
 /* Totals pills */
@@ -288,8 +288,8 @@
   left: 0;
   top: 0;
   width: 114px;
-  height: 158px;
-  transform-origin: 20px 135px;
+  height: 166px;
+  transform-origin: 20px 143px;
 }
 
 .cardMotion {
@@ -302,7 +302,7 @@
 
 .card {
   width: 114px;
-  height: 158px;
+  height: 166px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.10);
@@ -409,22 +409,25 @@
 
 /* Deal flight — every card materialises face-down ON the deck, flat and
    straight (no tilt, no zoom), sits there a beat, then translates to its
-   seat — position only, no rotation, no bounce/overshoot. The flip to
+   seat — position only, no rotation, no bounce/overshoot. The start point
+   comes from --deal-from-x/--deal-from-y (measured per card from the real
+   deck position — see dealFromVars() in Blackjack.jsx); the fallback is
+   only for the very first paint before measurement lands. The flip to
    face-up is a SEPARATE step that only starts once this flight completes. */
 @keyframes dealIn {
   0% {
     opacity: 0;
-    transform: translate(230px, -270px);
+    transform: translate(var(--deal-from-x, 230px), var(--deal-from-y, -270px));
   }
 
   10% {
     opacity: 1;
-    transform: translate(230px, -270px);
+    transform: translate(var(--deal-from-x, 230px), var(--deal-from-y, -270px));
   }
 
   32% {
     opacity: 1;
-    transform: translate(230px, -270px);
+    transform: translate(var(--deal-from-x, 230px), var(--deal-from-y, -270px));
   }
 
   100% {
@@ -628,12 +631,12 @@
 @media (max-width: 420px) {
   .cardSlot {
     width: 96px;
-    height: 134px;
+    height: 140px;
   }
 
   .card {
     width: 96px;
-    height: 134px;
+    height: 140px;
     border-radius: 10px;
   }
 

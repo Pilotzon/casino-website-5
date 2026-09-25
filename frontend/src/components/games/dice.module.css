@@ -520,6 +520,11 @@
   border-color: var(--ui-outline-focus);
 }
 
+/* enabled stat fields brighten on hover, like every input app-wide */
+.statInput:hover:has(input:not(:disabled)) {
+  background: var(--color-bg-input-hover);
+}
+
 .statInput input {
   background: transparent;
   border: none;

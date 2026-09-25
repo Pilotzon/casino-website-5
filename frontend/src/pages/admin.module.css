@@ -312,6 +312,11 @@
   border-color: var(--color-border-input-focus);
 }
 
+/* enabled admin fields brighten on hover, like every input app-wide */
+.field input:not(:disabled):hover {
+  background: var(--color-bg-input-hover);
+}
+
 .field input:disabled,
 .field select:disabled {
   opacity: 1;
@@ -1041,6 +1046,10 @@
 
 .inputWithStepper:focus-within {
   border-color: var(--color-border-input-focus);
+}
+
+.inputWithStepper:hover:has(input:not(:disabled)) {
+  background: var(--color-bg-input-hover);
 }
 
 .inputWithStepper input {

@@ -122,10 +122,11 @@ static async processFlip(userId, betAmount, selectedSide) {
   try {
     const result = RNG.randomBool() ? "heads" : "tails";
 
-    let won = result === selectedSide;
-
-    // Make wins less frequent without reducing payout
-    if (won && RNG.randomFloat() > WIN_DAMPENER) won = false;
+    // The call stands exactly as the coin lands: matching the outcome is
+    // ALWAYS a win. (WIN_DAMPENER must never apply here — flipping a
+    // matched call to a loss shows Tails-on-Tails as a loss, which is
+    // indistinguishable from a rigged result.)
+    const won = result === selectedSide;
 
     const multiplier = won ? 1.98 : 0;
     const payoutAmount = won ? bet * multiplier : 0;
@@ -1522,6 +1523,10 @@ static async towerPick(roundId, tileIndex) {
         multiplier: Number(gs.currentMultiplier),
         balance: newBalance,
         completed: true,
+        // final clear: same post-round safe reveal as a manual cashout
+        reveal: {
+          safeMap: gs.safeMap,
+        },
       },
       gameState: {
         roundId,
@@ -1598,6 +1603,11 @@ static async towerCashout(roundId) {
       payout: payoutAmount,
       multiplier,
       balance: newBalance,
+      // post-round reveal: the client shows the remaining safe tiles,
+      // dimmed (after the last pick's own animation has finished)
+      reveal: {
+        safeMap: gs.safeMap,
+      },
     },
     gameState: {
       roundId,

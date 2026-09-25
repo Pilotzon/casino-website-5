@@ -373,6 +373,12 @@
   box-shadow: 0 0 0 3px var(--fire-ring);
 }
 
+/* Post-round auto-reveal (loss or cashout): tiles the player never clicked
+   show their egg dimmed — the same 0.7 darkened treatment as Mines. */
+.tileAutoRevealed {
+  opacity: 0.7;
+}
+
 /* Tile BG SVG */
 .tileBgSvg {
   position: absolute;

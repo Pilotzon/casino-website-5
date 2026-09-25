@@ -2,6 +2,7 @@ import Stepper from "../common/Stepper";
 import { useState, useEffect, useRef } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import usePillSlide from "../../hooks/usePillSlide";
 import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -109,6 +110,8 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [arrivalNonce, setArrivalNonce] = useState(0);
   // Round history for the top pills (newest first, capped)
   const [history, setHistory] = useState([]);
+  // Pill row slides in from the right as one motion on every addition
+  const { pillsRef, slideKey, slideFrom } = usePillSlide(history.length);
   const MOVE_MS = 450;
   // Press dip is 280ms (matches .gemPress); the move starts at its
   // halfway point so the flight overlaps the dip's tail end.
@@ -438,7 +441,12 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             Crash (row-reverse puts the first pill at the right). */}
         <div className={styles.historyRow}>
           <div className={styles.historyScroll}>
-            <div className={styles.historyPills}>
+            <div
+                  key={slideKey}
+                  ref={pillsRef}
+                  className={styles.historyPills}
+                  style={slideFrom ? { "--pill-slide-from": `${slideFrom}px` } : undefined}
+                >
               {history.length === 0 ? (
                 <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
                   0.00
@@ -572,7 +580,16 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
           <div className={styles.statBox}>
             <div className={styles.statHeader}>Roll {rollUnder ? "Under" : "Over"}</div>
-            <div className={`${styles.statInput} ${styles.editable}`}>
+            {/* the whole field toggles over/under — clicks on the inner
+                buttons (swap, stepper) are theirs alone, not a toggle */}
+            <div
+              className={`${styles.statInput} ${styles.editable}`}
+              onClick={(e) => {
+                if (isRolling) return;
+                if (e.target.closest("button")) return;
+                toggleMode();
+              }}
+            >
               <input type="number" value={targetNumber} onChange={handleTargetInputChange} disabled={isRolling} />
               <button className={styles.swapBtn} onClick={toggleMode} type="button" disabled={isRolling}>
                 <IconArrowClockwise />

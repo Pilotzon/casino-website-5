@@ -80,6 +80,7 @@
 
 .searchBar:hover {
   border-color: var(--color-border-input-focus);
+  background: var(--color-bg-input-hover);
 }
 
 .searchBar:focus-within {

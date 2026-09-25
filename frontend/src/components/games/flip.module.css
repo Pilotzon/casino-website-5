@@ -137,13 +137,8 @@
   composes: ui-action-active from global;
 }
 
-/* Disabled side buttons: the whole button (fill, text, markers) is
-   darkened with a brightness filter — markers stay visibly coloured. */
-button.sideBtn:disabled {
-  cursor: default;
-  color: var(--color-text-primary);
-  filter: brightness(0.75);
-}
+/* Disabled side buttons: no override — they reuse the exact disabled
+   treatment of Blackjack's side buttons (global .ui-action-button). */
 
 .textSide {
   font-weight: 700;
@@ -159,19 +154,23 @@ button.sideBtn:disabled {
 }
 
 /* side markers: always visibly coloured (same language as the history
-   strip — gold round = heads, blue diamond = tails) */
+   strip — gold round = heads, blue diamond = tails). The diamond is 10px
+   so its rotated footprint (≈14px) matches the 14px circle — both buttons
+   keep identical vertical rhythm. */
 .dotHeads {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: #fca311;
+  flex: 0 0 auto;
 }
 
 .dotTails {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   background: #3b82f6;
   transform: rotate(45deg);
+  flex: 0 0 auto;
 }
 
 .gameStage {

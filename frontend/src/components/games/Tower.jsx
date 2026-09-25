@@ -167,8 +167,17 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [currentMultiplier, setCurrentMultiplier] = useState(1);
 
   const [lossSafeMap, setLossSafeMap] = useState(null);
+  const [cashoutSafeMap, setCashoutSafeMap] = useState(null);
   const [lostPick, setLostPick] = useState(null);
   const [loseStage, setLoseStage] = useState("loop");
+  // Post-round reveal gates: the remaining tiles appear only after the
+  // clicked tile's own animation fully finished (fire one-shot on loss,
+  // egg one-shot on the last pick before a cashout). Fallback timers
+  // force them true so a missed onDone can never hide the reveal.
+  const [fireDone, setFireDone] = useState(false);
+  const [pickAnimDone, setPickAnimDone] = useState(true);
+  const fireFallbackRef = useRef(null);
+  const pickFallbackRef = useRef(null);
 
   const [lastPick, setLastPick] = useState(null); // { row, col }
 
@@ -359,7 +368,12 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       setLoseStage("loop");
       setWinStage("loop");
       setLossSafeMap(null);
+      setCashoutSafeMap(null);
       setLostPick(null);
+      setFireDone(false);
+      setPickAnimDone(true);
+      if (fireFallbackRef.current) clearTimeout(fireFallbackRef.current);
+      if (pickFallbackRef.current) clearTimeout(pickFallbackRef.current);
 
       setLastPick(null);
       setLastCashoutPayout(null);
@@ -391,14 +405,25 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       setRevealed(gs.revealed || []);
       setCurrentMultiplier(gs.currentMultiplier || 1);
 
+      // every pick starts a fresh tile animation; the post-round reveal of
+      // the other tiles waits for it (4s fallback safety net)
+      if (pickFallbackRef.current) clearTimeout(pickFallbackRef.current);
+      setPickAnimDone(false);
+      pickFallbackRef.current = setTimeout(() => setPickAnimDone(true), 4000);
+
       if (result?.status === "lost") {
         const sm = result?.reveal?.safeMap;
         setLoseStage("start");
         if (Array.isArray(sm)) setLossSafeMap(sm);
         setLostPick({ row: result.row, tileIndex: result.tileIndex });
+        setFireDone(false);
+        if (fireFallbackRef.current) clearTimeout(fireFallbackRef.current);
+        fireFallbackRef.current = setTimeout(() => setFireDone(true), 4000);
       } else if (result?.status === "cashed_out") {
         const payout = Number(result.payout || 0);
         setLastCashoutPayout(payout);
+        const csm = result?.reveal?.safeMap;
+        if (Array.isArray(csm)) setCashoutSafeMap(csm);
 
         const nextRow = gs.currentRow ?? currentRow;
         const totalRows = gs.rows ?? rows;
@@ -427,6 +452,8 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       setCurrentRow(gs.currentRow ?? currentRow);
       setRevealed(gs.revealed || []);
       setCurrentMultiplier(gs.currentMultiplier || currentMultiplier);
+      const csm = result?.reveal?.safeMap;
+      if (Array.isArray(csm)) setCashoutSafeMap(csm);
 
       setWinStage("start");
       setLoseStage("loop");
@@ -455,8 +482,15 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     const pickEntry = revealed.find((r) => r.row === row && r.tileIndex === col);
     if (pickEntry?.safe) return true;
 
-    if (status === "lost" && Array.isArray(lossSafeMap)) {
+    // post-round auto-reveal (dimmed): only after the clicked tile's own
+    // animation fully finished — the fire one-shot on loss, the last
+    // pick's egg one-shot on cashout
+    if (status === "lost" && fireDone && Array.isArray(lossSafeMap)) {
       const rowSafes = lossSafeMap[row];
+      return Array.isArray(rowSafes) && rowSafes.includes(col);
+    }
+    if (status === "cashed_out" && pickAnimDone && Array.isArray(cashoutSafeMap)) {
+      const rowSafes = cashoutSafeMap[row];
       return Array.isArray(rowSafes) && rowSafes.includes(col);
     }
     return false;
@@ -669,6 +703,8 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
                   const picked = !!(lastPick && lastPick.row === gameRow && lastPick.col === col);
                   const chosenSafe = isChosenSafe(gameRow, col);
+                  // auto-revealed eggs (never clicked) render dimmed, Mines-style
+                  const autoEgg = egg && !chosenSafe;
 
                   return (
                     <button
@@ -679,6 +715,7 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                         chosenSafe ? styles.tileChosen : "",
                         picked ? styles.tilePicked : "",
                         skull ? styles.tileFire : "",
+                        autoEgg ? styles.tileAutoRevealed : "",
                       ].join(" ")}
                       style={{ gridRow: vRow + 1, gridColumn: col + 1 }}
                       disabled={disabled}
@@ -700,6 +737,11 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                           smoothing={true}
                           dprCap={1}
                           className={`${styles.symbolCanvas} ${styles.eggCanvas}`}
+                          onDone={
+                            lastPick && lastPick.row === gameRow && lastPick.col === col
+                              ? () => setPickAnimDone(true)
+                              : undefined
+                          }
                         />
                       )}
 
@@ -726,7 +768,7 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                               smoothing={true}
                               dprCap={1}
                               className={`${styles.symbolCanvas} ${styles.fireCanvas}`}
-                              onDone={() => setLoseStage("loop")}
+                              onDone={() => { setLoseStage("loop"); setFireDone(true); }}
                             />
                           )}
                         </>

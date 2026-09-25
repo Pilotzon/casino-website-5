@@ -18,9 +18,11 @@ import h2t from "../../assets/flip/flipping_heads-to-tails.mp4";
 import t2h from "../../assets/flip/flipping_tails-to-heads.mp4";
 import t2t from "../../assets/flip/flipping_tails-to-tails.mp4";
 
-// ✅ Flip sounds
+// ✅ Flip sounds (midwin.mp3 is currently a copy of Win.mp3 — replace the
+// file with the real mid-sequence win sting; the trigger is wired below)
 import flipRoundMp3 from "../../assets/flip/Flip.mp3";
 import flipWinMp3 from "../../assets/flip/Win.mp3";
+import flipMidWinMp3 from "../../assets/flip/midwin.mp3";
 import CurrencyIcon from "../common/CurrencyIcon";
 
 function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
@@ -31,6 +33,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     {
       flip: flipRoundMp3,
       win: flipWinMp3,
+      midwin: flipMidWinMp3,
     },
     { enabled: soundEnabled, volume: soundVolume }
   );
@@ -110,6 +113,12 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const pendingResultRef = useRef(null);
 
   const videoRef = useRef(null);
+  // Sync flip guard (state updates lag a frame — this ref can't double-fire
+  // on rapid clicks) + play token so overlapping video sequences never stack.
+  const flipBusyRef = useRef(false);
+  const playTokenRef = useRef(0);
+  // Snappier flips: every transition plays once, faster than realtime.
+  const FLIP_PLAYBACK_RATE = 1.5;
 
   // payout is 1.98x (see totalProfit below for the live profit math)
 
@@ -167,11 +176,16 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     });
 
   const setAndPlay = async (src) => {
+    // a newer sequence cancels this one at every await — the video can
+    // never be told to play twice for one flip
+    const myPlay = ++playTokenRef.current;
+
     setVideoSrc(src);
 
     // wait for React to apply src
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => requestAnimationFrame(r));
+    if (playTokenRef.current !== myPlay) return;
 
     const v = videoRef.current;
     if (!v) return;
@@ -186,10 +200,13 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     } catch { }
 
     await waitForEvent(v, "canplay", 2500);
+    if (playTokenRef.current !== myPlay) return;
 
     try {
       v.currentTime = 0;
     } catch { }
+
+    v.playbackRate = FLIP_PLAYBACK_RATE;
 
     try {
       await v.play();
@@ -212,7 +229,9 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       } catch { /* metadata not ready yet — loadeddata retries */ }
     };
     freezeAtStart();
-    v.addEventListener("loadeddata", freezeAtStart);
+    // one-shot: freezes the initial frame only, then detaches so later
+    // flip loads are never paused/rewound by a stale listener
+    v.addEventListener("loadeddata", freezeAtStart, { once: true });
     return () => v.removeEventListener("loadeddata", freezeAtStart);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -246,10 +265,10 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           updateBalance(pending.balance);
         }
 
-        // ✅ win sound only after video ends (no popup here — the popup
-        // waits for an explicit cashout, and never shows on a loss)
+        // ✅ mid-sequence win sting after video ends (no popup here — the
+        // popup waits for an explicit cashout, and never shows on a loss)
         if (pending.won) {
-          sfx.play("win", { volume: 1 });
+          sfx.play("midwin", { volume: 1 });
           const payout = Number(pending.payout || 0);
           setWinPayout(payout);
           const flipBet = Number(pending.flipBet || 0);
@@ -269,6 +288,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         setStage("bet");
       }
 
+      flipBusyRef.current = false;
       setIsBusy(false);
     }
   };
@@ -299,7 +319,8 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   // Step 2 — a side is chosen: the bet rides, the coin flips.
   const flip = async (side) => {
-    if (stage !== "choose" || isBusy) return;
+    if (stage !== "choose" || isBusy || flipBusyRef.current) return;
+    flipBusyRef.current = true;
 
     setStage("flipping");
     setIsBusy(true);
@@ -322,18 +343,11 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       await setAndPlay(transitionSrc);
     } catch (error) {
       pendingResultRef.current = null;
+      flipBusyRef.current = false;
       setIsBusy(false);
       setStage("choose");
       toast.error(error.response?.data?.message || "Bet failed");
     }
-  };
-
-  // Back out before the first flip (nothing was staked yet)
-  const handleCancel = () => {
-    if (stage !== "choose" || chainCount !== 0 || isBusy) return;
-    setChainBet(0);
-    setOriginalBet(0);
-    setStage("bet");
   };
 
   // Walk away with the winnings (already paid out — just ends the round).
@@ -414,14 +428,19 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         </div>
 
         <span className="ui-bet-wrap">
+          {/* No cancel exists: once a bet is placed the round cannot be
+              reversed — pre-first-flip there is no main action (the player
+              picks a side instead). */}
+          {stage === "choose" && chainCount === 0 ? null : (
           <button
             className={styles.betButton}
-            onClick={stage === "bet" ? handleBet : chainCount === 0 ? handleCancel : handleCollect}
+            onClick={stage === "bet" ? handleBet : handleCollect}
             disabled={isLocked || stage === "flipping"}
             data-bet-sound="true"
             title={isLocked ? betErrorMessage : undefined}>
-          {stage === "flipping" ? "Flipping..." : stage === "choose" ? (chainCount === 0 ? "Cancel" : "Cashout") : "Bet"}
+          {stage === "flipping" ? "Flipping..." : stage === "choose" ? "Cashout" : "Bet"}
           </button>
+          )}
           <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
         </span>
 

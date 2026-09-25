@@ -23,6 +23,9 @@ import CurrencyIcon from "../common/CurrencyIcon";
 
 const GRID_SIZE = 5;
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
+// Full click animation: 450ms cover flight + the icon zoom (starts 392ms
+// in, runs 300ms) — the rest of the board reveals only after this.
+const CLICK_ANIM_MS = 700;
 
 const format8 = (n) => Number(n || 0).toFixed(2); // 2 decimals everywhere
 
@@ -239,10 +242,21 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         // reset streak/buff on mine
         resetGemSoundState();
 
-        // A mine hit reveals the ENTIRE board: every mine plus every gem
-        // the player hadn't pressed yet (auto-revealed tiles render dimmed).
+        // A mine hit reveals the ENTIRE board — but sequenced: the clicked
+        // tile plays its own click animation first, and only once it has
+        // fully finished do the other tiles reveal (auto-revealed tiles
+        // render dimmed; the fatal tile stays full opacity).
         const mineSet = new Set(Array.isArray(data.minePositions) ? data.minePositions : [idx]);
         setLossMineIdx(idx);
+        setCells((prev) => {
+          const next = [...prev];
+          next[idx] = "mine";
+          return next;
+        });
+
+        await new Promise((r) => setTimeout(r, CLICK_ANIM_MS));
+        if (animRef.current !== myAnim) return;
+
         setCells((prev) => {
           const next = [...prev];
           for (let i = 0; i < CELL_COUNT; i++) {
@@ -462,7 +476,8 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             const isRevealed = st === "gem" || st === "mine";
             // Tiles the player pressed (gems + the fatal mine) stay full
             // opacity; everything auto-revealed at round end (loss OR
-            // cashout) is dimmed to 0.7. All reveal simultaneously.
+            // cashout) is dimmed to 0.7. On a mine hit the rest reveal
+            // only after the clicked tile's animation fully finishes.
             const userPressed = revealedCells.includes(i) || i === lossMineIdx;
             const dimmed = ended && isRevealed && !userPressed;
 

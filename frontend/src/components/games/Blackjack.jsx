@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
 import BetLockBadge from "../common/BetLockBadge";
@@ -39,11 +39,25 @@ const BJ_ACTION_URL = "/api/games/blackjack/action";
 
 // animation timings (match CSS)
 const DEAL_FLIGHT_MS = 700; // one card's flight, deck -> seat (dealIn)
-const DEAL_STEP_MS = 650; // gap between consecutive flights (sequential deal)
+// Step EQUALS flight: strictly sequential, zero idle — the next card starts
+// the instant the previous one arrives (P0 [0,700], D0 [700,1400], …).
+const DEAL_STEP_MS = 700;
 const DEAL_EXTRA_MS = 150; // lead-in before mid-round cards (hits, draws)
 const DEAL_FLIP_MS = 420; // post-flight flip (dealFlipIn)
-const FLIP_MS = 650;
-const FLIP_TOTAL_OFFSET_MS = 200;
+const FLIP_MS = 650; // hole-card reveal flip (flipWrap transition)
+
+// Card geometry (match blackjack.module.css) — shared by the fan layout
+// AND the deck-origin math so they can never drift apart.
+const CARD_W = 114;
+const CARD_H = 166;
+const OVERLAP_X = 39; // fan cascade step, x (slot left = index * this)
+const OVERLAP_Y = 15; // fan cascade step, y (slot top = index * this)
+
+// Deal-origin tuning knobs: measured deck-centre minus seat position, plus
+// this nudge (px). Touch ONLY these two numbers to shift where every card
+// visually starts flying from — see the guide in dealFromVars().
+const DEAL_ORIGIN_NUDGE_X = 0;
+const DEAL_ORIGIN_NUDGE_Y = 0;
 
 // Sequential deal order: P0, D0, P1, D1 — one card flies at a time.
 // Mid-round cards (hits, splits, dealer draws) use a short lead-in.
@@ -56,6 +70,32 @@ function playerDealDelay(handIdx, i) {
   if (handIdx === 0 && i < 2) return i * 2 * DEAL_STEP_MS;
   if (handIdx === 0) return DEAL_EXTRA_MS;
   return DEAL_EXTRA_MS + handIdx * DEAL_STEP_MS;
+}
+
+// HOW THE DEAL SOURCE POSITION WORKS (step-by-step):
+//  1. stageRef/deckRef/fanTopRef/fanBottomRefs mark the stage, the deck
+//     entity, and each fan; measureDealGeom() snapshots their rects
+//     relative to the stage (on mount, every new round, every split — a new
+//     fan mounts — and every window resize).
+//  2. Each card seat is pure math: fan origin + index * OVERLAP — the same
+//     numbers Card uses for its own slot, so seats are exact by construction.
+//  3. dealFromVars() returns the flight's start vector: deck-centre minus
+//     seat top-left (the card's centre starts on the deck's centre), plus
+//     DEAL_ORIGIN_NUDGE_*.
+//  4. The vector rides to CSS as --deal-from-x/--deal-from-y on .cardMotion;
+//     the dealIn keyframes translate from it (falling back to the old
+//     230/-270px constants before the first measurement lands).
+// TO RETUNE: touch ONLY DEAL_ORIGIN_NUDGE_X/Y above — positive X shifts the
+// start right, positive Y shifts it down, for every card at once.
+function dealFromVars(dealGeom, fanGeom, index) {
+  if (!dealGeom || !fanGeom) return undefined;
+  const seatX = fanGeom.x + index * OVERLAP_X;
+  const seatY = fanGeom.y + index * OVERLAP_Y;
+  const deckCx = dealGeom.deck.x + dealGeom.deck.w / 2;
+  const deckCy = dealGeom.deck.y + dealGeom.deck.h / 2;
+  const fromX = Math.round(deckCx - CARD_W / 2 - seatX + DEAL_ORIGIN_NUDGE_X);
+  const fromY = Math.round(deckCy - CARD_H / 2 - seatY + DEAL_ORIGIN_NUDGE_Y);
+  return { "--deal-from-x": `${fromX}px`, "--deal-from-y": `${fromY}px` };
 }
 
 function isRedSuit(s) {
@@ -190,6 +230,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   }, [betAmount, isAuthenticated, user?.balance]);
   const revealTimerRef = useRef(null);
   const dealerTotalTimersRef = useRef([]);
+  const playerTotalTimersRef = useRef([]);
 
   // ✅ Card deal sound timers (initial deal)
   const dealSoundTimersRef = useRef([]);
@@ -212,6 +253,9 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     // how many dealer cards the pill counts (the reveal count-up steps it)
     dealerShownCount: 0,
     dealerTotal: 0,
+    // per-hand count of player cards the pill counts — a card joins only
+    // after it has been flipped face-up, never while flying or flipping
+    playerShownCounts: [],
 
     settled: false,
     payout: 0,
@@ -224,6 +268,41 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     pendingOutcomes: null,
     pendingPayout: 0,
   }));
+
+  // ---- Deal-origin geometry (see dealFromVars() above for the guide) ----
+  const stageRef = useRef(null);
+  const deckRef = useRef(null);
+  const fanTopRef = useRef(null);
+  const fanBottomRefs = useRef([]);
+  const [dealGeom, setDealGeom] = useState(null);
+
+  const measureDealGeom = () => {
+    const stage = stageRef.current;
+    const deck = deckRef.current;
+    const fanTop = fanTopRef.current;
+    if (!stage || !deck || !fanTop) return;
+    const s = stage.getBoundingClientRect();
+    const rel = (el) => {
+      const b = el.getBoundingClientRect();
+      return { x: b.left - s.left, y: b.top - s.top, w: b.width, h: b.height };
+    };
+    setDealGeom({
+      deck: rel(deck),
+      fanTop: rel(fanTop),
+      fansBottom: fanBottomRefs.current.filter(Boolean).map(rel),
+    });
+  };
+
+  // Fans + deck are always mounted (even with no cards), so the initial
+  // deal already has exact vectors; splits mount a new fan (playerHands
+  // grows) and mid-round cards all carry 150ms+ delays, so the re-measure
+  // always lands before their flights start.
+  useLayoutEffect(() => {
+    measureDealGeom();
+    window.addEventListener("resize", measureDealGeom);
+    return () => window.removeEventListener("resize", measureDealGeom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ui.roundId, ui.playerHands.length]);
 
   const bet = useMemo(() => Number.parseFloat(betAmount) || 0, [betAmount]);
 
@@ -299,6 +378,49 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     dealerTotalTimersRef.current = [];
   };
 
+  const clearPlayerTotalTimers = () => {
+    playerTotalTimersRef.current.forEach((t) => clearTimeout(t));
+    playerTotalTimersRef.current = [];
+  };
+
+  // Steps a hand's total the instant a card finishes flipping face-up
+  // (flight + flip). Never counts flying, flipping, or face-down cards.
+  const schedulePlayerTotalStep = (handIdx, atMs, newShown) => {
+    playerTotalTimersRef.current.push(
+      setTimeout(() => {
+        setUi((prev) => {
+          const counts = [...(prev.playerShownCounts ?? [])];
+          counts[handIdx] = Math.max(counts[handIdx] ?? 0, newShown);
+          return { ...prev, playerShownCounts: counts };
+        });
+      }, atMs)
+    );
+  };
+
+  // Initial deal: P0, D0, P1 join their pills as each flip completes (the
+  // hole card stays out of the dealer total until the reveal flips it).
+  const scheduleInitialTotalCountUps = (gs) => {
+    clearDealerTotalTimers();
+    clearPlayerTotalTimers();
+
+    const p0 = (gs?.playerHands ?? [[]])[0]?.length ?? 0;
+    for (let i = 0; i < p0; i++) {
+      schedulePlayerTotalStep(0, playerDealDelay(0, i) + DEAL_FLIGHT_MS + DEAL_FLIP_MS, i + 1);
+    }
+
+    const dealerCount = (gs?.dealerHand ?? []).length;
+    if (dealerCount > 0) {
+      dealerTotalTimersRef.current.push(
+        setTimeout(() => {
+          setUi((prev) => ({
+            ...prev,
+            dealerShownCount: Math.max(prev.dealerShownCount ?? 0, 1),
+          }));
+        }, dealerDealDelay(0) + DEAL_FLIGHT_MS + DEAL_FLIP_MS)
+      );
+    }
+  };
+
   const clearDealSoundTimers = () => {
     dealSoundTimersRef.current.forEach((t) => clearTimeout(t));
     dealSoundTimersRef.current = [];
@@ -372,18 +494,20 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     if (dealer.length === 0) return;
 
     if (hadHoleCardHidden) {
+      // the hole joins the total only once its reveal flip completes —
+      // the pill must never show the full value while a card is face-down
       dealerTotalTimersRef.current.push(
         setTimeout(() => {
           setUi((prev) => ({
             ...prev,
             dealerShownCount: Math.min(2, dealer.length),
           }));
-        }, FLIP_TOTAL_OFFSET_MS)
+        }, FLIP_MS)
       );
 
       for (let i = 2; i < dealer.length; i++) {
-        // each draw joins the total as its flight lands
-        const delay = dealerDealDelay(i) + DEAL_FLIGHT_MS;
+        // each draw joins the total as its flip completes (not on landing)
+        const delay = dealerDealDelay(i) + DEAL_FLIGHT_MS + DEAL_FLIP_MS;
 
         dealerTotalTimersRef.current.push(
           setTimeout(() => {
@@ -399,7 +523,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     }
 
     for (let i = 1; i < dealer.length; i++) {
-      const delay = i < 2 ? DEAL_EXTRA_MS : dealerDealDelay(i) + DEAL_FLIGHT_MS;
+      const delay = i < 2 ? DEAL_EXTRA_MS : dealerDealDelay(i) + DEAL_FLIGHT_MS + DEAL_FLIP_MS;
 
       dealerTotalTimersRef.current.push(
         setTimeout(() => {
@@ -420,13 +544,14 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
     const { status, payout: summaryPayout } = summarizeResult(outcomes, payout);
 
-    // the reveal waits for every flight still in the air: the hole flip,
-    // any dealer draws landing one by one, and a possible double/hit card
+    // the reveal waits for every card still animating: the hole flip, any
+    // dealer draws flipping face-up one by one, and a possible double/hit
+    // card's flip — outcomes land only once all totals are final
     const dealerDraws = Math.max(0, (gs.dealerHand ?? []).length - 2);
     const drawEnd = dealerDraws > 0
-      ? DEAL_EXTRA_MS + (dealerDraws - 1) * DEAL_STEP_MS + DEAL_FLIGHT_MS
+      ? DEAL_EXTRA_MS + (dealerDraws - 1) * DEAL_STEP_MS + DEAL_FLIGHT_MS + DEAL_FLIP_MS
       : 0;
-    const playerNewEnd = DEAL_EXTRA_MS + DEAL_FLIGHT_MS;
+    const playerNewEnd = DEAL_EXTRA_MS + DEAL_FLIGHT_MS + DEAL_FLIP_MS;
 
     const delay = Math.max(hadHoleCardHidden ? FLIP_MS : 0, drawEnd, playerNewEnd);
 
@@ -475,9 +600,10 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
       handOutcomes: settled ? [] : serverOutcomes,
 
-      dealerShownCount: settled
-        ? s.dealerShownCount
-        : dealer.filter((c) => !c?.hidden).length,
+      // shown counts are stepped ONLY by the flip-end timers (initial deal,
+      // hits, splits, reveal) — never stamped from the server snapshot, or
+      // a pill would count cards still flying, flipping, or face-down
+      dealerShownCount: s.dealerShownCount,
       dealerTotal: typeof gs.dealerTotal === "number" ? gs.dealerTotal : 0,
 
       settled,
@@ -514,6 +640,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
       revealTimerRef.current = null;
     }
     clearDealerTotalTimers();
+    clearPlayerTotalTimers();
     clearDealSoundTimers();
     clearDealerSoundTimers();
 
@@ -526,12 +653,15 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
       pendingOutcomes: null,
       pendingPayout: 0,
       handOutcomes: [],
+      dealerShownCount: 0,
+      playerShownCounts: [],
     }));
 
     try {
       const data = await apiPost(BJ_START_URL, { betAmount: bet });
 
       scheduleDealSounds(data.gameState);
+      scheduleInitialTotalCountUps(data.gameState);
 
       applyServerState(data);
     } catch (e) {
@@ -566,11 +696,41 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
       if (action === "hit" || action === "double") {
         setTimeout(() => sfx.play("card", { volume: 1 }), DEAL_EXTRA_MS);
+        const hIdx = ui.activeHandIndex ?? 0;
+        const len = data.gameState?.playerHands?.[hIdx]?.length ?? 0;
+        const prevLen = ui.playerHands?.[hIdx]?.length ?? 0;
+        if (len > prevLen) {
+          schedulePlayerTotalStep(
+            hIdx,
+            playerDealDelay(hIdx, len - 1) + DEAL_FLIGHT_MS + DEAL_FLIP_MS,
+            len
+          );
+        }
       }
       if (action === "split") {
         setTimeout(() => sfx.play("card", { volume: 1 }), 0);
         setTimeout(() => sfx.play("card", { volume: 1 }), DEAL_EXTRA_MS + DEAL_STEP_MS);
         setTimeout(() => sfx.play("card", { volume: 1 }), 2 * DEAL_STEP_MS);
+        // split rearranges cards between hands: recount each hand from the
+        // already-visible carry-overs now, then step the fresh card(s) in
+        // as their flips complete (a plain max() would count them early)
+        const ck = (c) => c?.id ?? `${c?.r ?? c?.rank}-${c?.s ?? c?.suit}`;
+        const hands = data.gameState?.playerHands ?? [];
+        const prevHands = ui.playerHands ?? [];
+        const counts = [...(ui.playerShownCounts ?? [])];
+        hands.forEach((hand, hIdx) => {
+          const prevIds = new Set((prevHands[hIdx] ?? []).map(ck));
+          const carry = (hand ?? []).filter((c) => prevIds.has(ck(c))).length;
+          counts[hIdx] = carry;
+          if ((hand?.length ?? 0) > carry) {
+            schedulePlayerTotalStep(
+              hIdx,
+              playerDealDelay(hIdx, (hand?.length ?? 1) - 1) + DEAL_FLIGHT_MS + DEAL_FLIP_MS,
+              hand.length
+            );
+          }
+        });
+        setUi((s) => ({ ...s, playerShownCounts: counts }));
       }
 
       applyServerState(data);
@@ -659,12 +819,12 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         </span>
       </div>
 
-      <div className={styles.gameStage}>
+      <div className={styles.gameStage} ref={stageRef}>
         {isLocked ? (
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-        <div className={styles.deckEntity} aria-hidden="true">
+        <div className={styles.deckEntity} aria-hidden="true" ref={deckRef}>
           <img className={styles.deckEntityImg} src={deckEntityPng} alt="" draggable="false" />
         </div>
 
@@ -700,19 +860,21 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         )}
 
         <div className={styles.dealerArea}>
-          {ui.roundId ? (
-            /* Dealer total stays neutral dark — the win/loss highlight
-               belongs only on the settled player's own total pill. */
+          {/* Dealer total stays neutral dark — the win/loss highlight
+              belongs only on the settled player's own total pill. The pill
+              appears once the first card has flipped face-up and never
+              counts flying, flipping, or face-down cards. */}
+          {ui.roundId && (ui.dealerShownCount ?? 0) > 0 ? (
             <div className={styles.totalPillDark}>
               {handTotalDisplay(
                 ui.dealer
                   .filter((c) => !c?.hidden)
-                  .slice(0, Math.max(1, ui.dealerShownCount || 0))
+                  .slice(0, ui.dealerShownCount)
               )}
             </div>
           ) : null}
 
-          <div className={styles.fanTop}>
+          <div className={styles.fanTop} ref={fanTopRef}>
             {ui.dealer.map((c, i) => (
               <Card
                 key={i === 1 ? `dealer-hole-${ui.roundId ?? "x"}` : cardKey(c, i)}
@@ -725,6 +887,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                 flip={i === 1}
                 faceUp={!c?.hidden}
                 dealDelayMs={dealerDealDelay(i)}
+                dealFrom={dealFromVars(dealGeom, dealGeom?.fanTop, i)}
               />
             ))}
           </div>
@@ -737,7 +900,10 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         <div className={styles.playerArea}>
           <div className={styles.handsRow}>
             {ui.playerHands.map((hand, hIdx) => {
-              const total = handTotalDisplay(hand);
+              // the pill counts only flipped-up cards (shown steps up as
+              // each flip completes) and hides until the first one lands
+              const shown = ui.playerShownCounts?.[hIdx] ?? 0;
+              const total = handTotalDisplay(hand.slice(0, shown));
               const outcome = ui.handOutcomes?.[hIdx] ?? null;
 
               const settled = ui.showResult && ui.phase === "settled";
@@ -761,15 +927,17 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                       : ""
                 : "";
 
+              const fanGeom = dealGeom?.fansBottom?.[hIdx] ?? dealGeom?.fansBottom?.[0] ?? null;
+
               return (
                 <div key={hIdx} className={styles.handWrap}>
-                  {ui.roundId ? (
+                  {ui.roundId && shown > 0 ? (
                     <div className={`${styles.totalPillPlayer} ${pillTone}`}>
                       {total}
                     </div>
                   ) : null}
 
-                  <div className={styles.fanBottom}>
+                  <div className={styles.fanBottom} ref={(el) => { fanBottomRefs.current[hIdx] = el; }}>
                     {hand.map((c, i) => (
                       <Card
                         key={cardKey(c, i)}
@@ -780,6 +948,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                         animate
                         cardBackSrc={cardBackSvg}
                         dealDelayMs={playerDealDelay(hIdx, i)}
+                        dealFrom={dealFromVars(dealGeom, fanGeom, i)}
                       />
                     ))}
                   </div>
@@ -795,16 +964,14 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   );
 }
 
-function Card({ index, card, hidden, outline = "none", animate = false, cardBackSrc, flip = false, faceUp = true, dealDelayMs = 0 }) {
+function Card({ index, card, hidden, outline = "none", animate = false, cardBackSrc, flip = false, faceUp = true, dealDelayMs = 0, dealFrom = null }) {
   const r = card?.r;
   const s = card?.s;
   const red = s ? isRedSuit(s) : false;
   const suitSrc = s ? suitIconSrc(s) : null;
 
-  const overlapX = 39;
-  const overlapY = 14;
-  const x = index * overlapX;
-  const y = index * overlapY;
+  const x = index * OVERLAP_X;
+  const y = index * OVERLAP_Y;
   const rot = 0;
 
   const showFlip = !!flip;
@@ -845,7 +1012,7 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
     >
       <div
         className={`${styles.cardMotion} ${animate ? styles.cardDeal : ""}`}
-        style={animate ? { animationDelay: `${dealDelayMs}ms` } : undefined}
+        style={animate ? { animationDelay: `${dealDelayMs}ms`, ...(dealFrom || {}) } : undefined}
       >
         <div
           className={`${styles.card} ${hidden ? styles.cardNoClip : ""} ${outline === "win" ? styles.cardOutlineWin : outline === "lose" ? styles.cardOutlineLose : outline === "push" ? styles.cardOutlinePush : ""

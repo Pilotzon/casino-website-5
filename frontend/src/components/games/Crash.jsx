@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { gamesAPI } from '../../services/api';
 import Stepper from "../common/Stepper";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import usePillSlide from "../../hooks/usePillSlide";
 import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -231,6 +232,8 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   // ended  -> the last finished round is on the board, betting is available
   const [phase, setPhase] = useState('boot');
   const [history, setHistory] = useState([]);          // newest first (server order)
+  // Pill row slides in from the right as one motion on every addition
+  const { pillsRef, slideKey, slideFrom } = usePillSlide(history.length);
   const [lastRound, setLastRound] = useState(null);    // finished round on the board
   const [activeBet, setActiveBet] = useState(null);    // { betAmount, autoCashout }
   const [cashout, setCashout] = useState(null);        // { multiplier, payout }
@@ -1046,7 +1049,12 @@ function Crash({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 On phones the wrapper scrolls sideways instead of clipping. */}
             <div className={styles.historyRow}>
               <div className={styles.historyScroll} ref={historyScrollRef}>
-                <div className={styles.historyPills}>
+                <div
+                  key={slideKey}
+                  ref={pillsRef}
+                  className={styles.historyPills}
+                  style={slideFrom ? { "--pill-slide-from": `${slideFrom}px` } : undefined}
+                >
                   {/* Always rendered: an invisible placeholder pill reserves
                       the row's space until the first real pill swaps in. */}
                   {history.length === 0 ? (

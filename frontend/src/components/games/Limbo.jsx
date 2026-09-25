@@ -2,6 +2,7 @@ import Stepper from "../common/Stepper";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useActiveBetFlag from "../../hooks/useActiveBetFlag";
 import useGameDisabled from "../../hooks/useGameDisabled";
+import usePillSlide from "../../hooks/usePillSlide";
 import BetLockBadge from "../common/BetLockBadge";
 import DisabledGameStage from "./DisabledGameStage";
 import BetError from "../common/BetError";
@@ -61,6 +62,8 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
+  // Pill row slides in from the right as one motion on every addition
+  const { pillsRef, slideKey, slideFrom } = usePillSlide(history.length);
 
   const [displayMult, setDisplayMult] = useState(1.0);
   const animTokenRef = useRef(0);
@@ -254,7 +257,12 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             Crash (row-reverse puts the first pill at the right). */}
         <div className={styles.historyRow}>
           <div className={styles.historyScroll}>
-            <div className={styles.historyPills}>
+            <div
+                  key={slideKey}
+                  ref={pillsRef}
+                  className={styles.historyPills}
+                  style={slideFrom ? { "--pill-slide-from": `${slideFrom}px` } : undefined}
+                >
               {history.length === 0 ? (
                 <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
                   0.00×
