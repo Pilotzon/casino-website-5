@@ -130,12 +130,20 @@
   min-width: 0;
 }
 
-.odFrac {
+/* Right half: fraction + × suffix glued together, left-aligned against
+   the decimal point (the suffix must ride with the text, never the edge). */
+.odRight {
   flex: 1 1 0;
   display: flex;
   justify-content: flex-start;
   align-items: baseline;
   min-width: 0;
+}
+
+.odFrac {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
 }
 
 .odSlot {
@@ -236,6 +244,10 @@
 
 .histGray {
   composes: ui-hist-gray from global;
+}
+
+.histPlaceholder {
+  composes: ui-hist-placeholder from global;
 }
 
 /* Bottom stack (target multiplier + win chance) — anchored to

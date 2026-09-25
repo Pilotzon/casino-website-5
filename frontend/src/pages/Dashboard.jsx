@@ -311,7 +311,7 @@ export default function Dashboard() {
       .slice(0, 6);
   }, [breakdown]);
 
-  const PIE_COLORS = ["#2377ff", "#00e701", "#ff9f00", "#FB7984", "#3E586C", "#A1BFD6"];
+  const PIE_COLORS = ["#2377ff", "#00e701", "#ff9f00", "#E9103C", "#3E586C", "#A1BFD6"];
 
   const totalBetsCount = Number(gaming?.total_rounds ?? 0) + Number(customBets?.total_bets ?? customBets?.participated ?? 0);
 

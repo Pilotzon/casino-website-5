@@ -184,7 +184,9 @@
 
 .trackPad {
   position: relative;
-  z-index: 1;
+  /* stacking context sits above the tick triangles so the result gem
+     (z-20 inside this context) always paints over them */
+  z-index: 6;
   width: 100%;
   padding: 0 var(--track-inset);
   box-sizing: border-box;
@@ -298,15 +300,16 @@
    inside it. Its bottom corner sits exactly on the range track.
    Three nested rigs, all anchored at the bottom corner:
      .resultGem  slides along the track (the move; 0.45s — MOVE_MS in JSX)
-     .gemPress   1.0 → 0.97 press on bet click, released when the move starts
-     .gemBounce  overshoot bounce, retriggered on arrival */
+     .gemPress   1.0 → 0.97 press on bet click, held through the whole move
+                 and released on arrival — the bounce takes over the dip
+     .gemBounce  0.97 → 1.1 → 1.0 bounce (700ms), retriggered on arrival */
 .resultGem {
   position: absolute;
   bottom: 5px;
   /* the 10px track's vertical centre — the corner touches the track */
   transform: translateX(-50%);
-  width: 76px;
-  height: 85px;
+  width: 84px;
+  height: 94px;
   z-index: 20;
   opacity: 0;
   transition: left 0.45s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.2s;
@@ -333,38 +336,46 @@
   width: 100%;
   height: 100%;
   transform-origin: 50% 100%;
-  animation: diceGemBounce 480ms ease-out;
+  animation: diceGemBounce 700ms ease-out;
 }
 
-/* Genuine bounce: overshoot past 1.0, then decaying oscillations — the
+/* Arrival bounce from below: launches out of the held 0.97 press-dip,
+   overshoots to 1.1 at apex, then settles — the duplicated 1.0 tail holds
+   the gem at rest for a beat so it lands instead of vibrating. The
    per-keyframe easings (not one linear ease) sell the physics. */
 @keyframes diceGemBounce {
   0% {
-    transform: scale(1, 1);
-  }
-
-  28% {
-    transform: scale(1.05, 1.05);
+    transform: scale(0.97);
     animation-timing-function: ease-out;
   }
 
-  46% {
-    transform: scale(0.985, 0.985);
+  16% {
+    transform: scale(1.055);
+    animation-timing-function: ease-out;
+  }
+
+  32% {
+    transform: scale(1.1);
     animation-timing-function: ease-in-out;
   }
 
-  62% {
-    transform: scale(1.018, 1.018);
+  47% {
+    transform: scale(1.045);
     animation-timing-function: ease-in-out;
   }
 
-  78% {
-    transform: scale(0.996, 0.996);
+  61% {
+    transform: scale(1.008);
     animation-timing-function: ease-in-out;
+  }
+
+  73% {
+    transform: scale(1);
+    animation-timing-function: ease-out;
   }
 
   100% {
-    transform: scale(1, 1);
+    transform: scale(1);
   }
 }
 
@@ -383,7 +394,7 @@
   top: 50%;
   transform: translate(-50%, -50%);
   font-weight: 900;
-  font-size: 15px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -462,6 +473,10 @@
 
 .histGray {
   composes: ui-hist-gray from global;
+}
+
+.histPlaceholder {
+  composes: ui-hist-placeholder from global;
 }
 
 /* Stats panel — shared bottom-anchored panel + surface (global.css).

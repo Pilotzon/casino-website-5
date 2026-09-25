@@ -1075,7 +1075,7 @@ button:active {
 }
 
 .pmDeltaDown {
-  color: #ef4444;
+  color: #E9103C;
 }
 
 .pmArrowSvgWrap {
@@ -1426,9 +1426,9 @@ button:active {
 }
 
 .pillRed {
-  background: #EF4444;
+  background: #E9103C;
   color: var(--color-text-primary);
-  border-color: #EF4444;
+  border-color: #E9103C;
 }
 
 .pillOff {
@@ -2020,7 +2020,7 @@ button:active {
 }
 
 .likeActive {
-  color: #ef4444;
+  color: #E9103C;
 }
 
 .iconCount {
@@ -2220,7 +2220,7 @@ button:active {
   height: 40px;
   border-radius: 12px;
   border: 0;
-  background: #ef4444;
+  background: #E9103C;
   color: var(--color-text-primary);
   font-weight: 950;
   padding: 0 14px;

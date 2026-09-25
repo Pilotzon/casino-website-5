@@ -55,7 +55,7 @@ const HOLD_MS = 1500;           // server keeps the live poll open until the rou
 const HOLD_SEEN_MS = 250;       // a live request that took this long was really parked
 const POLL_REPARK_MS = 30;      // re-park almost immediately once the server holds
 
-const CRASH_RED = '#EF005E';    // crashed multiplier (red text)
+const CRASH_RED = '#E9103C';    // crashed multiplier (red text)
 const CRASH_DEAD = '#2E4552';   // line + fill colour once the round crashed
 const LINE_WIDTH = 8;           // white curve stroke (screen px)
 const SHADOW_DY = 1.2;          // shadow offset, board units (plot is 100 tall)

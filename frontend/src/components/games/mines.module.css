@@ -14,8 +14,8 @@
   /* Bottom-edge bevel — exact Casino value */
   --mines-tile-hover: #557086;
   /* Lighten on hover */
-  --mines-tile-hole: #071824;
-  /* Empty hole color */
+  --mines-tile-hole: #0A1724;
+  /* Empty hole color — plain static fill, never animated */
 
   --mines-tile-radius: 8px;
   /* exact Casino value */
@@ -201,12 +201,13 @@
   border-radius: var(--mines-tile-radius);
 
   background-color: var(--mines-tile-face);
-  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
 
-  /* CHANGED: Added transition for transform/shadow/bg-color 
+  /* CHANGED: Added transition for transform/bg-color
      This handles the reset animation when starting a new game.
+     (The tile itself is shadowless — the cover carries the bevel so the
+     whole face, shadow included, scales as one piece on click.)
   */
-  transition: transform 0s ease, box-shadow 0s ease, background-color 0.35s ease;
+  transition: transform 0s ease, background-color 0.35s ease;
 
   display: flex;
   justify-content: center;
@@ -214,14 +215,15 @@
   margin-bottom: 5.5px;
 }
 
-/* The front cover: an opaque #2F4553 face over the hole. It carries the
-   hover tint (the tile itself keeps the lift), and on reveal it scales
-   1 -> 1.03 -> 0 from the exact centre while the icon pops underneath. */
+/* The front cover: the tile's entire visible face (fill + bevel shadow).
+   On click the WHOLE cover scales 1 -> 1.05 -> 0 and fades out, leaving
+   the static hole + icon behind. */
 .cover {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   background-color: var(--mines-tile-face);
+  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
   transform-origin: 50% 50%;
   pointer-events: none;
 }
@@ -232,9 +234,8 @@
 */
 .tile:not(.tileRevealed):hover {
   transform: translateY(-3.5px);
-  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
   cursor: pointer;
-  transition: transform 0s ease, box-shadow 0s ease;
+  transition: transform 0s ease;
 }
 
 .tile:not(.tileRevealed):hover .cover {
@@ -246,7 +247,6 @@
 */
 .tile:not(.tileRevealed):active {
   transform: translateY(0) scale(1);
-  box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
   transition: none;
 }
 
@@ -259,13 +259,11 @@
   opacity: 1;
 }
 
-/* Revealed: Becomes a hole sitting on the "ground" */
+/* Revealed: a static #0A1724 hole sitting on the "ground" — plain style,
+   not part of the click animation. No border. */
 .tileRevealed {
   background-color: var(--mines-tile-hole);
-  box-shadow: 0 0 0 var(--mines-tile-shadow);
-  /* Shrink shadow to zero */
   transform: translateY(var(--mines-base-height));
-  border: 1px solid rgba(255, 255, 255, 0.05);
   cursor: default;
 }
 
@@ -277,51 +275,46 @@
   transition: none;
 }
 
-/* Reveal: the cover swells to 1.03 then collapses to 0 (exact centre
-   anchor); the icon scales up underneath once the cover starts to go. */
+/* Click: the whole face (fill + shadow) scales up to 1.05, then back
+   down to 0 while fading out — the static icon is simply uncovered. */
 .tileRevealed .cover {
-  animation: minesCoverOut 380ms forwards;
+  animation: minesTileOut 400ms forwards;
 }
 
-@keyframes minesCoverOut {
+@keyframes minesTileOut {
   0% {
     transform: scale(1);
+    opacity: 1;
     animation-timing-function: ease-out;
   }
 
-  32% {
-    transform: scale(1.03);
+  35% {
+    transform: scale(1.05);
+    opacity: 1;
     animation-timing-function: ease-in;
   }
 
   100% {
     transform: scale(0);
+    opacity: 0;
   }
 }
 
-/* Icon / Gem / Mine Animation */
+/* Icon / Gem / Mine — static, revealed as the cover collapses */
 .icon {
   width: 60%;
   height: 60%;
   object-fit: contain;
   position: relative;
   z-index: 1;
-  transform-origin: 50% 50%;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
-
-  /* starts once the cover begins collapsing (delay), overshoots to full size */
-  animation: zoomIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  animation-delay: 200ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tileRevealed .cover {
     animation: none;
     transform: scale(0);
-  }
-
-  .icon {
-    animation: none;
+    opacity: 0;
   }
 }
 

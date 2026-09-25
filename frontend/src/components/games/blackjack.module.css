@@ -6,7 +6,7 @@
    styles/global.css — do not redefine them here.
    ========================================================= */
 .container {
-  --lose-red: #ef4444;
+  --lose-red: #E9103C;
 
   --pill-bg: rgba(0, 0, 0, 0.35);
   --pill-text: rgba(255, 255, 255, 0.95);
@@ -165,7 +165,7 @@
 }
 
 .deckEntityImg {
-  width: 92px;
+  width: 100px;
   height: auto;
   display: block;
   user-select: none;
@@ -180,7 +180,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: clamp(260px, 72vw, 320px);
-  height: 170px;
+  height: 185px;
 }
 
 .fanTop {
@@ -188,7 +188,7 @@
   left: 0;
   top: 18px;
   width: 100%;
-  height: 150px;
+  height: 165px;
 }
 
 .playerArea {
@@ -197,7 +197,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(760px, 95%);
-  height: 210px;
+  height: 228px;
 }
 
 .handsRow {
@@ -211,7 +211,7 @@
 
 .handWrap {
   width: clamp(260px, 72vw, 320px);
-  height: 180px;
+  height: 196px;
   position: relative;
   border-radius: 12px;
   padding: 6px;
@@ -222,7 +222,7 @@
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 160px;
+  height: 175px;
 }
 
 /* Totals pills */
@@ -247,11 +247,21 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
-/* Push: the total label outlined in orange (same as the cards) */
+/* Settled totals take the SAME colour as the cards' outcome outline —
+   green on win, red on loss, orange on push. */
+.totalWin {
+  background: var(--accent-green);
+  color: #07210f;
+}
+
+.totalLose {
+  background: var(--accent-red);
+  color: #fff;
+}
+
 .totalPush {
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.35),
-    0 0 0 2px #ff9d00;
+  background: #ff9d00;
+  color: #3a2200;
 }
 
 /* Ribbon SVG */
@@ -277,9 +287,9 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 100px;
-  height: 140px;
-  transform-origin: 18px 118px;
+  width: 108px;
+  height: 150px;
+  transform-origin: 19px 127px;
 }
 
 .cardMotion {
@@ -291,8 +301,8 @@
 }
 
 .card {
-  width: 100px;
-  height: 140px;
+  width: 108px;
+  height: 150px;
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.10);
@@ -329,8 +339,8 @@
 /* Front card */
 .corner {
   position: absolute;
-  left: 12px;
-  top: 10px;
+  left: 13px;
+  top: 11px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -338,7 +348,7 @@
 
 .rank {
   font-weight: 900;
-  font-size: 34px;
+  font-size: 36px;
   line-height: 1;
 }
 
@@ -351,8 +361,8 @@
 }
 
 .centerSuitIconLarge {
-  width: 58px;
-  height: 58px;
+  width: 62px;
+  height: 62px;
   display: block;
   user-select: none;
   -webkit-user-drag: none;
@@ -397,8 +407,8 @@
   background-color: #007bff;
 }
 
-/* Deal flight — every card spawns face-down at the deck (top-right):
-   small + tilted, gliding down into its seat. The flip to face-up is a
+/* Deal flight — every card materialises face-down ON the deck, sits there
+   a beat, then glides down into its seat. The flip to face-up is a
    SEPARATE step that only starts once this flight completes. */
 @keyframes dealIn {
   0% {
@@ -406,11 +416,17 @@
     transform: translate(230px, -270px) scale(0.4) rotate(12deg);
   }
 
-  12% {
+  10% {
     opacity: 1;
+    transform: translate(230px, -270px) scale(0.4) rotate(12deg);
   }
 
-  62% {
+  32% {
+    opacity: 1;
+    transform: translate(230px, -270px) scale(0.4) rotate(12deg);
+  }
+
+  78% {
     opacity: 1;
     transform: translate(-7px, 5px) scale(1.02) rotate(-1deg);
   }
@@ -422,7 +438,7 @@
 }
 
 .cardDeal {
-  animation: dealIn 540ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dealIn 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Post-flight flip: back face -> front face, starting only after the
@@ -529,7 +545,7 @@
 }
 
 .popupLose .resultPopupTitle {
-  color: #f12c4c;
+  color: var(--accent-red);
 }
 
 .resultPopup.popupPush {
@@ -577,7 +593,7 @@
   }
 
   .deckEntityImg {
-    width: 76px;
+    width: 82px;
   }
 }
 
@@ -609,19 +625,19 @@
   }
 
   .deckEntityImg {
-    width: 66px;
+    width: 72px;
   }
 }
 
 @media (max-width: 420px) {
   .cardSlot {
-    width: 86px;
-    height: 120px;
+    width: 92px;
+    height: 128px;
   }
 
   .card {
-    width: 86px;
-    height: 120px;
+    width: 92px;
+    height: 128px;
     border-radius: 10px;
   }
 
@@ -639,6 +655,6 @@
   }
 
   .deckEntityImg {
-    width: 58px;
+    width: 62px;
   }
 }

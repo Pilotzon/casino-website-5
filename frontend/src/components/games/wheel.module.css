@@ -227,7 +227,7 @@
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  background: #ff5b76;
+  background: var(--accent-red);
   z-index: 2;
 }
 
@@ -250,7 +250,7 @@
   height: 0;
   border-left: 14px solid transparent;
   border-right: 14px solid transparent;
-  border-top: 32px solid #ff5b76;
+  border-top: 32px solid var(--accent-red);
   z-index: 1;
 }
 
@@ -523,6 +523,10 @@
 
 .histGray {
   composes: ui-hist-gray from global;
+}
+
+.histPlaceholder {
+  composes: ui-hist-placeholder from global;
 }
 
 /* Modal — shared overlay styles (global.css) */

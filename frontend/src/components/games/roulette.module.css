@@ -10,7 +10,7 @@
 .container {
   --tile: var(--color-bg-tile);
   --tile-dark: #243b48;
-  --red: #fe2247;
+  --red: #E9103C;
   --green: #419e3f;
 }
 
@@ -376,12 +376,12 @@
    Pocket Hover Colors (explicit colors, no filters)
    ============================================================ */
 
-.pocketRed.pocketHover        { background: #ff5a7a; }
+.pocketRed.pocketHover        { background: #E9103C; }
 .pocketBlack.pocketHover      { background: #3d5a6b; }
 .pocketGreen.pocketHover      { background: #52b856; }
 .pocketCol.pocketHover        { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.4); }
 .pocketDark.pocketHover       { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.4); }
-.pocketRedSolid.pocketHover   { background: #ff5a7a; }
+.pocketRedSolid.pocketHover   { background: #E9103C; }
 .pocketBlackSolid.pocketHover { background: #3d5a6b; }
 
 /* Winner: green border, no glow */

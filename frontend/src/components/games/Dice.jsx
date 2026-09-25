@@ -72,7 +72,7 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [showResult, setShowResult] = useState(false);
   // Marker animation phasing (see dice.module.css — MOVE_MS matches the
   // marker's left transition exactly):
-  //   pressing:  bet click → result (1.0 → 0.97 press)
+  //   pressing:  bet click → arrival (the 0.97 dip is held through the move)
   //   gemMoving: bet click → arrival (text greyed, number swaps on arrival)
   const [pressing, setPressing] = useState(false);
   const [gemMoving, setGemMoving] = useState(false);
@@ -159,21 +159,23 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       const result = response.data.result;
 
-      // the move toward the target begins here — overlapping the tail end
-      // of the press — while the press releases back toward 1.0
+      // the move toward the target begins here — the press-dip stays held
+      // for the whole flight and only releases on arrival
       setLastResult(result);
       setShowResult(true);
       setResultPosition(result.roll);
-      setPressing(false);
       setHistory((prev) => [{ roll: result.roll, won: result.won }, ...prev].slice(0, 10));
 
       // ✅ Wait for the marker to arrive at its target
       await new Promise((r) => setTimeout(r, MOVE_MS));
 
       // on arrival: the number swaps in, the text takes its win/loss colour,
-      // and the overshoot bounce plays
+      // the press releases (280ms), and the bounce launches from the same
+      // 0.97 dip — the overlap reads as a touchdown squash before the
+      // 0.97 → 1.1 → 1.0 landing
       setShownPosition(result.roll);
       setGemMoving(false);
+      setPressing(false);
       setArrivalNonce((n) => n + 1);
 
       // ✅ After arrival: win sound + win popup
@@ -393,22 +395,30 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           </div>
         )}
 
-        {history.length > 0 && (
-          <div className={styles.historyRow}>
-            <div className={styles.historyScroll}>
-              <div className={styles.historyPills}>
-                {[...history].reverse().map((h, i) => (
+        {/* Always rendered: an invisible placeholder pill reserves the
+            row's space until the first real pill swaps in — the row never
+            grows, so content below never jumps. Newest-first, exactly like
+            Crash (row-reverse puts the first pill at the right). */}
+        <div className={styles.historyRow}>
+          <div className={styles.historyScroll}>
+            <div className={styles.historyPills}>
+              {history.length === 0 ? (
+                <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
+                  0.00
+                </span>
+              ) : (
+                history.map((h, i) => (
                   <span
                     key={i}
                     className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
                   >
                     {Number(h.roll).toFixed(2)}
                   </span>
-                ))}
-              </div>
+                ))
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         <div className={styles.sliderWrapper}>
           <div className={styles.scaleLabels}>
@@ -457,18 +467,16 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                   <div className={`${styles.gemPress} ${pressing ? styles.pressed : ""}`}>
                     <div key={arrivalNonce} className={styles.gemBounce}>
                       <svg className={styles.gemSvg} viewBox="0 0 100 112" aria-hidden="true">
-                        {/* rounded silhouette (round joins soften every corner) */}
+                        {/* rounded-corner hexagon silhouette (quadratic corners,
+                            r≈6 — no stroke, the fill alone draws the ring) */}
                         <path
-                          d="M50,4 L94,29 L94,83 L50,108 L6,83 L6,29 Z"
-                          fill="#7d92a9"
-                          stroke="#7d92a9"
-                          strokeWidth="8"
-                          strokeLinejoin="round"
+                          d="M44.8,7 Q50,4 55.2,7 L88.8,26 Q94,29 94,35 L94,77 Q94,83 88.8,86 L55.2,105 Q50,108 44.8,105 L11.2,86 Q6,83 6,77 L6,35 Q6,29 11.2,26 Z"
+                          fill="#9fb0c3"
                         />
                         {/* left facet: slightly darker */}
-                        <polygon points="10,32 50,56 50,103 10,80" fill="#d7dee7" />
+                        <polygon points="10,32 50,56 50,103 10,80" fill="#e6ebf1" />
                         {/* right facet: darker still */}
-                        <polygon points="50,56 90,32 90,80 50,103" fill="#a9b7c6" />
+                        <polygon points="50,56 90,32 90,80 50,103" fill="#c9d2dc" />
                         {/* top facet: white */}
                         <polygon points="50,9 90,32 50,56 10,32" fill="#ffffff" />
                       </svg>

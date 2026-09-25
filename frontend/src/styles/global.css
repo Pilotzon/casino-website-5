@@ -260,8 +260,13 @@
   /* Shared game accents — win/loss feedback INSIDE games.
      Deliberately green/red: these are game semantics, not chrome. */
   --accent-green: #00e701;
-  --accent-red: #FB7984;
+  --accent-red: #E9103C;
+  /* every loss / red-indicator state site-wide (never an error state) */
   --bitcoin: #fca311;
+
+  /* Error states ONLY: inline bet errors + the bet-amount input's error
+     border (+ page-level error banners). Never used for game losses. */
+  --color-error: #FB7984;
 
   /* The currency mark (CurrencyIcon: green disc, "$" cut out) — the ONE
      colour every "$" icon on the site uses. */
@@ -697,7 +702,7 @@ input[type="number"] {
 /* an error line right under the field paints the field's border red too */
 .sidebar-input-group:has(+ .bet-error),
 .sidebar-input-group:has(+ .bet-error):focus-within {
-  border-color: var(--accent-red);
+  border-color: var(--color-error);
 }
 
 .sidebar-input-group:focus-within {
@@ -1127,12 +1132,12 @@ textarea::placeholder {
   transform: translate(-50%, -50%);
   transform-origin: center;
   background: #1A3242;
-  border: 3px solid rgba(0, 231, 1, 0.9);
+  border: 4px solid rgba(0, 231, 1, 0.9);
   border-radius: 16px;
-  padding: 14px 18px;
+  padding: 18px 16px;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-  min-width: 200px;
+  min-width: 180px;
   max-width: calc(100% - 32px);
   pointer-events: none;
   z-index: 60;
@@ -1244,6 +1249,12 @@ textarea::placeholder {
   background: #2f4553;
   color: #fff;
 }
+/* Invisible placeholder: rendered from the start so the row's size is
+   final before the first real pill exists — zero layout shift, ever. */
+.ui-hist-placeholder {
+  visibility: hidden;
+  animation: none;
+}
 @keyframes ui-hist-pop {
   from { transform: translateX(12px) scale(0.94); opacity: 0; }
   to { transform: translateX(0) scale(1); opacity: 1; }
@@ -1286,7 +1297,7 @@ textarea::placeholder {
   gap: 8px;
   padding: 8px 0;
   margin: 0 0 calc(var(--sidebar-control-gap) - var(--sidebar-group-gap));
-  color: var(--accent-red);
+  color: var(--color-error);
   font-size: var(--font-size-control);
   font-weight: 600;
   line-height: 1.2;
@@ -2013,7 +2024,7 @@ html[data-maintenance="on"] .sidebar-bet-button::after {
   background: var(--color-bg-panel);
   border-radius: var(--radius-md);
   box-shadow: none;
-  border-left: 3px solid var(--accent-red);
+  border-left: 3px solid var(--color-error);
   color: var(--color-text-primary);
   font-size: var(--font-size-control);
   font-weight: 600;
@@ -2023,7 +2034,7 @@ html[data-maintenance="on"] .sidebar-bet-button::after {
   flex: 0 0 auto;
   width: 20px;
   height: 20px;
-  color: var(--accent-red);
+  color: var(--color-error);
   margin-top: 1px;
 }
 .ui-page-error-icon svg { width: 100%; height: 100%; }

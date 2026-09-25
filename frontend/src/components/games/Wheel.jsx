@@ -352,22 +352,30 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
         )}
 
         <div className={styles.boardWrap}>
-          {history.length > 0 && (
-            <div className={styles.historyRow}>
-              <div className={styles.historyScroll}>
-                <div className={styles.historyPills}>
-                  {[...history].reverse().map((h, i) => (
+          {/* Always rendered: an invisible placeholder pill reserves the
+              row's space until the first real pill swaps in — the row never
+              grows, so content below never jumps. Newest-first, exactly like
+              Crash (row-reverse puts the first pill at the right). */}
+          <div className={styles.historyRow}>
+            <div className={styles.historyScroll}>
+              <div className={styles.historyPills}>
+                {history.length === 0 ? (
+                  <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
+                    0.00×
+                  </span>
+                ) : (
+                  history.map((h, i) => (
                     <span
                       key={i}
                       className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
                     >
                       {Number(h.multiplier).toFixed(2)}×
                     </span>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           <div className={styles.wheelStage}>
 

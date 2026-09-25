@@ -17,8 +17,8 @@
 
   --tile-face: var(--color-bg-tile);
 
-  --snake-hover-base: #BA0E30;
-  --snake-hover-bg: #E9113C;
+  --snake-hover-base: #E9103C;
+  --snake-hover-bg: #E9103C;
 
   --diff-hover-base: #105EB4;
   --diff-hover-bg: #047BFF;

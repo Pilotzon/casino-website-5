@@ -292,16 +292,17 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       const res = await gamesAPI.cashoutMines({ roundId });
       const data = res.data;
 
+      // Cashout reveals the ENTIRE board, same as a mine hit: every mine
+      // plus every unpressed gem, all at once.
+      const cashoutMineSet = new Set(Array.isArray(data.minePositions) ? data.minePositions : []);
       setMinePositions(data.minePositions || []);
-      if (Array.isArray(data.minePositions)) {
-        setCells((prev) => {
-          const next = [...prev];
-          for (const m of data.minePositions) {
-            if (next[m] === "hidden") next[m] = "mine";
-          }
-          return next;
-        });
-      }
+      setCells((prev) => {
+        const next = [...prev];
+        for (let i = 0; i < CELL_COUNT; i++) {
+          if (next[i] === "hidden") next[i] = cashoutMineSet.has(i) ? "mine" : "gem";
+        }
+        return next;
+      });
 
       setCurrentMultiplier(Number(data.multiplier) || currentMultiplier);
       setInProgress(false);
@@ -460,14 +461,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             const st = cells[i];
             const isRevealed = st === "gem" || st === "mine";
             // Tiles the player pressed (gems + the fatal mine) stay full
-            // opacity; everything auto-revealed on loss is dimmed to 0.7.
-            const userPressed = revealedCells.includes(i) || (didLose && i === lossMineIdx);
-            const dimmed = didLose && isRevealed && !userPressed;
-            // Board-reveal ripple: icons pop outward from the mine the
-            // player hit (on top of the base 200ms cover delay).
-            const rippleMs = dimmed && lossMineIdx != null
-              ? 200 + (Math.abs(i - lossMineIdx) % CELL_COUNT) * 14
-              : undefined;
+            // opacity; everything auto-revealed at round end (loss OR
+            // cashout) is dimmed to 0.7. All reveal simultaneously.
+            const userPressed = revealedCells.includes(i) || i === lossMineIdx;
+            const dimmed = ended && isRevealed && !userPressed;
 
             return (
               <button
@@ -479,20 +476,10 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
               >
                 <span className={styles.cover} aria-hidden="true" />
                 {st === "gem" && (
-                  <img
-                    className={styles.icon}
-                    style={rippleMs != null ? { animationDelay: `${rippleMs}ms` } : undefined}
-                    src={gemImg}
-                    alt=""
-                  />
+                  <img className={styles.icon} src={gemImg} alt="" />
                 )}
                 {st === "mine" && (
-                  <img
-                    className={styles.icon}
-                    style={rippleMs != null ? { animationDelay: `${rippleMs}ms` } : undefined}
-                    src={mineImg}
-                    alt=""
-                  />
+                  <img className={styles.icon} src={mineImg} alt="" />
                 )}
               </button>
             );

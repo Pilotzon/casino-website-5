@@ -64,6 +64,9 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const [displayMult, setDisplayMult] = useState(1.0);
   const animTokenRef = useRef(0);
+  // guards against double-flight interleaving + restores the display on error
+  const busyRef = useRef(false);
+  const prevDisplayRef = useRef(1.0);
 
   const target = useMemo(() => parseFloat(targetMultiplier) || 2.0, [targetMultiplier]);
 
@@ -105,7 +108,7 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       openLoginModal();
       return;
     }
-    if (isPlaying) return;
+    if (isPlaying || busyRef.current) return;
 
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) { setBetError("Invalid bet amount"); return; }
@@ -114,6 +117,8 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       return toast.error("Target must be between 1.01x and 1,000,000x");
     }
 
+    busyRef.current = true;
+    prevDisplayRef.current = displayMult;
     setIsPlaying(true);
     setResult(null);
     setDisplayMult(1.0);
@@ -132,21 +137,24 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       const res = response.data.result;
 
-      // animate first
-      await animateTo(res.multiplier, 650);
-
-      // ✅ only after animation finishes: win sound
-      if (res?.won) {
-        sfx.play("win", { volume: 1 });
-      }
-
+      // single source of truth for the display, result and history pill
       const uiRes = {
-        resultMultiplier: res.multiplier,
+        resultMultiplier: Number(res.multiplier) || 0,
         won: res.won,
         payout: res.payout,
         balance: res.balance,
       };
 
+      // animate first
+      await animateTo(uiRes.resultMultiplier, 650);
+
+      // ✅ only after animation finishes: win sound
+      if (uiRes.won) {
+        sfx.play("win", { volume: 1 });
+      }
+
+      // pin the display to the exact logged value (never a stale frame)
+      setDisplayMult(Number(uiRes.resultMultiplier.toFixed(2)));
       setResult(uiRes);
       setHistory((prev) => [uiRes, ...prev].slice(0, 10));
 
@@ -158,10 +166,12 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         // keep toast if you want, but you didn’t have one here)
       }
     } catch (error) {
-      // ✅ if request failed, refund the bet
+      // ✅ if request failed, refund the bet and restore the last display
       updateBalance((b) => b + amount);
+      setDisplayMult(prevDisplayRef.current);
       toast.error(error.response?.data?.message || "Play failed");
     } finally {
+      busyRef.current = false;
       setIsPlaying(false);
     }
   };
@@ -238,22 +248,30 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
-        {history.length > 0 && (
-          <div className={styles.historyRow}>
-            <div className={styles.historyScroll}>
-              <div className={styles.historyPills}>
-                {[...history].reverse().map((h, i) => (
+        {/* Always rendered: an invisible placeholder pill reserves the
+            row's space until the first real pill swaps in — the row never
+            grows, so content below never jumps. Newest-first, exactly like
+            Crash (row-reverse puts the first pill at the right). */}
+        <div className={styles.historyRow}>
+          <div className={styles.historyScroll}>
+            <div className={styles.historyPills}>
+              {history.length === 0 ? (
+                <span className={`${styles.histPill} ${styles.histGray} ${styles.histPlaceholder}`}>
+                  0.00×
+                </span>
+              ) : (
+                history.map((h, i) => (
                   <span
                     key={i}
                     className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
                   >
                     {Number(h.resultMultiplier).toFixed(2)}×
                   </span>
-                ))}
-              </div>
+                ))
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         <div
           className={`${styles.bigMultiplier} ${result ? (result.won ? styles.bigWin : styles.bigLoss) : ""
@@ -267,13 +285,15 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
               <span key={arr.length - i} className={styles.odSlot}>{d}</span>
             ))}
           </span>
-          <span className={styles.odFrac} aria-hidden="true">
-            <span className={styles.odDot}>.</span>
-            {displayMult.toFixed(2).split(".")[1].split("").map((d, i) => (
-              <span key={i} className={styles.odSlot}>{d}</span>
-            ))}
+          <span className={styles.odRight} aria-hidden="true">
+            <span className={styles.odFrac}>
+              <span className={styles.odDot}>.</span>
+              {displayMult.toFixed(2).split(".")[1].split("").map((d, i) => (
+                <span key={i} className={styles.odSlot}>{d}</span>
+              ))}
+            </span>
+            <span className={styles.odSuffix}>×</span>
           </span>
-          <span className={styles.odSuffix} aria-hidden="true">×</span>
           <span className={styles.odSrOnly}>{displayMult.toFixed(2)}×</span>
         </div>
 

@@ -11,7 +11,7 @@
   font-family: 'proxima-nova';
   font-feature-settings: "salt" on;
   /* Crash-specific palette */
-  --crash-red: #EF005E;        /* crashed multiplier / red text  */
+  --crash-red: #E9103C;        /* crashed multiplier / red text  */
   --crash-fill: #FB9D08;       /* solid area under the curve     */
   --crash-board: #0F212C;      /* chart background               */
   --crash-axis: rgba(255, 255, 255, 0.18);

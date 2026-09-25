@@ -234,7 +234,7 @@
 }
 
 .tilePressedRed .tileNumber {
-  color: #f12c4c;
+  color: var(--accent-red);
   opacity: 0.95;
 }
 

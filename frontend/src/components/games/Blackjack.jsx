@@ -38,10 +38,25 @@ const BJ_START_URL = "/api/games/blackjack/start";
 const BJ_ACTION_URL = "/api/games/blackjack/action";
 
 // animation timings (match CSS)
-const DEAL_MS = 540;
-const DEAL_STAGGER = 120;
+const DEAL_FLIGHT_MS = 700; // one card's flight, deck -> seat (dealIn)
+const DEAL_STEP_MS = 650; // gap between consecutive flights (sequential deal)
+const DEAL_EXTRA_MS = 150; // lead-in before mid-round cards (hits, draws)
+const DEAL_FLIP_MS = 420; // post-flight flip (dealFlipIn)
 const FLIP_MS = 650;
 const FLIP_TOTAL_OFFSET_MS = 200;
+
+// Sequential deal order: P0, D0, P1, D1 — one card flies at a time.
+// Mid-round cards (hits, splits, dealer draws) use a short lead-in.
+function dealerDealDelay(i) {
+  if (i < 2) return (1 + i * 2) * DEAL_STEP_MS;
+  return DEAL_EXTRA_MS + (i - 2) * DEAL_STEP_MS;
+}
+
+function playerDealDelay(handIdx, i) {
+  if (handIdx === 0 && i < 2) return i * 2 * DEAL_STEP_MS;
+  if (handIdx === 0) return DEAL_EXTRA_MS;
+  return DEAL_EXTRA_MS + handIdx * DEAL_STEP_MS;
+}
 
 function isRedSuit(s) {
   return s === "hearts" || s === "diamonds";
@@ -107,7 +122,7 @@ function handTotalUi(hand) {
 }
 
 // Pill text for a hand. Soft hands (an ace that can still count as 11)
-// show BOTH totals — e.g. A+5 renders "6, 16". A natural 21 just says 21.
+// ALWAYS show BOTH totals — e.g. A+5 renders "6, 16".
 function handTotalDisplay(hand) {
   const cards = hand || [];
   let low = 0;
@@ -125,7 +140,6 @@ function handTotalDisplay(hand) {
   const high = aces > 0 ? low + 10 : low;
 
   if (aces > 0 && cards.length > 1 && high <= 21) {
-    if (high === 21 && cards.length === 2) return "21";
     return `${low}, ${high}`;
   }
 
@@ -298,15 +312,24 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   const scheduleDealSounds = (gs) => {
     clearDealSoundTimers();
 
+    // one swish per card flight, in deal order (P0, D0, P1, D1, …)
+    const hands = gs?.playerHands ?? [[]];
     const dealerCount = (gs?.dealerHand ?? []).length;
-    const playerCount = sum((gs?.playerHands ?? [[]]).map((h) => h?.length ?? 0));
-    const totalCards = dealerCount + playerCount;
-
-    for (let i = 0; i < totalCards; i++) {
+    const p0 = hands[0]?.length ?? 0;
+    const delays = [];
+    for (let i = 0; i < Math.max(p0, dealerCount); i++) {
+      if (i < p0) delays.push(playerDealDelay(0, i));
+      if (i < dealerCount) delays.push(dealerDealDelay(i));
+    }
+    for (let h = 1; h < hands.length; h++) {
+      const n = hands[h]?.length ?? 0;
+      for (let i = 0; i < n; i++) delays.push(playerDealDelay(h, i));
+    }
+    for (const d of delays) {
       dealSoundTimersRef.current.push(
         setTimeout(() => {
           sfx.play("card", { volume: 1 });
-        }, i * DEAL_STAGGER)
+        }, d)
       );
     }
   };
@@ -324,16 +347,15 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
       );
 
       for (let i = 2; i < dealerCount; i++) {
-        const delay = FLIP_TOTAL_OFFSET_MS + (i - 1) * DEAL_STAGGER;
         dealerSoundTimersRef.current.push(
           setTimeout(() => {
             sfx.play("card", { volume: 1 });
-          }, delay)
+          }, dealerDealDelay(i))
         );
       }
     } else {
       for (let i = 1; i < dealerCount; i++) {
-        const delay = DEAL_MS + i * DEAL_STAGGER;
+        const delay = i < 2 ? 0 : dealerDealDelay(i);
         dealerSoundTimersRef.current.push(
           setTimeout(() => {
             sfx.play("card", { volume: 1 });
@@ -360,7 +382,8 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
       );
 
       for (let i = 2; i < dealer.length; i++) {
-        const delay = FLIP_TOTAL_OFFSET_MS + (i - 1) * DEAL_STAGGER;
+        // each draw joins the total as its flight lands
+        const delay = dealerDealDelay(i) + DEAL_FLIGHT_MS;
 
         dealerTotalTimersRef.current.push(
           setTimeout(() => {
@@ -376,7 +399,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     }
 
     for (let i = 1; i < dealer.length; i++) {
-      const delay = DEAL_MS + i * DEAL_STAGGER;
+      const delay = i < 2 ? DEAL_EXTRA_MS : dealerDealDelay(i) + DEAL_FLIGHT_MS;
 
       dealerTotalTimersRef.current.push(
         setTimeout(() => {
@@ -397,10 +420,15 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
     const { status, payout: summaryPayout } = summarizeResult(outcomes, payout);
 
-    const maxCards = Math.max(0, ...(gs.playerHands ?? [[]]).map((h) => (h?.length ?? 0)));
-    const dealDelay = DEAL_MS + Math.max(0, maxCards - 1) * DEAL_STAGGER;
+    // the reveal waits for every flight still in the air: the hole flip,
+    // any dealer draws landing one by one, and a possible double/hit card
+    const dealerDraws = Math.max(0, (gs.dealerHand ?? []).length - 2);
+    const drawEnd = dealerDraws > 0
+      ? DEAL_EXTRA_MS + (dealerDraws - 1) * DEAL_STEP_MS + DEAL_FLIGHT_MS
+      : 0;
+    const playerNewEnd = DEAL_EXTRA_MS + DEAL_FLIGHT_MS;
 
-    const delay = hadHoleCardHidden ? FLIP_MS : dealDelay;
+    const delay = Math.max(hadHoleCardHidden ? FLIP_MS : 0, drawEnd, playerNewEnd);
 
     revealTimerRef.current = setTimeout(() => {
       if (status === "win") sfx.play("win", { volume: 1 });
@@ -536,10 +564,13 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         handIndex: ui.activeHandIndex ?? 0,
       });
 
-      if (action === "hit" || action === "double") sfx.play("card", { volume: 1 });
+      if (action === "hit" || action === "double") {
+        setTimeout(() => sfx.play("card", { volume: 1 }), DEAL_EXTRA_MS);
+      }
       if (action === "split") {
-        sfx.play("card", { volume: 1 });
-        setTimeout(() => sfx.play("card", { volume: 1 }), DEAL_STAGGER);
+        setTimeout(() => sfx.play("card", { volume: 1 }), 0);
+        setTimeout(() => sfx.play("card", { volume: 1 }), DEAL_EXTRA_MS + DEAL_STEP_MS);
+        setTimeout(() => sfx.play("card", { volume: 1 }), 2 * DEAL_STEP_MS);
       }
 
       applyServerState(data);
@@ -670,7 +701,18 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
         <div className={styles.dealerArea}>
           {ui.roundId ? (
-            <div className={styles.totalPillDark}>
+            <div
+              className={`${styles.totalPillDark} ${ui.showResult && ui.phase === "settled"
+                ? ui.resultStatus === "win"
+                  ? styles.totalWin
+                  : ui.resultStatus === "lose"
+                    ? styles.totalLose
+                    : ui.resultStatus === "push"
+                      ? styles.totalPush
+                      : ""
+                : ""
+                }`}
+            >
               {handTotalDisplay(
                 ui.dealer
                   .filter((c) => !c?.hidden)
@@ -691,6 +733,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                 cardBackSrc={cardBackSvg}
                 flip={i === 1}
                 faceUp={!c?.hidden}
+                dealDelayMs={dealerDealDelay(i)}
               />
             ))}
           </div>
@@ -717,10 +760,20 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                       : "none"
                 : "none";
 
+              const pillTone = settled
+                ? outcome === "win"
+                  ? styles.totalWin
+                  : outcome === "lose"
+                    ? styles.totalLose
+                    : outcome === "push"
+                      ? styles.totalPush
+                      : ""
+                : "";
+
               return (
                 <div key={hIdx} className={styles.handWrap}>
                   {ui.roundId ? (
-                    <div className={`${styles.totalPillPlayer} ${settled && outcome === "push" ? styles.totalPush : ""}`}>
+                    <div className={`${styles.totalPillPlayer} ${pillTone}`}>
                       {total}
                     </div>
                   ) : null}
@@ -735,6 +788,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                         outline={outline}
                         animate
                         cardBackSrc={cardBackSvg}
+                        dealDelayMs={playerDealDelay(hIdx, i)}
                       />
                     ))}
                   </div>
@@ -750,14 +804,14 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
   );
 }
 
-function Card({ index, card, hidden, outline = "none", animate = false, cardBackSrc, flip = false, faceUp = true }) {
+function Card({ index, card, hidden, outline = "none", animate = false, cardBackSrc, flip = false, faceUp = true, dealDelayMs = 0 }) {
   const r = card?.r;
   const s = card?.s;
   const red = s ? isRedSuit(s) : false;
   const suitSrc = s ? suitIconSrc(s) : null;
 
-  const overlapX = 34;
-  const overlapY = 12;
+  const overlapX = 37;
+  const overlapY = 13;
   const x = index * overlapX;
   const y = index * overlapY;
   const rot = 0;
@@ -800,7 +854,7 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
     >
       <div
         className={`${styles.cardMotion} ${animate ? styles.cardDeal : ""}`}
-        style={animate ? { animationDelay: `${index * DEAL_STAGGER}ms` } : undefined}
+        style={animate ? { animationDelay: `${dealDelayMs}ms` } : undefined}
       >
         <div
           className={`${styles.card} ${hidden ? styles.cardNoClip : ""} ${outline === "win" ? styles.cardOutlineWin : outline === "lose" ? styles.cardOutlineLose : outline === "push" ? styles.cardOutlinePush : ""
@@ -817,7 +871,7 @@ function Card({ index, card, hidden, outline = "none", animate = false, cardBack
                the old reveal path — it never deal-flips). */
             <div
               className={`${styles.flipWrap} ${animate ? styles.dealFlipDo : styles.flipFaceUp}`}
-              style={animate ? { "--deal-flip-delay": `${index * DEAL_STAGGER + DEAL_MS}ms` } : undefined}
+              style={animate ? { "--deal-flip-delay": `${dealDelayMs + DEAL_FLIGHT_MS}ms` } : undefined}
             >
               <div className={`${styles.flipFace} ${styles.flipFront}`}>{frontFace}</div>
               <div className={`${styles.flipFace} ${styles.flipBack}`}>{backFace}</div>

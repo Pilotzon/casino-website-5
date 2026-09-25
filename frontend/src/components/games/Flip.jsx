@@ -81,6 +81,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   // (the payout rides as the next bet ≈ doubling) or Collect.
   const [stage, setStage] = useState("bet"); // bet | choose | flipping
   const [chainBet, setChainBet] = useState(0); // riding stake for the next flip
+  const [originalBet, setOriginalBet] = useState(0); // the sequence's first stake
   const [chainCount, setChainCount] = useState(0); // consecutive wins this round
   const [history, setHistory] = useState([]); // this round's flips (reset per round)
 
@@ -110,7 +111,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const videoRef = useRef(null);
 
-  // payout is 1.98x, profit on win is stake*(1.98-1)=0.98x (see stakeForProfit below)
+  // payout is 1.98x (see totalProfit below for the live profit math)
 
   const allVideos = useMemo(() => [startingOnce, h2h, h2t, t2h, t2t], []);
 
@@ -260,6 +261,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         } else {
           // Loss ends the round — back to placing a bet
           setChainBet(0);
+          setOriginalBet(0);
           setChainCount(0);
           setStage("bet");
         }
@@ -290,6 +292,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setHistory([]);
 
     setChainBet(amount);
+    setOriginalBet(amount);
     setChainCount(0);
     setStage("choose");
   };
@@ -333,6 +336,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const handleCancel = () => {
     if (stage !== "choose" || chainCount !== 0 || isBusy) return;
     setChainBet(0);
+    setOriginalBet(0);
     setStage("bet");
   };
 
@@ -342,6 +346,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setShowWinPopup(false);
     setWinPayout(0);
     setChainBet(0);
+    setOriginalBet(0);
     setChainCount(0);
     setStage("bet");
   };
@@ -361,9 +366,11 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const roundActive = stage !== "bet";
   const awaitingChoice = stage === "choose";
-  // profit the NEXT flip pays: the riding stake × 0.98 while a round is
-  // live, otherwise the entered bet × 0.98
-  const stakeForProfit = roundActive ? chainBet : (parseFloat(betAmount || 0) || 0);
+  // Total Profit: while a sequence is live it is the locked-in gain
+  // (riding stake − original stake); otherwise the entered bet × 0.98.
+  const totalProfit = roundActive
+    ? chainBet - originalBet
+    : (parseFloat(betAmount || 0) || 0) * 0.98;
 
   return (
     <div className={styles.container}>
@@ -412,7 +419,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             disabled={isLocked || stage === "flipping"}
             data-bet-sound="true"
             title={isLocked ? betErrorMessage : undefined}>
-          {stage === "flipping" ? "Flipping..." : stage === "choose" ? (chainCount === 0 ? "Cancel" : `Collect ${Number(chainBet || 0).toFixed(2)}`) : "Bet"}
+          {stage === "flipping" ? "Flipping..." : stage === "choose" ? (chainCount === 0 ? "Cancel" : "Cashout") : "Bet"}
           </button>
           <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
         </span>
@@ -426,7 +433,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           Random Pick
         </button>
 
-        <div className={`${styles.sideSelector} ${awaitingChoice ? styles.awaitingChoice : ""}`}>
+        <div className={styles.sideSelector}>
           <button
             className={styles.sideBtn}
             onClick={() => flip("heads")}
@@ -449,11 +456,11 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
         <div className={styles.controlGroup}>
           <div className={styles.labelRow}>
-            <span>Total Profit (0.98×)</span>
+            <span>{roundActive ? "Total Profit" : "Total Profit (0.98×)"}</span>
             <span>$0.00</span>
           </div>
           <div className={`${styles.readonlyInput} ${styles.profitInput}`}>
-            <input type="text" value={(stakeForProfit * 0.98).toFixed(2)} readOnly />
+            <input type="text" value={Number(totalProfit || 0).toFixed(2)} readOnly />
             <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
@@ -470,14 +477,6 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             <div className={styles.winPopupMult}>{Number(winMult || 1.98).toFixed(2)}×</div>
             <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
-          </div>
-        )}
-
-        {awaitingChoice && (
-          <div className={styles.choosePrompt} role="status">
-            {chainCount === 0
-              ? "Heads or Tails?"
-              : `${chainCount} win${chainCount === 1 ? "" : "s"} in a row — flip again or collect`}
           </div>
         )}
 
