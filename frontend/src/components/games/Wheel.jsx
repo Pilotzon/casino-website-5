@@ -44,7 +44,10 @@ function makeCubicBezier(x1, y1, x2, y2) {
   };
 }
 
-const spinEasingNormal = makeCubicBezier(0.06, 0.9, 0.06, 1.0);
+/* Fast ease-out: launches hard, then a long lazy settle. The pointer
+   tracker and the CSS transition below MUST use these same numbers. */
+const SPIN_BEZIER = [0.1, 0.8, 0.08, 1];
+const spinEasingNormal = makeCubicBezier(...SPIN_BEZIER);
 
 export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
   const { updateBalance } = useAuth();
@@ -63,7 +66,8 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
   const [wheelLayout, setWheelLayout] = useState([]);
 
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState(null);
+  // Round history for the top pills (newest first, capped)
+  const [history, setHistory] = useState([]);
   const [error, setError] = useState("");
 
   const [rotation, setRotation] = useState(0);
@@ -89,6 +93,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMult, setWinMult] = useState(0);
 
   const animRef = useRef(0);
   const spinDurationRef = useRef(5000);
@@ -177,7 +182,8 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
     setCellModalMultiplier(null);
     setShowWinPopup(false);
     setWinAmount(0);
-    setResult(null);
+    setWinMult(0);
+    setHistory([]);
   }, [riskLevel, segments]);
 
   const stopTracking = useCallback(() => {
@@ -280,9 +286,9 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
 
     setError("");
     setSpinning(true);
-    setResult(null);
     setShowWinPopup(false);
     setWinAmount(0);
+    setWinMult(0);
 
     const my = ++animRef.current;
 
@@ -298,9 +304,9 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       const centerOfSegment = landedIndex * segAngle + segAngle / 2;
       const targetRotMod360 = ((360 - centerOfSegment) % 360 + 360) % 360;
 
-      const fullSpins = 12;
+      const fullSpins = 8;
       const fromRot = rotation;
-      const durationMs = 5000 + Math.random() * 2000;
+      const durationMs = 2800 + Math.random() * 900;
       spinDurationRef.current = durationMs;
 
       // Add some jitter so it doesn't always land perfectly centered
@@ -325,14 +331,20 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
       setTimeout(() => {
         if (animRef.current !== my) return;
         stopTracking();
-        setResult(data);
         setSpinning(false);
 
         if (data?.balance != null) updateBalance(data.balance);
 
         const won = Number(data?.payout || 0) > 0;
+        setHistory((prev) => [{ multiplier: data?.multiplier, won }, ...prev].slice(0, 10));
+
+        // one last pointer thunk as the wheel locks in
+        setBounceDuration(420);
+        setBounceKey((k) => k + 1);
+
         if (won) {
           setWinAmount(Number(data.payout || 0));
+          setWinMult(Number(data.multiplier || 0));
           setShowWinPopup(true);
           setTimeout(() => {
             if (animRef.current === my) setShowWinPopup(false);
@@ -462,19 +474,37 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
             centred over the whole game area as a true overlay. */}
         {showWinPopup && winAmount > 0 && (
           <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>${formatMoney(winAmount)}</div>
+            <div className={styles.winPopupMult}>{Number(winMult || 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
+            <div className={styles.winPopupAmount}>{formatMoney(winAmount)}<CurrencyIcon /></div>
           </div>
         )}
 
         <div className={styles.boardWrap}>
+          {history.length > 0 && (
+            <div className={styles.historyRow}>
+              <div className={styles.historyScroll}>
+                <div className={styles.historyPills}>
+                  {[...history].reverse().map((h, i) => (
+                    <span
+                      key={i}
+                      className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
+                    >
+                      {Number(h.multiplier).toFixed(2)}×
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className={styles.wheelStage}>
 
             {/* .wheelBox is a strict 1:1 square sized from the smaller of the
                 stage's width/height; the pointer is anchored to it (not to the
                 viewport) and the wheel itself fills it, so it can never be
                 stretched into an oval regardless of the panel's proportions. */}
-            <div className={styles.wheelBox}>
+            <div className={`${styles.wheelBox} ${spinning ? styles.spinning : ""}`}>
               <div
                 key={bounceKey}
                 className={`${styles.pointerWrap} ${bounceKey > 0 ? styles.pointerBounce : ""}`}
@@ -490,7 +520,7 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
                 style={{
                   transform: `rotate(${rotation}deg)`,
                   transition: spinning
-                    ? `transform ${spinDurationRef.current / 1000}s cubic-bezier(0.06, 0.9, 0.06, 1.0)`
+                    ? `transform ${spinDurationRef.current / 1000}s cubic-bezier(${SPIN_BEZIER.join(", ")})`
                     : "none",
                 }}
               >
@@ -625,16 +655,6 @@ export default function Wheel({ gameRow, soundEnabled, soundVolume }) {
             )}
           </Modal>
 
-          {result && (
-            <div className={styles.resultLine}>
-              <span className={styles.resultKey}>Result:</span>
-              <span className={styles.resultVal}>{Number(result.multiplier).toFixed(2)}×</span>
-              <span className={styles.resultSep}>•</span>
-              <span className={styles.resultVal}>
-                {result.won ? `Won $${formatMoney(result.payout)}` : "No win"}
-              </span>
-            </div>
-          )}
         </div>
           </>
         )}

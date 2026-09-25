@@ -188,16 +188,20 @@
   composes: ui-win-popup from global;
 }
 
-.container .winPopup {
-  border-color: rgba(0, 231, 1, 0.9);
-}
-
 .winPopupTitle {
   composes: ui-win-popup-title from global;
 }
 
 .winPopupAmount {
   composes: ui-win-popup-amount from global;
+}
+
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
 }
 
 /* Dragon */

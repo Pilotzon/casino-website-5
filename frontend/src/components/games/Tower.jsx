@@ -577,7 +577,8 @@ function Tower({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             as a true overlay. */}
         {status === "cashed_out" && lastCashoutPayout != null && (
           <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{Number(currentMultiplier || 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{format8(lastCashoutPayout)}<CurrencyIcon /></div>
           </div>
         )}

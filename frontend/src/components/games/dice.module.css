@@ -294,18 +294,18 @@
   cursor: grabbing;
 }
 
+/* Result marker — a white 3-tone hexagon. The outer rig only slides it
+   along the track; the landing squash/bounce runs on the inner element
+   (bottom-anchored, pivoting at the track) and retriggers every roll. */
 .resultGem {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 3px solid #fff;
+  width: 40px;
+  height: 40px;
   z-index: 20;
   opacity: 0;
-  transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: left 0.45s cubic-bezier(0.22, 0.9, 0.3, 1), opacity 0.2s;
   pointer-events: none;
 }
 
@@ -313,34 +313,95 @@
   opacity: 1;
 }
 
-.gemWin {
-  background: var(--accent-green);
+.gemBounce {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: diceGemLand 480ms ease-out;
 }
 
-.gemLoss {
-  background: var(--accent-red);
+@keyframes diceGemLand {
+  0% {
+    transform: translateY(-48px) scale(1, 1);
+  }
+
+  55% {
+    transform: translateY(0) scale(1.14, 0.8);
+    animation-timing-function: ease-out;
+  }
+
+  72% {
+    transform: translateY(-11px) scale(0.96, 1.05);
+    animation-timing-function: ease-in;
+  }
+
+  88% {
+    transform: translateY(0) scale(1.03, 0.96);
+  }
+
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+/* White 3-tone hexagon: bright crown, cool mid, shaded base. */
+.gemHex {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(25% 2%, 75% 2%, 98% 50%, 75% 98%, 25% 98%, 2% 50%);
+  background: linear-gradient(180deg,
+      #ffffff 0%,
+      #e6edf4 38%,
+      #a9bccf 72%,
+      #7d92a9 100%);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
 }
 
 .gemInner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
+  position: absolute;
+  inset: 20%;
+  clip-path: polygon(25% 2%, 75% 2%, 98% 50%, 75% 98%, 25% 98%, 2% 50%);
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.15) 55%,
+      rgba(125, 146, 169, 0.45) 100%);
 }
 
 .resultValueBubble {
   position: absolute;
-  top: -55px;
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-bg-panel);
   /* sidebar panel */
-  color: var(--color-text-primary);
+  color: var(--text-dim);
+  /* idle/rolling grey — win/loss classes recolour the text */
   padding: 8px 12px;
   border-radius: 8px;
   font-weight: 800;
   font-size: 16px;
+  font-variant-numeric: tabular-nums;
   border: 2px solid var(--bg-surface);
   white-space: nowrap;
+}
+
+.bubbleWin {
+  color: var(--accent-green);
+}
+
+.bubbleLoss {
+  color: var(--accent-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gemBounce {
+    animation: none;
+  }
+
+  .resultGem {
+    transition: opacity 0.2s;
+  }
 }
 
 /* ✅ Win popup — shared, dead-centre overlay (global.css) */
@@ -354,6 +415,42 @@
 
 .winPopupAmount {
   composes: ui-win-popup-amount from global;
+}
+
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
+}
+
+/* History pills (the Crash system, shared) — pinned to the TOP of the
+   stage; the auto bottom margin absorbs the free space so the slider
+   stays centred in what is left. */
+.historyRow {
+  composes: ui-history-row from global;
+  margin-bottom: auto;
+}
+
+.historyScroll {
+  composes: ui-history-scroll from global;
+}
+
+.historyPills {
+  composes: ui-history-pills from global;
+}
+
+.histPill {
+  composes: ui-hist-pill from global;
+}
+
+.histGreen {
+  composes: ui-hist-green from global;
+}
+
+.histGray {
+  composes: ui-hist-gray from global;
 }
 
 /* Stats panel — shared bottom-anchored panel + surface (global.css).
@@ -485,6 +582,11 @@
   .gameStage {
     padding: var(--stage-pad); /* equal on all four sides (global rule) */
     justify-content: flex-start;
+  }
+
+  /* the stage is top-aligned on small screens — no auto margin needed */
+  .historyRow {
+    margin-bottom: 10px;
   }
 
   .sliderWrapper {

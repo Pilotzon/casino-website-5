@@ -214,26 +214,44 @@
   margin-bottom: 5.5px;
 }
 
-/* Hover: LEVITATE THE WHOLE TILE 
-   Transition here can be 'none' or '0.1s' for responsiveness. 
+/* The front cover: an opaque #2F4553 face over the hole. It carries the
+   hover tint (the tile itself keeps the lift), and on reveal it scales
+   1 -> 1.03 -> 0 from the exact centre while the icon pops underneath. */
+.cover {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: var(--mines-tile-face);
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+/* Hover: LEVITATE THE WHOLE TILE
+   Transition here can be 'none' or '0.1s' for responsiveness.
    Keeping it short so clicking feels snappy.
 */
 .tile:not(.tileRevealed):hover {
-  background-color: var(--mines-tile-hover);
   transform: translateY(-3.5px);
   box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
   cursor: pointer;
   transition: transform 0s ease, box-shadow 0s ease;
 }
 
+.tile:not(.tileRevealed):hover .cover {
+  background-color: var(--mines-tile-hover);
+}
+
 /* Active (Click): UNREVEALED TILE
    Instantly snaps back.
 */
 .tile:not(.tileRevealed):active {
-  background-color: var(--mines-tile-hover);
   transform: translateY(0) scale(1);
   box-shadow: 0 var(--mines-base-height) 0 var(--mines-tile-shadow);
   transition: none;
+}
+
+.tile:not(.tileRevealed):active .cover {
+  background-color: var(--mines-tile-hover);
 }
 
 .tile:disabled {
@@ -259,15 +277,52 @@
   transition: none;
 }
 
+/* Reveal: the cover swells to 1.03 then collapses to 0 (exact centre
+   anchor); the icon scales up underneath once the cover starts to go. */
+.tileRevealed .cover {
+  animation: minesCoverOut 380ms forwards;
+}
+
+@keyframes minesCoverOut {
+  0% {
+    transform: scale(1);
+    animation-timing-function: ease-out;
+  }
+
+  32% {
+    transform: scale(1.03);
+    animation-timing-function: ease-in;
+  }
+
+  100% {
+    transform: scale(0);
+  }
+}
+
 /* Icon / Gem / Mine Animation */
 .icon {
   width: 60%;
   height: 60%;
   object-fit: contain;
+  position: relative;
+  z-index: 1;
+  transform-origin: 50% 50%;
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
 
-  /* The ONLY smooth animation: Zoom In */
-  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  /* starts once the cover begins collapsing (delay), overshoots to full size */
+  animation: zoomIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tileRevealed .cover {
+    animation: none;
+    transform: scale(0);
+  }
+
+  .icon {
+    animation: none;
+  }
 }
 
 /* ✅ Win popup — shared, dead-centre overlay (global.css).
@@ -276,16 +331,20 @@
   composes: ui-win-popup from global;
 }
 
-.container .winPopup {
-  border: 3px solid rgb(0, 187, 0);
-}
-
 .winPopupTitle {
   composes: ui-win-popup-title from global;
 }
 
 .winPopupAmount {
   composes: ui-win-popup-amount from global;
+}
+
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
 }
 
 @keyframes zoomIn {
@@ -323,26 +382,13 @@
 }
 
 /* ========================================= */
-/* LOSS DARKENING (AFTER HIT MINE)            */
+/* LOSS DIMMING (AFTER HIT MINE)              */
 /* ========================================= */
 
-/* Darken ONLY the unrevealed tiles after losing */
-.gridLost .tile:not(.tileRevealed) {
-  background-color: #1a2f3b;
-  /* darker than --mines-tile-face */
-  box-shadow: 0 var(--mines-base-height) 0 #162a34;
-  /* darker base */
-  filter: saturate(0.85) brightness(0.95);
-}
-
-/* Keep holes slightly dim too (optional, matches "lost" feel) */
-.gridLost .tileRevealed {
-  filter: brightness(0.92);
-}
-
-/* Keep icons readable */
-.gridLost .icon {
-  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6));
+/* The whole board is revealed on a mine hit. Tiles the player pressed stay
+   at full opacity; every auto-revealed tile is dimmed to 0.7. */
+.tileDimmed {
+  opacity: 0.7;
 }
 
 /* ===== Mobile polish (Mines) ===== */

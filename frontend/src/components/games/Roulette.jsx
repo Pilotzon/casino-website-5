@@ -791,7 +791,8 @@ export default function Roulette({ gameRow }) {
         {/* Win popup — direct child of the stage, dead-centre overlay */}
         {showWinPopup && (
           <div className={styles.winPopup}>
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{(totalBet > 0 ? Number(lastPayout) / totalBet : 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{Number(lastPayout).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}

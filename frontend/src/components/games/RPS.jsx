@@ -164,6 +164,7 @@ export default function RPS({ gameRow }) {
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMult, setWinMult] = useState(0);
 
   const busyRef = useRef(false);
   const drawTimerRef = useRef(null);
@@ -371,6 +372,7 @@ export default function RPS({ gameRow }) {
       playSound(WinSound);
 
       setWinAmount(payout);
+      setWinMult(Number(r.multiplier || 0));
       setShowWinPopup(true);
       setTimeout(() => setShowWinPopup(false), 1800);
     } catch (e) {
@@ -469,8 +471,9 @@ export default function RPS({ gameRow }) {
         {/* Cashout popup — direct child of the stage, dead-centre overlay */}
         {showWinPopup && winAmount > 0 && (
           <div className={`${styles.cashoutPopup} ${styles.popupWin}`}>
-            <div className={styles.cashoutPopupTitle}>YOU WON</div>
-            <div className={styles.cashoutPopupAmount}>${format2(winAmount)}</div>
+            <div className={styles.cashoutPopupMult}>{Number(winMult || 0).toFixed(2)}×</div>
+            <div className={styles.cashoutPopupDivider} aria-hidden="true" />
+            <div className={styles.cashoutPopupAmount}>{format2(winAmount)}<CurrencyIcon /></div>
           </div>
         )}
 

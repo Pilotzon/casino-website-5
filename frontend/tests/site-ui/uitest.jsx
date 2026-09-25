@@ -558,11 +558,18 @@ async function main() {
       unmountAll();
     }
 
-    // --- 7e: every other sidebar icon is white
+    // --- 7e: blackjack action icons use their signature colours
+    // (Hit orange, Stand purple — Split/Double stay white)
     const bj = readCss('src/components/games/blackjack.module.css');
-    ok(/\.actionHit \.actionIcon,\s*\.actionStand \.actionIcon,\s*\.actionSplit \.actionIcon,\s*\.actionDouble \.actionIcon\s*\{\s*filter:\s*brightness\(0\) invert\(1\)/.test(bj)
-      && !/\.action(Hit|Stand|Split|Double)\s+\.actionIcon\s*\{[^}]*hue-rotate/.test(bj),
-      'Blackjack: Hit / Stand / Split / Double icons are all white (card-suit art keeps its colours)');
+    const bjHit = firstRule(bj, '.actionHit .actionIcon');
+    const bjStand = firstRule(bj, '.actionStand .actionIcon');
+    ok(/invert\(67%\)/.test(bjHit) && /hue-rotate\(360deg\)/.test(bjHit),
+      'Blackjack: Hit icon is orange #ff9d00');
+    ok(/invert\(18%\)/.test(bjStand) && /hue-rotate\(265deg\)/.test(bjStand),
+      'Blackjack: Stand icon is purple #9000ff');
+    ok(/filter:\s*brightness\(0\) invert\(1\)/.test(firstRule(bj, '.actionSplit .actionIcon'))
+      && /filter:\s*brightness\(0\) invert\(1\)/.test(firstRule(bj, '.actionDouble .actionIcon')),
+      'Blackjack: Split / Double icons stay white');
     ok(/filter:\s*brightness\(0\) invert\(1\)/.test(firstRule(readCss('src/components/games/RPS.module.css'), '.choiceSmallIcon')),
       'RPS: the rock / paper / scissors marks are white');
     const flipCss = readCss('src/components/games/flip.module.css');

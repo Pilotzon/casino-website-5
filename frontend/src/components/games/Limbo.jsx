@@ -238,6 +238,23 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
           <DisabledGameStage title={disabledTitle} message={disabledDesc} mobile={isMobileDisabled} />
         ) : (
           <>
+        {history.length > 0 && (
+          <div className={styles.historyRow}>
+            <div className={styles.historyScroll}>
+              <div className={styles.historyPills}>
+                {[...history].reverse().map((h, i) => (
+                  <span
+                    key={i}
+                    className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
+                  >
+                    {Number(h.resultMultiplier).toFixed(2)}×
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div
           className={`${styles.bigMultiplier} ${result ? (result.won ? styles.bigWin : styles.bigLoss) : ""
             }`}
@@ -247,32 +264,13 @@ function Limbo({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
         {result?.won && (
           <div className={styles.winPopup}>
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{Number(result.resultMultiplier).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{Number(result.payout).toFixed(2)}<CurrencyIcon /></div>
           </div>
         )}
 
         <div className={styles.bottomStack}>
-          {/* History sits ABOVE the stats panel; invisible (space reserved)
-              until the first round so its appearance never shifts layout. */}
-          <div className={`${styles.recentPanel} ${history.length === 0 ? styles.recentHidden : ""}`}>
-            <div className={styles.recentLabel}>Recent Multipliers</div>
-            <div className={styles.recentRow}>
-              {history.length === 0 ? (
-                <div className={styles.recentEmpty}>—</div>
-              ) : (
-                history.map((h, i) => (
-                  <div
-                    key={i}
-                    className={`${styles.recentChip} ${h.won ? styles.chipWin : styles.chipLoss}`}
-                  >
-                    {Number(h.resultMultiplier).toFixed(2)}×
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
           <div className={styles.bottomPanel}>
             <div className={styles.bottomBox}>
               <div className={styles.bottomLabel}>Target Multiplier</div>

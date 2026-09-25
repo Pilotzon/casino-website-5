@@ -76,12 +76,18 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     });
 
   }, [betAmount, isAuthenticated, user?.balance]);
-  const [selectedSide, setSelectedSide] = useState("heads");
-  const [history, setHistory] = useState([]);
+  // Round flow: bet FIRST (amount locked in), THEN pick Heads/Tails —
+  // the video only plays after a side is chosen. A win offers Continue
+  // (the payout rides as the next bet ≈ doubling) or Collect.
+  const [stage, setStage] = useState("bet"); // bet | choose | flipping
+  const [chainBet, setChainBet] = useState(0); // riding stake for the next flip
+  const [chainCount, setChainCount] = useState(0); // consecutive wins this round
+  const [history, setHistory] = useState([]); // this round's flips (reset per round)
 
   // ✅ Win popup (Limbo-like)
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winPayout, setWinPayout] = useState(0);
+  const [winMult, setWinMult] = useState(1.98);
 
   // video state
   const [phase, setPhase] = useState("idle_once"); // idle_once | transition | hold
@@ -104,8 +110,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   const videoRef = useRef(null);
 
-  // payout is 1.98x, profit on win is bet*(1.98-1)=0.98x
-  const profit = (parseFloat(betAmount || 0) || 0) * 0.98;
+  // payout is 1.98x, profit on win is stake*(1.98-1)=0.98x (see stakeForProfit below)
 
   const allVideos = useMemo(() => [startingOnce, h2h, h2t, t2h, t2t], []);
 
@@ -234,44 +239,75 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         // ✅ win sound + popup only after video ends
         if (pending.won) {
           sfx.play("win", { volume: 1 });
-          setWinPayout(Number(pending.payout || 0));
+          const payout = Number(pending.payout || 0);
+          setWinPayout(payout);
+          const flipBet = Number(pending.flipBet || 0);
+          setWinMult(flipBet > 0 ? payout / flipBet : 1.98);
           setShowWinPopup(true);
+          // Continue: the payout rides as the next flip's stake
+          setChainBet(payout);
+          setChainCount((c) => c + 1);
+          setStage("choose");
+        } else {
+          // Loss ends the round — back to placing a bet
+          setChainBet(0);
+          setChainCount(0);
+          setStage("bet");
         }
+      } else {
+        setStage("bet");
       }
 
       setIsBusy(false);
     }
   };
 
-  const handleBet = async () => {
+  // Step 1 — place the bet (amount locked, history reset). No video yet:
+  // the player picks Heads/Tails next, and only then does the coin flip.
+  const handleBet = () => {
     if (!isAuthenticated) {
       openLoginModal();
       return;
     }
-    if (isBusy) return;
+    if (isBusy || stage !== "bet") return;
 
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) { setBetError("Invalid bet amount"); return; }
     if (amount > user.balance) { setBetError("Insufficient balance"); return; }
 
-    // reset popup each round
+    // reset popup + history for the new round
+    setShowWinPopup(false);
+    setWinPayout(0);
+    setHistory([]);
+
+    setChainBet(amount);
+    setChainCount(0);
+    setStage("choose");
+  };
+
+  // Step 2 — a side is chosen: the bet rides, the coin flips.
+  const flip = async (side) => {
+    if (stage !== "choose" || isBusy) return;
+
+    // hide the previous flip's popup once the player continues
     setShowWinPopup(false);
     setWinPayout(0);
 
+    setStage("flipping");
     setIsBusy(true);
 
     // ✅ round start sound
     sfx.play("flip", { volume: 1 });
 
     try {
-      const response = await gamesAPI.playFlip({ betAmount: amount, selectedSide });
+      const response = await gamesAPI.playFlip({ betAmount: chainBet, selectedSide: side });
       const result = response.data.result;
 
       const fromSide = currentSide;
       const toSide = result.outcome;
 
       setCurrentSide(toSide);
-      pendingResultRef.current = result;
+      pendingResultRef.current = { ...result, flipBet: chainBet };
 
       const transitionSrc = pickTransitionVideo(fromSide, toSide);
       setPhase("transition");
@@ -279,8 +315,26 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     } catch (error) {
       pendingResultRef.current = null;
       setIsBusy(false);
+      setStage("choose");
       toast.error(error.response?.data?.message || "Bet failed");
     }
+  };
+
+  // Back out before the first flip (nothing was staked yet)
+  const handleCancel = () => {
+    if (stage !== "choose" || chainCount !== 0 || isBusy) return;
+    setChainBet(0);
+    setStage("bet");
+  };
+
+  // Walk away with the winnings (already paid out — just ends the round)
+  const handleCollect = () => {
+    if (stage !== "choose" || chainCount === 0) return;
+    setShowWinPopup(false);
+    setWinPayout(0);
+    setChainBet(0);
+    setChainCount(0);
+    setStage("bet");
   };
 
   const adjustBet = (factor) => {
@@ -288,13 +342,19 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setBetAmount((curr * factor).toFixed(2));
   };
   // Warn before a page refresh while a bet is live (see RefreshGuard).
-  useActiveBetFlag("flip", isBusy || phase === 'transition');
+  useActiveBetFlag("flip", stage !== "bet");
 
 
   const handleRandomPick = () => {
-    if (isBusy) return;
-    setSelectedSide(Math.random() < 0.5 ? "heads" : "tails");
+    if (stage !== "choose" || isBusy) return;
+    flip(Math.random() < 0.5 ? "heads" : "tails");
   };
+
+  const roundActive = stage !== "bet";
+  const awaitingChoice = stage === "choose";
+  // profit the NEXT flip pays: the riding stake × 0.98 while a round is
+  // live, otherwise the entered bet × 0.98
+  const stakeForProfit = roundActive ? chainBet : (parseFloat(betAmount || 0) || 0);
 
   return (
     <div className={styles.container}>
@@ -318,15 +378,16 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 placeholder="0.00" value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 step="0.00000001"
+                disabled={roundActive}
               />
               <CurrencyIcon className={styles.btcIcon} />
             </div>
             <div className={styles.splitButtons}>
-              <button onClick={() => adjustBet(0.5)} disabled={isLocked || isBusy}>
+              <button onClick={() => adjustBet(0.5)} disabled={isLocked || isBusy || roundActive}>
                 ½
               </button>
               <div className={styles.divider}></div>
-              <button onClick={() => adjustBet(2)} disabled={isLocked || isBusy}>
+              <button onClick={() => adjustBet(2)} disabled={isLocked || isBusy || roundActive}>
                 2×
               </button>
             </div>
@@ -338,38 +399,38 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         <span className="ui-bet-wrap">
           <button
             className={styles.betButton}
-            onClick={handleBet}
-            disabled={isLocked || isBusy}
+            onClick={stage === "bet" ? handleBet : chainCount === 0 ? handleCancel : handleCollect}
+            disabled={isLocked || stage === "flipping"}
             data-bet-sound="true"
             title={isLocked ? betErrorMessage : undefined}>
-          {isBusy ? "Flipping..." : "Bet"}
+          {stage === "flipping" ? "Flipping..." : stage === "choose" ? (chainCount === 0 ? "Cancel" : `Collect ${Number(chainBet || 0).toFixed(2)}`) : "Bet"}
           </button>
           <BetLockBadge locked={isLocked} title={disabledTitle} description={disabledDesc} />
         </span>
 
         <button
           className={styles.randomButton}
-          disabled={isBusy}
+          disabled={!awaitingChoice || isBusy}
           type="button"
           onClick={handleRandomPick}
         >
           Random Pick
         </button>
 
-        <div className={styles.sideSelector}>
+        <div className={`${styles.sideSelector} ${awaitingChoice ? styles.awaitingChoice : ""}`}>
           <button
-            className={`${styles.sideBtn} ${selectedSide === "heads" ? styles.activeSide : ""}`}
-            onClick={() => setSelectedSide("heads")}
-            disabled={isBusy}
+            className={styles.sideBtn}
+            onClick={() => flip("heads")}
+            disabled={!awaitingChoice || isBusy}
             type="button"
           >
             <span className={styles.textSide}>Heads</span>
             <div className={styles.dotHeads}></div>
           </button>
           <button
-            className={`${styles.sideBtn} ${selectedSide === "tails" ? styles.activeSide : ""}`}
-            onClick={() => setSelectedSide("tails")}
-            disabled={isBusy}
+            className={styles.sideBtn}
+            onClick={() => flip("tails")}
+            disabled={!awaitingChoice || isBusy}
             type="button"
           >
             <span className={styles.textSide}>Tails</span>
@@ -383,7 +444,7 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
             <span>$0.00</span>
           </div>
           <div className={`${styles.readonlyInput} ${styles.profitInput}`}>
-            <input type="text" value={profit.toFixed(2)} readOnly />
+            <input type="text" value={(stakeForProfit * 0.98).toFixed(2)} readOnly />
             <CurrencyIcon className={styles.btcIcon} />
           </div>
         </div>
@@ -397,8 +458,17 @@ function Flip({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {/* ✅ Limbo-style win popup */}
         {showWinPopup && (
           <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{Number(winMult || 1.98).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
+          </div>
+        )}
+
+        {awaitingChoice && (
+          <div className={styles.choosePrompt} role="status">
+            {chainCount === 0
+              ? "Heads or Tails?"
+              : `${chainCount} win${chainCount === 1 ? "" : "s"} in a row — flip again or collect`}
           </div>
         )}
 

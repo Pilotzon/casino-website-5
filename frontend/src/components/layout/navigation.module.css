@@ -26,7 +26,28 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-xl);
+  position: relative;
 
+}
+
+/* The balance box lives DEAD-CENTRE of the navbar (horizontally centred
+   on the bar itself), while the logo stays left and the account actions
+   stay right. Absolutely positioned so it never pushes either side. */
+.center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.center > * {
+  pointer-events: auto;
+  margin-right: 0;
 }
 
 .left {

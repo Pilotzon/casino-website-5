@@ -831,6 +831,14 @@
   composes: ui-win-popup-amount from global;
 }
 
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
+}
+
 /* Loss popup — same shared overlay, red accent (scoped border) */
 .lossPopup {
   composes: ui-win-popup from global;

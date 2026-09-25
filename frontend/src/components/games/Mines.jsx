@@ -83,10 +83,13 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
   // ✅ track whether round ended by loss (hit mine)
   const [didLose, setDidLose] = useState(false);
+  // tile the player clicked when the mine hit (stays full opacity)
+  const [lossMineIdx, setLossMineIdx] = useState(null);
 
   // ✅ Win popup (Limbo-like) for cashout
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [lastCashoutPayout, setLastCashoutPayout] = useState(0);
+  const [lastCashoutMult, setLastCashoutMult] = useState(1);
 
   /**
    * ✅ Gem streak + Gem-3 rule
@@ -128,9 +131,11 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
     setInProgress(false);
     setClickedCell(null);
     setDidLose(false);
+    setLossMineIdx(null);
 
     setShowWinPopup(false);
     setLastCashoutPayout(0);
+    setLastCashoutMult(1);
 
     resetGemSoundState();
   };
@@ -234,21 +239,20 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         // reset streak/buff on mine
         resetGemSoundState();
 
+        // A mine hit reveals the ENTIRE board: every mine plus every gem
+        // the player hadn't pressed yet (auto-revealed tiles render dimmed).
+        const mineSet = new Set(Array.isArray(data.minePositions) ? data.minePositions : [idx]);
+        setLossMineIdx(idx);
         setCells((prev) => {
           const next = [...prev];
-          next[idx] = "mine";
+          for (let i = 0; i < CELL_COUNT; i++) {
+            if (next[i] === "hidden") next[i] = mineSet.has(i) ? "mine" : "gem";
+          }
           return next;
         });
 
         if (Array.isArray(data.minePositions)) {
           setMinePositions(data.minePositions);
-          setCells((prev) => {
-            const next = [...prev];
-            for (const m of data.minePositions) {
-              if (next[m] === "hidden") next[m] = "mine";
-            }
-            return next;
-          });
         } else {
           setMinePositions([]);
         }
@@ -306,6 +310,7 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
       // ✅ show win popup for cashout
       const payout = Number(data.payout || 0);
       setLastCashoutPayout(payout);
+      setLastCashoutMult(Number(data.multiplier) || currentMultiplier);
       setShowWinPopup(true);
 
       // streak ends on cashout
@@ -444,30 +449,50 @@ function Mines({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {/* ✅ Win popup (Limbo-like) */}
         {showWinPopup && !didLose && lastCashoutPayout > 0 && (
           <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{Number(lastCashoutMult || 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{format8(lastCashoutPayout)}<CurrencyIcon /></div>
           </div>
         )}
 
-        <div className={`${styles.grid} ${didLose ? styles.gridLost : ""}`}>
+        <div className={styles.grid}>
           {Array.from({ length: CELL_COUNT }, (_, i) => {
             const st = cells[i];
             const isRevealed = st === "gem" || st === "mine";
-            const pop = i === clickedCell && isRevealed;
+            // Tiles the player pressed (gems + the fatal mine) stay full
+            // opacity; everything auto-revealed on loss is dimmed to 0.7.
+            const userPressed = revealedCells.includes(i) || (didLose && i === lossMineIdx);
+            const dimmed = didLose && isRevealed && !userPressed;
+            // Board-reveal ripple: icons pop outward from the mine the
+            // player hit (on top of the base 200ms cover delay).
+            const rippleMs = dimmed && lossMineIdx != null
+              ? 200 + (Math.abs(i - lossMineIdx) % CELL_COUNT) * 14
+              : undefined;
 
             return (
               <button
                 key={i}
                 type="button"
-                className={`${styles.tile} ${isRevealed ? styles.tileRevealed : ""}`}
+                className={`${styles.tile} ${isRevealed ? styles.tileRevealed : ""} ${dimmed ? styles.tileDimmed : ""}`}
                 onClick={() => reveal(i)}
                 disabled={!canReveal || isRevealed}
               >
+                <span className={styles.cover} aria-hidden="true" />
                 {st === "gem" && (
-                  <img className={`${styles.icon} ${pop ? styles.pop : ""}`} src={gemImg} alt="" />
+                  <img
+                    className={styles.icon}
+                    style={rippleMs != null ? { animationDelay: `${rippleMs}ms` } : undefined}
+                    src={gemImg}
+                    alt=""
+                  />
                 )}
                 {st === "mine" && (
-                  <img className={`${styles.icon} ${pop ? styles.pop : ""}`} src={mineImg} alt="" />
+                  <img
+                    className={styles.icon}
+                    style={rippleMs != null ? { animationDelay: `${rippleMs}ms` } : undefined}
+                    src={mineImg}
+                    alt=""
+                  />
                 )}
               </button>
             );

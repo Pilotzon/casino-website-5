@@ -190,6 +190,7 @@ export default function Snakes({ gameRow }) {
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMult, setWinMult] = useState(0);
   const [showLossPopup, setShowLossPopup] = useState(false);
 
   // Audio refs
@@ -738,6 +739,7 @@ export default function Snakes({ gameRow }) {
         if (payout > 0) {
           setShowWinPopup(true);
           setWinAmount(payout);
+          setWinMult(Number(newMultiplier || 0));
         }
 
         await new Promise((rr) => setTimeout(rr, 1800));
@@ -797,6 +799,7 @@ export default function Snakes({ gameRow }) {
       if (payout > 0) {
         setShowWinPopup(true);
         setWinAmount(payout);
+        setWinMult(Number(r.multiplier || gs.totalMultiplier || 0));
 
         await new Promise((rr) => setTimeout(rr, 1800));
         if (animRef.current !== my) return;
@@ -1033,8 +1036,9 @@ export default function Snakes({ gameRow }) {
             always dead-centred over the board as true overlays. */}
         {showWinPopup && winAmount > 0 && (
           <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
-            <div className={styles.winPopupAmount}>${fmt2(winAmount)}</div>
+            <div className={styles.winPopupMult}>{Number(winMult || 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
+            <div className={styles.winPopupAmount}>{fmt2(winAmount)}<CurrencyIcon /></div>
           </div>
         )}
 

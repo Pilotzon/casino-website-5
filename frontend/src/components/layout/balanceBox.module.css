@@ -8,7 +8,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin-right: var(--space-sm); /* clear air before the username */
+  /* the box is centred on the navbar now — no trailing margin */
+  margin-right: 0;
 }
 
 .box {

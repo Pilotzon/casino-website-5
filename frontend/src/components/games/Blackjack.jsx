@@ -106,6 +106,32 @@ function handTotalUi(hand) {
   return total;
 }
 
+// Pill text for a hand. Soft hands (an ace that can still count as 11)
+// show BOTH totals — e.g. A+5 renders "6, 16". A natural 21 just says 21.
+function handTotalDisplay(hand) {
+  const cards = hand || [];
+  let low = 0;
+  let aces = 0;
+
+  for (const c of cards) {
+    if (c?.r === "A") {
+      aces += 1;
+      low += 1;
+    } else {
+      low += rankValue(c?.r);
+    }
+  }
+
+  const high = aces > 0 ? low + 10 : low;
+
+  if (aces > 0 && cards.length > 1 && high <= 21) {
+    if (high === 21 && cards.length === 2) return "21";
+    return `${low}, ${high}`;
+  }
+
+  return `${high <= 21 ? high : low}`;
+}
+
 export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const auth = useAuth();
   const { user, isAuthenticated, openLoginModal, updateBalance } = auth;
@@ -169,7 +195,8 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
     handBets: [],
     handOutcomes: [],
 
-    dealerShownTotal: 0,
+    // how many dealer cards the pill counts (the reveal count-up steps it)
+    dealerShownCount: 0,
     dealerTotal: 0,
 
     settled: false,
@@ -327,7 +354,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         setTimeout(() => {
           setUi((prev) => ({
             ...prev,
-            dealerShownTotal: handTotalUi(dealer.slice(0, Math.min(2, dealer.length))),
+            dealerShownCount: Math.min(2, dealer.length),
           }));
         }, FLIP_TOTAL_OFFSET_MS)
       );
@@ -339,7 +366,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
           setTimeout(() => {
             setUi((prev) => ({
               ...prev,
-              dealerShownTotal: handTotalUi(dealer.slice(0, i + 1)),
+              dealerShownCount: i + 1,
             }));
           }, delay)
         );
@@ -355,7 +382,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         setTimeout(() => {
           setUi((prev) => ({
             ...prev,
-            dealerShownTotal: handTotalUi(dealer.slice(0, i + 1)),
+            dealerShownCount: i + 1,
           }));
         }, delay)
       );
@@ -420,11 +447,9 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
 
       handOutcomes: settled ? [] : serverOutcomes,
 
-      dealerShownTotal: settled
-        ? s.dealerShownTotal
-        : typeof gs.dealerShownTotal === "number"
-          ? gs.dealerShownTotal
-          : 0,
+      dealerShownCount: settled
+        ? s.dealerShownCount
+        : dealer.filter((c) => !c?.hidden).length,
       dealerTotal: typeof gs.dealerTotal === "number" ? gs.dealerTotal : 0,
 
       settled,
@@ -621,20 +646,38 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
                   : styles.popupPush
               }`}
           >
-            <div className={styles.resultPopupTitle}>
-              {ui.resultStatus === "win" ? "YOU WON" : ui.resultStatus === "lose" ? "YOU LOST" : "PUSH"}
-            </div>
-
-            {ui.resultStatus === "win" || ui.resultStatus === "push" ? (
-              <div className={styles.resultPopupAmount}>{Number(ui.resultPayout || 0).toFixed(2)}<CurrencyIcon /></div>
+            {ui.resultStatus === "lose" ? (
+              <>
+                <div className={styles.resultPopupTitle}>YOU LOST</div>
+                <div className={styles.resultPopupAmountMuted}>-{sum(ui.handBets).toFixed(2)}<CurrencyIcon /></div>
+              </>
             ) : (
-              <div className={styles.resultPopupAmountMuted}>-{sum(ui.handBets).toFixed(2)}<CurrencyIcon /></div>
+              <>
+                <div className={styles.resultPopupMult}>
+                  {(ui.resultStatus === "push"
+                    ? 1
+                    : sum(ui.handBets) > 0
+                      ? Number(ui.resultPayout || 0) / sum(ui.handBets)
+                      : 0
+                  ).toFixed(2)}×
+                </div>
+                <div className={styles.resultPopupDivider} aria-hidden="true" />
+                <div className={styles.resultPopupAmount}>{Number(ui.resultPayout || 0).toFixed(2)}<CurrencyIcon /></div>
+              </>
             )}
           </div>
         )}
 
         <div className={styles.dealerArea}>
-          {ui.roundId ? <div className={styles.totalPillDark}>{ui.dealerShownTotal}</div> : null}
+          {ui.roundId ? (
+            <div className={styles.totalPillDark}>
+              {handTotalDisplay(
+                ui.dealer
+                  .filter((c) => !c?.hidden)
+                  .slice(0, Math.max(1, ui.dealerShownCount || 0))
+              )}
+            </div>
+          ) : null}
 
           <div className={styles.fanTop}>
             {ui.dealer.map((c, i) => (
@@ -660,7 +703,7 @@ export default function Blackjack({ gameRow, soundEnabled = true, soundVolume = 
         <div className={styles.playerArea}>
           <div className={styles.handsRow}>
             {ui.playerHands.map((hand, hIdx) => {
-              const total = ui.handTotals?.[hIdx] ?? 0;
+              const total = handTotalDisplay(hand);
               const outcome = ui.handOutcomes?.[hIdx] ?? null;
 
               const outline =

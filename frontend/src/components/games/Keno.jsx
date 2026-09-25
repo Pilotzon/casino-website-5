@@ -170,6 +170,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
 
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
+  const [winMult, setWinMult] = useState(0);
 
   // desktop hover
   const [hoverHit, setHoverHit] = useState(null);
@@ -368,6 +369,7 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
 
       if (payout > 0) {
         setWinAmount(payout);
+        setWinMult(Number(r.multiplier || 0));
         setShowWinPopup(true);
         setTimeout(() => {
           if (animRef.current === my) setShowWinPopup(false);
@@ -522,7 +524,8 @@ export default function Keno({ gameRow, soundEnabled = true, soundVolume = 0.8 }
             centred over the board as a true overlay (no layout shift). */}
         {showWinPopup && winAmount > 0 && (
           <div className={styles.winPopup} role="status" aria-live="polite">
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{Number(winMult || 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{format8(winAmount)}<CurrencyIcon /></div>
           </div>
         )}

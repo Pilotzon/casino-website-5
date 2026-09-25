@@ -220,35 +220,34 @@
 }
 
 .pointerBounce {
-  animation: pointerFlick var(--bounce-duration, 350ms) cubic-bezier(0.22, 0.7, 0.36, 1) forwards;
+  animation: pointerFlick var(--bounce-duration, 350ms) ease-out forwards;
 }
 
+/* The pointer snaps back past centre and oscillates down to rest —
+   while the wheel is fast the flicks chain into a rattle; as it slows
+   each peg hit reads as its own bounce. */
 @keyframes pointerFlick {
   0% {
     transform: translateX(-50%) rotate(0deg);
   }
 
-  10% {
-    transform: translateX(-50%) rotate(-34deg);
+  12% {
+    transform: translateX(-50%) rotate(-38deg);
   }
 
-  25% {
-    transform: translateX(-50%) rotate(-26deg);
+  30% {
+    transform: translateX(-50%) rotate(7deg);
   }
 
-  40% {
-    transform: translateX(-50%) rotate(-19deg);
+  48% {
+    transform: translateX(-50%) rotate(-4deg);
   }
 
-  55% {
-    transform: translateX(-50%) rotate(-10deg);
+  64% {
+    transform: translateX(-50%) rotate(2deg);
   }
 
-  70% {
-    transform: translateX(-50%) rotate(-6deg);
-  }
-
-  85% {
+  82% {
     transform: translateX(-50%) rotate(-1deg);
   }
 
@@ -310,6 +309,13 @@
   box-shadow:
     inset 0 0 0 10px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition: filter 300ms ease;
+}
+
+/* While spinning the segments smear just slightly, like motion blur —
+   it drops away the moment the wheel stops. */
+.spinning .ring {
+  filter: blur(1px) saturate(1.15);
 }
 
 .segment {
@@ -333,8 +339,10 @@
   inset: 22%;
   /* of the inner plate (was 92px of 420px) */
   border-radius: 50%;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06);
-  background: rgba(15, 33, 46, 0.55);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
+    inset 0 6px 18px rgba(0, 0, 0, 0.45);
+  background: radial-gradient(circle at 50% 35%, #8e1b2e 0%, #631222 62%, #400a15 100%);
 }
 
 /* Win popup — shared, dead-centre overlay (global.css) */
@@ -348,6 +356,14 @@
 
 .winPopupAmount {
   composes: ui-win-popup-amount from global;
+}
+
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
 }
 
 /* HOVER PANEL — the shared read-only-input design (global.css), same
@@ -512,33 +528,30 @@
   letter-spacing: 0.2px;
 }
 
-.resultLine {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 24px;
+/* History pills (the Crash system, shared) — newest at the top right.
+   The win amount moved into the win popup; the old result line is gone. */
+.historyRow {
+  composes: ui-history-row from global;
 }
 
-.resultKey {
-  color: var(--color-text-label);
-  font-weight: 900;
+.historyScroll {
+  composes: ui-history-scroll from global;
 }
 
-.resultVal {
-  color: var(--color-text-primary);
-  font-weight: 900;
+.historyPills {
+  composes: ui-history-pills from global;
 }
 
-.resultSep {
-  color: rgba(255, 255, 255, 0.18);
+.histPill {
+  composes: ui-hist-pill from global;
+}
+
+.histGreen {
+  composes: ui-hist-green from global;
+}
+
+.histGray {
+  composes: ui-hist-gray from global;
 }
 
 /* Modal — shared overlay styles (global.css) */
@@ -634,11 +647,6 @@
   .wheelBox {
     width: min(100%, 70vh);
     width: min(100cqw, 70vh, 520px);
-  }
-
-  .resultLine {
-    position: relative;
-    margin-top: 10px;
   }
 
   .multStrip {

@@ -564,6 +564,14 @@
   composes: ui-win-popup-amount from global;
 }
 
+.cashoutPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.cashoutPopupDivider {
+  composes: ui-win-popup-divider from global;
+}
+
 /* win status — scoped so it beats the shared green border */
 .cashoutPopup.popupWin {
   border-color: rgba(0, 231, 1, 0.85);

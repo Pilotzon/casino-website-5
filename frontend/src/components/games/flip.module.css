@@ -106,6 +106,14 @@
   composes: ui-win-popup-amount from global;
 }
 
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
+}
+
 /* Random Pick — unified secondary button (defined once in global.css) */
 .randomButton {
   composes: sidebar-secondary-button from global;
@@ -127,6 +135,40 @@
 /* Active: recolor only — zero layout shift */
 .activeSide {
   composes: ui-action-active from global;
+}
+
+/* While the round awaits a Heads/Tails choice the two side buttons glow
+   so it is obvious they are the next move. */
+.awaitingChoice .sideBtn:not(:disabled) {
+  border-color: rgba(0, 231, 1, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 231, 1, 0.35), 0 0 18px rgba(0, 231, 1, 0.18);
+}
+
+/* Stage prompt shown while a side choice is pending */
+.choosePrompt {
+  align-self: center;
+  margin-bottom: 12px;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-panel);
+  border: 1px solid rgba(0, 231, 1, 0.4);
+  color: var(--color-text-primary);
+  font-weight: 800;
+  font-size: var(--font-size-control);
+  letter-spacing: 0.2px;
+  animation: flip-prompt-in 200ms ease-out both;
+}
+
+@keyframes flip-prompt-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .textSide {

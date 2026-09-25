@@ -233,11 +233,15 @@ function Navigation() {
             )}
           </div>
 
+          {isAuthenticated && (
+            <div className={styles.center}>
+              <BalanceBox />
+            </div>
+          )}
+
           <div className={styles.actions}>
             {isAuthenticated ? (
               <>
-                <BalanceBox />
-
                 <div className={styles.user}>
                   <span className={styles.username}>{user?.username}</span>
                   <Button variant="secondary" size="sm" className={styles.authBtn} onClick={handleLogout}>

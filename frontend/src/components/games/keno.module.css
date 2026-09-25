@@ -534,6 +534,14 @@
   composes: ui-win-popup-amount from global;
 }
 
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
+}
+
 /* Modal — shared overlay styles (global.css) */
 .modalOverlay {
   composes: ui-modal-overlay from global;

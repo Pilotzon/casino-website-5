@@ -101,7 +101,8 @@
   padding: var(--stage-pad); /* equal on all four sides (global rule) */
 }
 
-/* Desktop big number */
+/* Desktop big number — tabular digits so the counting animation never
+   pushes the layout sideways as values change width. */
 .bigMultiplier {
   font-size: 120px;
   font-weight: 900;
@@ -111,6 +112,8 @@
   user-select: none;
   text-align: center;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on, "salt" on;
 }
 
 .bigWin {
@@ -135,7 +138,43 @@
   composes: ui-win-popup-amount from global;
 }
 
-/* Bottom stack (target multiplier + recent multipliers) — anchored to
+.winPopupMult {
+  composes: ui-win-popup-mult from global;
+}
+
+.winPopupDivider {
+  composes: ui-win-popup-divider from global;
+}
+
+/* History pills (the Crash system, shared) — pinned to the TOP of the
+   stage; the auto bottom margin absorbs the free space so the big number
+   stays centred in what is left. */
+.historyRow {
+  composes: ui-history-row from global;
+  margin-bottom: auto;
+}
+
+.historyScroll {
+  composes: ui-history-scroll from global;
+}
+
+.historyPills {
+  composes: ui-history-pills from global;
+}
+
+.histPill {
+  composes: ui-hist-pill from global;
+}
+
+.histGreen {
+  composes: ui-hist-green from global;
+}
+
+.histGray {
+  composes: ui-hist-gray from global;
+}
+
+/* Bottom stack (target multiplier + win chance) — anchored to
    the bottom of the game stage. The global .ui-stage-bottom insets give
    it exactly 16px bottom/left/right (always centred) — no width math here. */
 .bottomStack {
@@ -146,8 +185,7 @@
   flex-shrink: 0;
 }
 
-/* Both bottom panels (stats + recent multipliers) share the same surface
-   (global.css) and the same width — they simply fill .bottomStack. */
+/* The bottom stats panel fills .bottomStack at the same surface (global.css). */
 .bottomPanel {
   composes: ui-panel-surface from global;
   width: 100%;
@@ -205,61 +243,7 @@
   font-weight: 900;
 }
 
-.recentPanel {
-  composes: ui-panel-surface from global;
-  width: 100%;
-  /* identical width to .bottomPanel above */
-  box-sizing: border-box;
-  box-shadow: var(--shadow-md);
-}
-
-/* Hidden until the first round — INVISIBLE but space-reserved (the empty
-   "—" placeholder keeps the height constant), so its first appearance
-   never shifts the layout. */
-.recentHidden {
-  visibility: hidden;
-}
-
-.recentLabel {
-  font-size: var(--font-size-control);
-  font-weight: 800;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-
-}
-
-.recentRow {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.recentEmpty {
-  color: rgba(255, 255, 255, 0.35);
-  font-weight: 800;
-}
-
-.recentChip {
-  padding: 7px 12px;
-  background: #0f212e;
-  /* neutral slot (win/loss classes override color) */
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.chipWin {
-  background: rgba(0, 231, 1, 0.2);
-  color: var(--accent-green);
-}
-
-.chipLoss {
-  background: rgba(241, 44, 76, 0.2);
-  color: var(--accent-red);
-}
+/* (Recent multipliers now live in the top history pills row.) */
 
 @media (max-width: 900px) {
   .container {
@@ -317,8 +301,8 @@
     gap: 10px;
   }
 
-  .recentRow {
-    gap: 8px;
-    -webkit-overflow-scrolling: touch;
+  /* the stage is top-aligned on small screens — no auto margin needed */
+  .historyRow {
+    margin-bottom: 10px;
   }
 }

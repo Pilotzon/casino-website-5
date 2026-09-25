@@ -70,6 +70,10 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   const [lastResult, setLastResult] = useState(null);
   const [resultPosition, setResultPosition] = useState(50);
   const [showResult, setShowResult] = useState(false);
+  // Retriggers the gem landing animation every roll (never reuses a key)
+  const [rollNonce, setRollNonce] = useState(0);
+  // Round history for the top pills (newest first, capped)
+  const [history, setHistory] = useState([]);
 
   // ✅ Win popup (Limbo-like)
   const [showWinPopup, setShowWinPopup] = useState(false);
@@ -148,9 +152,11 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
 
       setShowResult(true);
       setResultPosition(result.roll);
+      setRollNonce((n) => n + 1);
+      setHistory((prev) => [{ roll: result.roll, won: result.won }, ...prev].slice(0, 10));
 
       // ✅ Wait for result gem movement animation to finish
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 500));
 
       // ✅ After animation finishes: win sound + win popup
       if (result?.won) {
@@ -288,10 +294,12 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
   useActiveBetFlag("dice", isRolling);
 
 
-  const gemClass = useMemo(() => {
-    if (!lastResult) return styles.gemLoss;
-    return lastResult.won ? styles.gemWin : styles.gemLoss;
-  }, [lastResult]);
+  // Position text state: grey while rolling, then green (win) / red (loss)
+  const bubbleClass = !showResult || isRolling
+    ? ""
+    : lastResult?.won
+      ? styles.bubbleWin
+      : styles.bubbleLoss;
 
   return (
     <div className={styles.container}>
@@ -359,8 +367,26 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
         {/* ✅ Limbo-style win popup */}
         {showWinPopup && (
           <div className={styles.winPopup}>
-            <div className={styles.winPopupTitle}>YOU WON</div>
+            <div className={styles.winPopupMult}>{Number(lastResult?.multiplier || 0).toFixed(2)}×</div>
+            <div className={styles.winPopupDivider} aria-hidden="true" />
             <div className={styles.winPopupAmount}>{Number(winPayout || 0).toFixed(2)}<CurrencyIcon /></div>
+          </div>
+        )}
+
+        {history.length > 0 && (
+          <div className={styles.historyRow}>
+            <div className={styles.historyScroll}>
+              <div className={styles.historyPills}>
+                {[...history].reverse().map((h, i) => (
+                  <span
+                    key={i}
+                    className={`${styles.histPill} ${h.won ? styles.histGreen : styles.histGray}`}
+                  >
+                    {Number(h.roll).toFixed(2)}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -405,12 +431,16 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 </div>
 
                 <div
-                  className={`${styles.resultGem} ${showResult ? styles.visible : ""} ${gemClass}`}
+                  className={`${styles.resultGem} ${showResult ? styles.visible : ""}`}
                   style={{ left: `${resultPosition}%` }}
                 >
-                  <div className={styles.gemInner}></div>
-                  <div className={styles.resultValueBubble}>
-                    {showResult ? Number(resultPosition).toFixed(2) : ""}
+                  <div key={rollNonce} className={styles.gemBounce}>
+                    <div className={`${styles.resultValueBubble} ${bubbleClass}`}>
+                      {showResult ? Number(resultPosition).toFixed(2) : ""}
+                    </div>
+                    <div className={styles.gemHex}>
+                      <div className={styles.gemInner}></div>
+                    </div>
                   </div>
                 </div>
 
@@ -448,20 +478,21 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 value={multiplierInput}
                 onChange={handleMultiplierChange}
                 step="0.0001"
+                disabled={isRolling}
               />
               <span className={styles.statSuffix}>×</span>
-              <Stepper value={multiplierInput} onChange={(v) => handleMultiplierChange({ target: { value: v } })} step={0.01} min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} decimals={4} />
+              <Stepper value={multiplierInput} onChange={(v) => handleMultiplierChange({ target: { value: v } })} step={0.01} min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} decimals={4} disabled={isRolling} />
             </div>
           </div>
 
           <div className={styles.statBox}>
             <div className={styles.statHeader}>Roll {rollUnder ? "Under" : "Over"}</div>
             <div className={`${styles.statInput} ${styles.editable}`}>
-              <input type="number" value={targetNumber} onChange={handleTargetInputChange} />
-              <button className={styles.swapBtn} onClick={toggleMode} type="button">
+              <input type="number" value={targetNumber} onChange={handleTargetInputChange} disabled={isRolling} />
+              <button className={styles.swapBtn} onClick={toggleMode} type="button" disabled={isRolling}>
                 <IconArrowClockwise />
               </button>
-              <Stepper value={targetNumber} onChange={(v) => handleTargetInputChange({ target: { value: v } })} step={1} min={TARGET_MIN} max={TARGET_MAX} decimals={0} />
+              <Stepper value={targetNumber} onChange={(v) => handleTargetInputChange({ target: { value: v } })} step={1} min={TARGET_MIN} max={TARGET_MAX} decimals={0} disabled={isRolling} />
             </div>
           </div>
 
@@ -473,9 +504,10 @@ function Dice({ gameRow, soundEnabled = true, soundVolume = 0.8 }) {
                 value={winChanceInput}
                 onChange={handleWinChanceChange}
                 step="0.01"
+                disabled={isRolling}
               />
               <span className={styles.statSuffix}>%</span>
-              <Stepper value={winChanceInput} onChange={(v) => handleWinChanceChange({ target: { value: v } })} step={1} min={0.01} max={98} decimals={2} />
+              <Stepper value={winChanceInput} onChange={(v) => handleWinChanceChange({ target: { value: v } })} step={1} min={0.01} max={98} decimals={2} disabled={isRolling} />
             </div>
           </div>
         </div>
